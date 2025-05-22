@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Edit3, Trash2, Search, Eye, Package, LayoutGrid } from 'lucide-react';
+import { PlusCircle, Edit3, Trash2, Search, Eye, Package } from 'lucide-react';
 import Image from 'next/image';
 import type { Product } from '@/types';
-import { ProductCategoryEnum, categoryIcons } from '@/types'; 
+import { categoryIcons } from '@/types';
 import Link from 'next/link';
 import {
   Dialog,
@@ -20,27 +20,44 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import ProductForm from '@/components/admin/ProductForm'; 
+import ProductForm from '@/components/admin/ProductForm';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-
-const initialProducts: Product[] = [
-  { id: '1', name: 'Maillot Sénégal Authentique 2024', description: 'Portez les couleurs des Lions avec fierté.', price: 45000, category: ProductCategoryEnum.Maillots, imageUrl: 'https://placehold.co/400x400.png', stock: 50, imageAiHint: 'senegal football jersey', sizes: ['S', 'M', 'L'] },
-  { id: '2', name: 'Chaussures de Foot "Vitesse Ultime"', description: 'Légères et réactives pour des accélérations explosives.', price: 62000, category: ProductCategoryEnum.Chaussures, imageUrl: 'https://placehold.co/400x400.png', stock: 30, imageAiHint: 'soccer cleats dynamic', sizes: ['40', '41', '42'] },
-  { id: '3', name: 'Pantalon d\'Entraînement Pro', description: 'Confort thermique et liberté de mouvement.', price: 28000, category: ProductCategoryEnum.Pantalons, imageUrl: 'https://placehold.co/400x400.png', stock: 0, imageAiHint: 'training pants athlete', sizes: ['M', 'L'] },
-];
-
+import { db } from '@/lib/firebase';
+import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
 
 export default function AdminProductsPage() {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const { toast } = useToast();
 
+  useEffect(() => {
+    setIsLoading(true);
+    const productsCollectionRef = collection(db, 'products');
+    const q = query(productsCollectionRef, orderBy("name", "asc")); // Example: order by name
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const fetchedProducts: Product[] = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data() as Omit<Product, 'id'>
+      }));
+      setProducts(fetchedProducts);
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Erreur de récupération des produits (snapshot):", error);
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les produits en temps réel." });
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe(); // Cleanup listener on component unmount
+  }, [toast]);
+
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toString().toLowerCase().includes(searchTerm.toLowerCase())
+    (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const handleAddProduct = () => {
@@ -53,32 +70,45 @@ export default function AdminProductsPage() {
     setIsFormOpen(true);
   };
 
-  const handleDeleteProduct = (productId: string) => {
-    // In a real app, this would call an API
-    setProducts(prev => prev.filter(p => p.id !== productId));
-    toast({ title: "Produit supprimé", description: "Le produit a été retiré de la liste (simulation)." });
+  const handleDeleteProduct = async (productId: string, productName: string) => {
+    try {
+      await deleteDoc(doc(db, 'products', productId));
+      toast({ title: "Produit supprimé", description: `Le produit "${productName}" a été supprimé de Firestore.` });
+      // Real-time updates from onSnapshot will refresh the list
+    } catch (error) {
+      console.error("Erreur de suppression du produit:", error);
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de supprimer le produit." });
+    }
   };
 
-  const handleFormSubmit = (productData: Product) => {
-    if (editingProduct) {
-      // Update existing product (simulation)
-      setProducts(prev => prev.map(p => (p.id === productData.id ? productData : p)));
-      toast({ title: "Produit modifié", description: `${productData.name} a été mis à jour.` });
-    } else {
-      // Add new product (simulation)
-      const newProduct = { ...productData, id: (Math.random() * 10000).toString() }; // temp ID
-      setProducts(prev => [newProduct, ...prev]);
-      toast({ title: "Produit ajouté", description: `${newProduct.name} a été ajouté avec succès.` });
+  const handleFormSubmit = async (productData: Omit<Product, 'id'>) => { // ProductForm now submits Omit<Product,'id'> or full Product
+    try {
+      if (editingProduct && editingProduct.id) {
+        const productDocRef = doc(db, 'products', editingProduct.id);
+        await updateDoc(productDocRef, productData);
+        toast({ title: "Produit modifié", description: `${productData.name} a été mis à jour dans Firestore.` });
+      } else {
+        await addDoc(collection(db, 'products'), productData);
+        toast({ title: "Produit ajouté", description: `${productData.name} a été ajouté à Firestore.` });
+      }
+      setIsFormOpen(false);
+      setEditingProduct(null);
+      // Real-time updates from onSnapshot will refresh the list
+    } catch (error) {
+      console.error("Erreur de sauvegarde du produit:", error);
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de sauvegarder le produit." });
     }
-    setIsFormOpen(false);
-    setEditingProduct(null);
   };
+  
+  if (isLoading) {
+    return <div className="flex justify-center items-center h-64"><p>Chargement des produits...</p></div>;
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-foreground">Gestion des Produits</h1>
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setEditingProduct(null);}}>
           <DialogTrigger asChild>
             <Button onClick={handleAddProduct} className="bg-primary hover:bg-primary/90">
               <PlusCircle className="mr-2 h-5 w-5" /> Ajouter un Produit
@@ -91,9 +121,9 @@ export default function AdminProductsPage() {
                 {editingProduct ? 'Mettez à jour les informations du produit.' : 'Remplissez les détails du nouveau produit.'}
               </DialogDescription>
             </DialogHeader>
-            <ProductForm 
-              product={editingProduct} 
-              onSubmit={handleFormSubmit} 
+            <ProductForm
+              product={editingProduct}
+              onSubmit={handleFormSubmit}
               onCancel={() => { setIsFormOpen(false); setEditingProduct(null); }}
             />
           </DialogContent>
@@ -127,12 +157,12 @@ export default function AdminProductsPage() {
             </TableHeader>
             <TableBody>
               {filteredProducts.length > 0 ? filteredProducts.map((product) => {
-                const CategoryIcon = categoryIcons[product.category] || Package;
+                const CategoryIcon = product.category ? categoryIcons[product.category] || Package : Package;
                 return (
                   <TableRow key={product.id}>
                     <TableCell>
                       <div className="relative h-12 w-12 rounded-md overflow-hidden border">
-                        <Image src={product.imageUrl} alt={product.name} fill sizes="50px" className="object-cover" data-ai-hint={product.imageAiHint || "product thumbnail"}/>
+                        <Image src={product.imageUrl || 'https://placehold.co/100x100.png'} alt={product.name} fill sizes="50px" className="object-cover" data-ai-hint={product.imageAiHint || "product thumbnail"}/>
                       </div>
                     </TableCell>
                     <TableCell className="font-medium">
@@ -141,10 +171,12 @@ export default function AdminProductsPage() {
                       </Link>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary" className="text-xs inline-flex items-center gap-1">
-                        {CategoryIcon && <CategoryIcon className="h-3 w-3" />}
-                        {product.category}
-                      </Badge>
+                      {product.category && (
+                        <Badge variant="secondary" className="text-xs inline-flex items-center gap-1">
+                          {CategoryIcon && <CategoryIcon className="h-3 w-3" />}
+                          {product.category}
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">{product.price.toLocaleString('fr-FR')}</TableCell>
                     <TableCell className="text-center">
@@ -152,7 +184,7 @@ export default function AdminProductsPage() {
                         {product.stock > 0 ? product.stock : 'Épuisé'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-center space-x-2">
+                    <TableCell className="text-center space-x-1"> {/* Reduced space-x-2 to space-x-1 */}
                       <Button variant="ghost" size="icon" onClick={() => handleEditProduct(product)} title="Modifier">
                         <Edit3 className="h-4 w-4" />
                       </Button>
@@ -173,7 +205,7 @@ export default function AdminProductsPage() {
                                   <DialogClose asChild>
                                       <Button variant="outline">Annuler</Button>
                                   </DialogClose>
-                                  <Button variant="destructive" onClick={() => handleDeleteProduct(product.id)}>
+                                  <Button variant="destructive" onClick={() => handleDeleteProduct(product.id, product.name)}>
                                       Supprimer
                                   </Button>
                               </DialogFooter>
@@ -185,7 +217,7 @@ export default function AdminProductsPage() {
               }) : (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    Aucun produit trouvé.
+                    Aucun produit trouvé dans Firestore.
                   </TableCell>
                 </TableRow>
               )}
@@ -196,3 +228,5 @@ export default function AdminProductsPage() {
     </div>
   );
 }
+
+    
