@@ -49,7 +49,7 @@ export default function AdminProductsPage() {
 
   const handleDeleteProduct = (productId: string) => {
     setProducts(products.filter((p) => p.id !== productId));
-    toast({ title: "Product Deleted", description: "The product has been successfully deleted." });
+    toast({ title: "Produit Supprimé", description: "Le produit a été supprimé avec succès." });
   };
 
   const handleFormSubmit = (data: any) => {
@@ -62,10 +62,10 @@ export default function AdminProductsPage() {
       setProducts(
         products.map((p) => (p.id === editingProduct.id ? { ...p, ...productData } : p))
       );
-      toast({ title: "Product Updated", description: "The product has been successfully updated." });
+      toast({ title: "Produit Mis à Jour", description: "Le produit a été mis à jour avec succès." });
     } else {
       setProducts([...products, { ...productData, id: String(Date.now()) }]);
-      toast({ title: "Product Added", description: "The new product has been successfully added." });
+      toast({ title: "Produit Ajouté", description: "Le nouveau produit a été ajouté avec succès." });
     }
     setIsDialogOpen(false);
     setEditingProduct(null);
@@ -74,18 +74,18 @@ export default function AdminProductsPage() {
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-primary">Manage Products</h1>
+        <h1 className="text-3xl font-bold text-primary">Gérer les Produits</h1>
         <Button onClick={handleAddProduct} className="bg-primary hover:bg-primary/90">
-          <PlusCircle className="mr-2 h-4 w-4" /> Add Product
+          <PlusCircle className="mr-2 h-4 w-4" /> Ajouter un Produit
         </Button>
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
+            <DialogTitle>{editingProduct ? 'Modifier le Produit' : 'Ajouter un Nouveau Produit'}</DialogTitle>
             <DialogDescription>
-              {editingProduct ? 'Update the details of this product.' : 'Fill in the details for the new product.'}
+              {editingProduct ? 'Mettez à jour les détails de ce produit.' : 'Remplissez les détails pour le nouveau produit.'}
             </DialogDescription>
           </DialogHeader>
           <ProductForm
@@ -105,11 +105,11 @@ export default function AdminProductsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[80px]">Image</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Price</TableHead>
+                <TableHead>Nom</TableHead>
+                <TableHead>Catégorie</TableHead>
+                <TableHead>Prix</TableHead>
                 <TableHead>Stock</TableHead>
-                <TableHead>Featured</TableHead>
+                <TableHead>En Vedette</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -137,7 +137,7 @@ export default function AdminProductsPage() {
                     </TableCell>
                     <TableCell>{product.price.toLocaleString()} FCFA</TableCell>
                     <TableCell>{product.stock}</TableCell>
-                    <TableCell>{product.featured ? <Badge>Yes</Badge> : <Badge variant="secondary">No</Badge>}</TableCell>
+                    <TableCell>{product.featured ? <Badge>Oui</Badge> : <Badge variant="secondary">Non</Badge>}</TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button variant="outline" size="icon" onClick={() => handleEditProduct(product)}>
                         <Edit className="h-4 w-4" />
@@ -152,7 +152,7 @@ export default function AdminProductsPage() {
             </TableBody>
           </Table>
         ) : (
-           <p className="text-center py-4 text-muted-foreground">No products found. Add new products to see them here.</p>
+           <p className="text-center py-4 text-muted-foreground">Aucun produit trouvé. Ajoutez de nouveaux produits pour les voir ici.</p>
         )}
       </div>
     </div>

@@ -1,10 +1,11 @@
+
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { Toaster } from "@/components/ui/toaster";
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Admin - Sonko Shop',
-  description: 'Administration panel for Sonko Shop.',
+  description: "Panneau d'administration pour Sonko Shop.",
 };
 
 export default function AdminLayout({

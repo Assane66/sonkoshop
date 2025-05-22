@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -10,6 +11,7 @@ import {
   Settings,
   PenSquare,
   Home,
+  Package, // Ajout de l'icône Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -19,13 +21,13 @@ const AdminSidebar = () => {
   const pathname = usePathname();
 
   const navItems = [
-    { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/admin/products', label: 'Products', icon: ShoppingBag },
-    { href: '/admin/banners', label: 'Banners', icon: ImageIcon },
-    { href: '/admin/ad-copy-generator', label: 'Ad Copy Tool', icon: PenSquare },
-    // { href: '/admin/orders', label: 'Orders', icon: Package },
-    // { href: '/admin/users', label: 'Users', icon: Users },
-    // { href: '/admin/settings', label: 'Settings', icon: Settings },
+    { href: '/admin', label: 'Tableau de Bord', icon: LayoutDashboard },
+    { href: '/admin/products', label: 'Produits', icon: ShoppingBag },
+    { href: '/admin/banners', label: 'Bannières', icon: ImageIcon },
+    { href: '/admin/ad-copy-generator', label: 'Outil Publicitaire', icon: PenSquare },
+    { href: '/admin/orders', label: 'Commandes', icon: Package },
+    { href: '/admin/users', label: 'Utilisateurs', icon: Users },
+    { href: '/admin/settings', label: 'Paramètres', icon: Settings },
   ];
 
   return (

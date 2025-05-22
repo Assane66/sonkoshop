@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -46,7 +47,7 @@ export default function AdminBannersPage() {
 
   const handleDeleteBanner = (bannerId: string) => {
     setBanners(banners.filter((b) => b.id !== bannerId));
-    toast({ title: "Banner Deleted", description: "The banner has been successfully deleted." });
+    toast({ title: "Bannière Supprimée", description: "La bannière a été supprimée avec succès." });
   };
 
   const handleFormSubmit = (data: any) => {
@@ -54,10 +55,10 @@ export default function AdminBannersPage() {
       setBanners(
         banners.map((b) => (b.id === editingBanner.id ? { ...b, ...data } : b))
       );
-      toast({ title: "Banner Updated", description: "The banner has been successfully updated." });
+      toast({ title: "Bannière Mise à Jour", description: "La bannière a été mise à jour avec succès." });
     } else {
       setBanners([...banners, { ...data, id: String(Date.now()) }]);
-      toast({ title: "Banner Added", description: "The new banner has been successfully added." });
+      toast({ title: "Bannière Ajoutée", description: "La nouvelle bannière a été ajoutée avec succès." });
     }
     setIsDialogOpen(false);
     setEditingBanner(null);
@@ -66,18 +67,18 @@ export default function AdminBannersPage() {
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-primary">Manage Banners</h1>
+        <h1 className="text-3xl font-bold text-primary">Gérer les Bannières</h1>
         <Button onClick={handleAddBanner} className="bg-primary hover:bg-primary/90">
-          <PlusCircle className="mr-2 h-4 w-4" /> Add Banner
+          <PlusCircle className="mr-2 h-4 w-4" /> Ajouter une Bannière
         </Button>
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>{editingBanner ? 'Edit Banner' : 'Add New Banner'}</DialogTitle>
+            <DialogTitle>{editingBanner ? 'Modifier la Bannière' : 'Ajouter une Nouvelle Bannière'}</DialogTitle>
             <DialogDescription>
-              {editingBanner ? 'Update the details of this banner.' : 'Fill in the details for the new banner.'}
+              {editingBanner ? 'Mettez à jour les détails de cette bannière.' : 'Remplissez les détails pour la nouvelle bannière.'}
             </DialogDescription>
           </DialogHeader>
           <BannerForm
@@ -97,8 +98,8 @@ export default function AdminBannersPage() {
             <TableHeader>
                 <TableRow>
                 <TableHead className="w-[100px]">Image</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Link</TableHead>
+                <TableHead>Titre</TableHead>
+                <TableHead>Lien</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
             </TableHeader>
@@ -130,7 +131,7 @@ export default function AdminBannersPage() {
             </TableBody>
             </Table>
         ) : (
-            <p className="text-center py-4 text-muted-foreground">No banners found. Add new banners to display them on the homepage.</p>
+            <p className="text-center py-4 text-muted-foreground">Aucune bannière trouvée. Ajoutez de nouvelles bannières pour les afficher sur la page d'accueil.</p>
         )}
       </div>
     </div>
