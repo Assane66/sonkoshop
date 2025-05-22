@@ -19,7 +19,7 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
   const { toast } = useToast();
-  const CategoryIcon = categoryIcons[product.category as ProductCategory];
+  const CategoryIcon = categoryIcons[product.category as keyof typeof categoryIcons] || categoryIcons["Default"];
 
   const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault(); 
@@ -36,8 +36,9 @@ export default function ProductCard({ product }: ProductCardProps) {
     
     let sizeToAdd = undefined;
     if (product.sizes && product.sizes.length > 0) {
-        // For simplicity, allow adding with undefined size. 
-        // CartContext handles optional size.
+        // For simplicity, allow adding with undefined size if no size is pre-selected on card.
+        // Product detail page handles mandatory size selection.
+        // If you want to force size selection even from card, a modal or different UI would be needed.
     }
 
     addToCart(product, 1, sizeToAdd);
@@ -48,18 +49,22 @@ export default function ProductCard({ product }: ProductCardProps) {
     });
   };
 
+  const imageUrl = product.imageUrl && product.imageUrl.trim() !== '' ? product.imageUrl : 'https://placehold.co/600x400.png';
+  const imageAiHint = (product.imageUrl && product.imageUrl.trim() !== '') ? (product.imageAiHint || 'product image') : 'placeholder image';
+
+
   return (
     <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full group">
       <CardHeader className="p-0">
         <Link href={`/products/${product.id}`} legacyBehavior>
           <a className="block relative w-full h-48 md:h-60">
             <Image
-              src={product.imageUrl}
+              src={imageUrl}
               alt={product.name}
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               className="object-cover transition-transform duration-300 group-hover:scale-105"
-              data-ai-hint={product.imageAiHint || 'product image'}
+              data-ai-hint={imageAiHint}
             />
              {product.stock === 0 && (
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -76,10 +81,12 @@ export default function ProductCard({ product }: ProductCardProps) {
           </a>
         </Link>
         <p className="text-sm text-muted-foreground mb-2 h-10 overflow-hidden">{product.description.substring(0,60)}{product.description.length > 60 ? '...' : ''}</p>
-        <Badge variant="secondary" className="text-xs inline-flex items-center gap-1">
-          {CategoryIcon && <CategoryIcon className="h-3 w-3" />}
-          {product.category}
-        </Badge>
+        {product.category && (
+          <Badge variant="secondary" className="text-xs inline-flex items-center gap-1">
+            {CategoryIcon && <CategoryIcon className="h-3 w-3" />}
+            {product.category}
+          </Badge>
+        )}
       </CardContent>
       <CardFooter className="p-4 flex justify-between items-center">
         <p className="text-xl font-bold text-primary">{product.price.toLocaleString('fr-FR')} FCFA</p>
@@ -97,3 +104,4 @@ export default function ProductCard({ product }: ProductCardProps) {
     </Card>
   );
 }
+
