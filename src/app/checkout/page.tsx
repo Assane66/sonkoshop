@@ -65,39 +65,47 @@ export default function CheckoutPage() {
   const onSubmit = async (data: CheckoutFormValues) => {
     setIsProcessing(true);
     
-    const orderItems: OrderItem[] = cartItems.map(item => ({
-      productId: item.id,
-      productName: item.name,
-      quantity: item.quantity,
-      price: item.price,
-      selectedSize: item.selectedSize,
-      imageUrl: item.imageUrl,
-    }));
+    const orderItems: OrderItem[] = cartItems.map(item => {
+      const orderItem: OrderItem = {
+        productId: item.id,
+        productName: item.name,
+        quantity: item.quantity,
+        price: item.price,
+      };
+      if (item.selectedSize) {
+        orderItem.selectedSize = item.selectedSize;
+      }
+      if (item.imageUrl) {
+        orderItem.imageUrl = item.imageUrl;
+      }
+      return orderItem;
+    });
 
     const customerInfo: CustomerInfo = {
       fullName: data.fullName,
-      address: data.address, // L'adresse de livraison est utilisée pour les infos client et l'adresse de livraison
+      address: data.address, 
       phone: data.phone,
     };
 
     if (data.paymentMethod === 'cod') {
       try {
-        const orderData: Omit<Order, 'id' | 'orderDate'> = { // orderDate sera un Timestamp
+        const orderData: Omit<Order, 'id' | 'orderDate'> = { 
           customerInfo,
           items: orderItems,
           totalAmount: totalPrice,
-          status: "En attente" as AppOrderStatus, // Assurez-vous que AppOrderStatus.Pending correspond à "En attente"
+          status: "En attente" as AppOrderStatus, 
           paymentMethod: 'cod',
-          shippingAddress: data.address, // Utiliser l'adresse du formulaire
-          // orderDate sera ajouté par Firestore avec serverTimestamp
+          shippingAddress: data.address, 
         };
+        
+        console.log('Tentative d\'enregistrement de la commande COD:', orderData);
 
         await addDoc(collection(db, 'orders'), {
           ...orderData,
-          orderDate: serverTimestamp() // Firestore ajoutera la date/heure du serveur
+          orderDate: serverTimestamp() 
         });
 
-        console.log('Commande (Paiement à la livraison) enregistrée dans Firestore:', orderData);
+        console.log('Commande (Paiement à la livraison) enregistrée avec succès dans Firestore.');
         toast({
           title: "Commande confirmée!",
           description: "Votre commande avec paiement à la livraison a été enregistrée. Nous vous contacterons bientôt.",
@@ -105,12 +113,16 @@ export default function CheckoutPage() {
         clearCart();
         router.push('/checkout/success?method=cod');
 
-      } catch (error) {
-        console.error("Erreur lors de l'enregistrement de la commande COD dans Firestore:", error);
+      } catch (error: any) {
+        console.error("Erreur détaillée lors de l'enregistrement de la commande COD dans Firestore:", error);
+        let description = "Impossible d'enregistrer votre commande. Veuillez réessayer.";
+        if (error.message) {
+          description += ` Détail: ${error.message}`;
+        }
         toast({
           variant: "destructive",
           title: "Erreur de commande",
-          description: "Impossible d'enregistrer votre commande. Veuillez réessayer.",
+          description: description,
         });
         setIsProcessing(false);
       }
@@ -124,9 +136,7 @@ export default function CheckoutPage() {
         setIsProcessing(false);
         return;
       }
-      // Pour Wave, on ne sauvegarde pas la commande ici, car le paiement doit être confirmé (typiquement via webhook)
-      // On pourrait sauvegarder une commande "en attente de paiement Wave" si nécessaire.
-      // Pour l'instant, on redirige et on vide le panier.
+      
       console.log('Redirection vers Wave pour paiement. Commande non sauvegardée localement à ce stade pour Wave.', data, cartItems);
       toast({
         title: "Redirection vers Wave...",
@@ -135,7 +145,9 @@ export default function CheckoutPage() {
       
       const wavePaymentUrl = `${WAVE_PAYMENT_BASE_URL}?amount=${totalPrice}`;
       
-      clearCart();
+      // Il serait préférable de ne vider le panier qu'après confirmation de paiement via webhook.
+      // Pour l'instant, on vide le panier de manière optimiste.
+      clearCart(); 
       setTimeout(() => {
         if (typeof window !== "undefined") window.location.href = wavePaymentUrl;
       }, 1500);
