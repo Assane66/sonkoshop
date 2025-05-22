@@ -15,7 +15,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Line, ResponsiveContainer }
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { cn } from '@/lib/utils'; // Added missing import
+import { cn } from '@/lib/utils'; // Ensure this import is present
 
 // Updated data to somewhat match the visual scale of the image (0 to 40k)
 const monthlyRevenueData = [
