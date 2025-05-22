@@ -14,11 +14,11 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex min-h-screen bg-background"> {/* Use min-h-screen for full height */}
       <AdminSidebar />
       {/* Ajustement pour le desktop: ml-64 pour laisser la place à la sidebar fixe */}
-      <main className="flex-1 p-4 md:ml-64 pt-20 overflow-auto"> 
-        <div className="container mx-auto px-4 py-8">
+      <main className="flex-1 md:ml-64 overflow-auto"> 
+        <div className="container mx-auto px-6 py-8"> {/* Increased padding */}
          {children}
         </div>
       </main>

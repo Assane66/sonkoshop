@@ -2,7 +2,7 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Package, Users, ShoppingCart, BarChart3, LineChart, ListChecks } from "lucide-react";
+import { DollarSign, Package, Users, ShoppingCart, BarChart3, LineChart, ListChecks, AlertTriangle, Bell } from "lucide-react";
 import {
   ChartContainer,
   ChartTooltip,
@@ -11,126 +11,116 @@ import {
   ChartLegendContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Line, ResponsiveContainer, Pie, PieChart, Cell } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Line, ResponsiveContainer } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 
+// Updated data to somewhat match the visual scale of the image (0 to 40k)
 const monthlyRevenueData = [
-  { month: "Jan", desktop: 186000, mobile: 80000 },
-  { month: "Feb", desktop: 305000, mobile: 200000 },
-  { month: "Mar", desktop: 237000, mobile: 120000 },
-  { month: "Apr", desktop: 73000, mobile: 190000 },
-  { month: "May", desktop: 209000, mobile: 130000 },
-  { month: "Jun", desktop: 214000, mobile: 140000 },
+  { month: "Jan", revenue: 5000 },
+  { month: "Feb", revenue: 10000 },
+  { month: "Mar", revenue: 18000 },
+  { month: "Apr", revenue: 25000 },
+  { month: "May", revenue: 38000 },
+  { month: "Jun", revenue: 30000 },
+  { month: "Jul", revenue: 22000 },
 ];
 
 const chartConfig: ChartConfig = {
-  desktop: {
-    label: "Revenu (FCFA)",
-    color: "hsl(var(--primary))",
+  revenue: {
+    label: "Ventes (FCFA)", // Changed label to "Ventes"
+    color: "hsl(var(--primary))", // Use primary color (dark green)
     icon: LineChart,
   },
-  mobile: { // Example, can remove or rename
-    label: "Objectif (FCFA)",
-    color: "hsl(var(--secondary))",
-    icon: LineChart,
+};
+
+const latestOrdersData = [
+  { id: "#1806", customer: "Alice Brown", date: "Apr 23, 2024", status: "Paid" },
+  { id: "#1805", customer: "Bob Smith", date: "Apr 23, 2024", status: "Pending" },
+  { id: "#1804", customer: "Charlie Green", date: "Apr 22, 2024", status: "Pending" },
+  { id: "#1803", customer: "David Lee", date: "Apr 22, 2024", status: "Cancelled" },
+];
+
+const getStatusBadgeVariant = (status: string) => {
+  switch (status.toLowerCase()) {
+    case "paid": return "success"; // Will add this variant or use CSS
+    case "pending": return "warning"; // Will add this variant or use CSS
+    case "cancelled": return "destructive";
+    default: return "secondary";
   }
 };
 
-const salesByCategoryData = [
-  { category: "Maillots", sales: 45, fill: "hsl(var(--chart-1))" },
-  { category: "Chaussures", sales: 32, fill: "hsl(var(--chart-2))"  },
-  { category: "Pantalons", sales: 28, fill: "hsl(var(--chart-3))"  },
-  { category: "Enfants", sales: 22, fill: "hsl(var(--chart-4))"  },
-  { category: "Gardiens", sales: 18, fill: "hsl(var(--chart-5))"  },
-];
-
-const salesByCategoryConfig: ChartConfig = {
-  sales: {
-    label: "Unités Vendues",
-  },
-  Maillots: { label: "Maillots", color: "hsl(var(--chart-1))" },
-  Chaussures: { label: "Chaussures", color: "hsl(var(--chart-2))" },
-  Pantalons: { label: "Pantalons", color: "hsl(var(--chart-3))" },
-  Enfants: { label: "Enfants", color: "hsl(var(--chart-4))" },
-  Gardiens: { label: "Gardiens", color: "hsl(var(--chart-5))" },
-} satisfies ChartConfig;
-
-
-const recentActivities = [
-  { id: "CMD004", customer: "Fatou Kébé", items: 2, total: "58,000 FCFA", status: "En traitement" },
-  { id: "CMD005", customer: "Alioune Ndiaye", items: 1, total: "22,000 FCFA", status: "Expédiée" },
-  { id: "PROD009", customer: "Nouveau Produit", items: 0, total: "Veste de Sport", status: "Ajouté" },
-  { id: "USER003", customer: "Aminata Gueye", items: 0, total: "Nouveau Client", status: "Inscrit" },
-];
-
 export default function AdminDashboardPage() {
+  const totalProducts = 234; // From image
+  const stockAlerts = 3; // From image
+
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-8 text-primary">Tableau de Bord Admin</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+        {/* Optional: Icon on the right, like a settings or notification icon */}
+        {/* <Button variant="ghost" size="icon"><Bell className="h-5 w-5 text-muted-foreground" /></Button> */}
+      </div>
       
       {/* Summary Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-        <Card>
+        <Card className="lg:col-span-1 bg-primary text-primary-foreground">
+          <CardContent className="p-6 flex flex-col items-center justify-center">
+            <div className="text-5xl font-bold">{totalProducts}</div>
+            <p className="text-sm text-primary-foreground/90 mt-1">Total Products</p>
+          </CardContent>
+        </Card>
+        <Card className="lg:col-span-1 border-destructive">
+          <CardContent className="p-6 flex flex-col items-center justify-center relative">
+            <div className="absolute top-2 right-2">
+              <Badge variant="destructive" className="h-6 w-6 p-0 flex items-center justify-center text-xs">{stockAlerts}</Badge>
+            </div>
+            <div className="text-5xl font-bold text-destructive">{stockAlerts}</div>
+            <p className="text-sm text-muted-foreground mt-1">Stock Alerts</p>
+          </CardContent>
+        </Card>
+         {/* Placeholder for other cards if needed */}
+        <Card className="hidden lg:block lg:col-span-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Revenu Total (Mois)</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Revenue (Example)</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">FCFA 1,234,567</div>
-            <p className="text-xs text-muted-foreground">+20.1% depuis le mois dernier</p>
+            <p className="text-xs text-muted-foreground">+20.1% vs last month</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hidden lg:block lg:col-span-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ventes Totales (Mois)</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+120</div>
-            <p className="text-xs text-muted-foreground">+15% depuis le mois dernier</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Produits Actifs</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">58</div>
-            <p className="text-xs text-muted-foreground">+5 depuis la semaine dernière</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Nouveaux Clients</CardTitle>
+            <CardTitle className="text-sm font-medium">New Customers (Example)</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">+32</div>
-            <p className="text-xs text-muted-foreground">+8.2% depuis le mois dernier</p>
+            <p className="text-xs text-muted-foreground">+5% vs last month</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Charts Section */}
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 mb-8">
+      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1 mb-8"> {/* Single column for Sales Report */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <LineChart className="h-5 w-5 text-primary" />
-              Revenu Mensuel
+            <CardTitle className="flex items-center gap-2 text-xl font-semibold">
+              {/* <LineChart className="h-5 w-5 text-primary" />  Icon removed to match image */}
+              Sales Report
             </CardTitle>
-            <CardDescription>Aperçu des revenus générés chaque mois.</CardDescription>
+            {/* <CardDescription>Monthly sales performance.</CardDescription> */}
           </CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="aspect-auto h-[250px] w-full">
+          <CardContent className="pl-2 pr-6 pb-6">
+            <ChartContainer config={chartConfig} className="aspect-video h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                   data={monthlyRevenueData}
-                  margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
+                  margin={{ top: 5, right: 10, left: 0, bottom: 0 }}
                 >
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis
                     dataKey="month"
                     tickLine={false}
@@ -139,105 +129,77 @@ export default function AdminDashboardPage() {
                     tickFormatter={(value) => value.slice(0, 3)}
                   />
                   <YAxis 
-                    tickFormatter={(value) => `${(value / 1000).toLocaleString()}k`}
+                    tickFormatter={(value) => `${(value / 1000)}k`}
                     tickLine={false}
                     axisLine={false}
                     tickMargin={8}
+                    domain={[0, 40000]} // Max value from image is around 40k (assuming $4k is illustrative)
+                    ticks={[0, 10000, 20000, 30000, 40000]} // Match image's y-axis
                   />
-                  <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
-                   <ChartLegend content={<ChartLegendContent />} />
+                  <ChartTooltip 
+                    cursor={{stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '3 3'}} 
+                    content={<ChartTooltipContent indicator="line" nameKey="revenue" labelKey="month" />} 
+                    />
+                  {/* <ChartLegend content={<ChartLegendContent />} /> Removed legend to match image */}
                   <Line
-                    dataKey="desktop"
+                    dataKey="revenue"
                     type="monotone"
-                    stroke="var(--color-desktop)"
-                    strokeWidth={2}
-                    dot={false}
-                    name="Revenu"
+                    stroke="hsl(var(--primary))" // Dark green line
+                    strokeWidth={3} // Thicker line
+                    dot={{ r: 4, fill: "hsl(var(--primary))", strokeWidth:0 }} // Slightly larger dots
+                    activeDot={{ r: 6, fill: "hsl(var(--primary))", strokeWidth:0 }}
+                    name="Revenue"
                   />
-                  {/* <Line
-                    dataKey="mobile"
-                    type="monotone"
-                    stroke="var(--color-mobile)"
-                    strokeWidth={2}
-                    dot={false}
-                    name="Objectif"
-                  /> */}
                 </LineChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              Ventes par Catégorie
-            </CardTitle>
-            <CardDescription>Distribution des unités vendues par catégorie de produits.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={salesByCategoryConfig} className="aspect-auto h-[250px] w-full">
-               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={salesByCategoryData} layout="vertical" margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
-                  <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-                  <XAxis type="number" tickLine={false} axisLine={false} tickMargin={8} />
-                  <YAxis 
-                    dataKey="category" 
-                    type="category" 
-                    tickLine={false} 
-                    axisLine={false} 
-                    tickMargin={8} 
-                    width={80}
-                  />
-                  <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-                  <ChartLegend content={<ChartLegendContent />} />
-                  <Bar dataKey="sales" radius={5}>
-                     {salesByCategoryData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                  </Bar>
-                </BarChart>
               </ResponsiveContainer>
             </ChartContainer>
           </CardContent>
         </Card>
       </div>
       
-      {/* Recent Activity Section */}
+      {/* Latest Orders Section */}
       <div className="mt-8">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ListChecks className="h-5 w-5 text-primary" />
-              Activité Récente
-            </CardTitle>
-            <CardDescription>Aperçu des dernières activités de la boutique.</CardDescription>
+            <CardTitle className="text-xl font-semibold">Latest Orders</CardTitle>
+            {/* <CardDescription>Recent orders in the store.</CardDescription> */}
           </CardHeader>
-          <CardContent>
-            {recentActivities.length > 0 ? (
+          <CardContent className="p-0"> {/* Remove padding to make table flush */}
+            {latestOrdersData.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Type/ID</TableHead>
-                    <TableHead>Détail</TableHead>
-                    <TableHead>Info</TableHead>
-                    <TableHead className="text-right">Statut/Action</TableHead>
+                    <TableHead className="pl-6">Order</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-left pr-6">Status</TableHead> {/* Align left and add padding */}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {recentActivities.map((activity, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">{activity.id.startsWith("CMD") ? "Commande" : activity.id.startsWith("PROD") ? "Produit" : "Utilisateur"}</TableCell>
-                      <TableCell>{activity.customer}</TableCell>
-                      <TableCell>{activity.total} {activity.items > 0 ? `(${activity.items} articles)` : ""}</TableCell>
-                      <TableCell className="text-right"><Badge variant={activity.status === "En traitement" ? "default" : activity.status === "Expédiée" ? "secondary" : "outline"}>{activity.status}</Badge></TableCell>
+                  {latestOrdersData.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium pl-6">{order.id}</TableCell>
+                      <TableCell>{order.customer}</TableCell>
+                      <TableCell>{order.date}</TableCell>
+                      <TableCell className="text-left pr-6">
+                        <Badge 
+                           variant={getStatusBadgeVariant(order.status) as any}
+                           className={cn(
+                            "text-xs py-1 px-2.5",
+                            order.status.toLowerCase() === 'paid' && 'bg-green-100 text-green-700 border-green-200',
+                            order.status.toLowerCase() === 'pending' && 'bg-yellow-100 text-yellow-700 border-yellow-200',
+                            order.status.toLowerCase() === 'cancelled' && 'bg-red-100 text-red-700 border-red-200'
+                           )}
+                        >
+                            {order.status}
+                        </Badge>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             ) : (
-              <p className="text-muted-foreground">Aucune activité récente à afficher pour le moment.</p>
+              <p className="text-muted-foreground p-6 text-center">No recent orders to display.</p>
             )}
           </CardContent>
         </Card>
@@ -245,5 +207,3 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
-
-    
