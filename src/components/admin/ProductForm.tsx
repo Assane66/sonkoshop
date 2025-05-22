@@ -13,12 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import type { Product, SiteCategory } from '@/types';
 import { db } from '@/lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, onSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image'; // Import Image component
 
-const CLOUDINARY_CLOUD_NAME = 'dm6yuokre'; // Votre Cloudinary Cloud Name
-const CLOUDINARY_UPLOAD_PRESET = 'assane_eats'; // Votre Cloudinary Upload Preset
+const CLOUDINARY_CLOUD_NAME = 'dm6yuokre'; 
+const CLOUDINARY_UPLOAD_PRESET = 'assane_eats'; 
 
 const productFormSchema = z.object({
   name: z.string().min(3, "Le nom doit contenir au moins 3 caractères."),
@@ -36,7 +36,7 @@ type ProductFormValues = z.infer<typeof productFormSchema>;
 
 interface ProductFormProps {
   product?: Product | null;
-  onSubmit: (data: Omit<Product, 'id'> | Product) => void; // Updated to accept Omit for new products
+  onSubmit: (data: Omit<Product, 'id'> | Product) => void; 
   onCancel: () => void;
 }
 
@@ -66,29 +66,26 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
   });
 
   useEffect(() => {
-    const fetchCategories = async () => {
-      setIsLoadingCategories(true);
-      try {
-        const categoriesCollectionRef = collection(db, 'categories');
-        const querySnapshot = await getDocs(categoriesCollectionRef);
-        const fetchedCategories: SiteCategory[] = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          name: doc.data().name,
-          iconName: doc.data().iconName,
-        }));
-        setCategories(fetchedCategories);
-        if (fetchedCategories.length > 0 && !product?.category) {
-          setValue('category', fetchedCategories[0].name);
-        }
-      } catch (error) {
-        console.error("Erreur de récupération des catégories pour le formulaire:", error);
-        toast({ variant: "destructive", title: "Erreur Catégories", description: "Impossible de charger les catégories." });
-      } finally {
-        setIsLoadingCategories(false);
+    setIsLoadingCategories(true);
+    const categoriesCollectionRef = collection(db, 'categories');
+    const unsubscribe = onSnapshot(categoriesCollectionRef, (querySnapshot) => {
+      const fetchedCategories: SiteCategory[] = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        name: doc.data().name,
+        iconName: doc.data().iconName,
+      }));
+      setCategories(fetchedCategories);
+      if (fetchedCategories.length > 0 && !product?.category && !watch('category')) {
+        setValue('category', fetchedCategories[0].name);
       }
-    };
-    fetchCategories();
-  }, [toast, product, setValue]);
+      setIsLoadingCategories(false);
+    }, (error) => {
+      console.error("Erreur de récupération des catégories pour le formulaire:", error);
+      toast({ variant: "destructive", title: "Erreur Catégories", description: "Impossible de charger les catégories." });
+      setIsLoadingCategories(false);
+    });
+    return () => unsubscribe();
+  }, [toast, product, setValue, watch]);
 
   useEffect(() => {
     if (product) {
@@ -109,7 +106,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
       });
       setImagePreview(null);
     }
-    setImageFile(null); // Reset file input on product change or new form
+    setImageFile(null); 
   }, [product, reset, categories]);
 
   const selectedSizes = watch('sizes') || [];
@@ -134,7 +131,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
       reader.readAsDataURL(file);
     } else {
       setImageFile(null);
-      setImagePreview(product?.imageUrl || null); // Revert to original if no file selected
+      setImagePreview(product?.imageUrl || null); 
     }
   };
 
@@ -143,29 +140,32 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
     formData.append('file', file);
     formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
+    console.log('Uploading to Cloudinary with:', { cloudName: CLOUDINARY_CLOUD_NAME, preset: CLOUDINARY_UPLOAD_PRESET });
+
     try {
       const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
         method: 'POST',
         body: formData,
       });
       const data = await response.json();
+      console.log('Cloudinary response:', data); 
       if (data.secure_url) {
         return data.secure_url;
       } else {
-        console.error('Cloudinary upload error:', data);
+        console.error('Cloudinary upload error details:', data); 
         toast({ variant: 'destructive', title: 'Erreur Cloudinary', description: data.error?.message || "Le téléversement de l'image a échoué." });
         return null;
       }
     } catch (error) {
       console.error('Failed to upload image to Cloudinary:', error);
-      toast({ variant: 'destructive', title: 'Erreur Réseau', description: "Impossible de contacter le serveur Cloudinary." });
+      toast({ variant: 'destructive', title: 'Erreur Réseau Cloudinary', description: "Impossible de contacter le serveur Cloudinary." });
       return null;
     }
   };
 
   const processSubmit: SubmitHandler<ProductFormValues> = async (data) => {
     setIsUploading(true);
-    let uploadedImageUrl = product?.imageUrl || ''; // Keep existing image URL by default
+    let uploadedImageUrl = product?.imageUrl || ''; 
 
     if (imageFile) {
       const cloudinaryUrl = await uploadImageToCloudinary(imageFile);
@@ -173,16 +173,16 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
         uploadedImageUrl = cloudinaryUrl;
       } else {
         setIsUploading(false);
-        return; // Stop submission if upload failed
+        toast({ variant: 'destructive', title: "Échec du téléversement", description: "L'image n'a pas pu être téléversée. Le produit n'a pas été sauvegardé."});
+        return; 
       }
     }
     
     const finalProductData: Omit<Product, 'id'> | Product = {
       ...data,
-      imageUrl: uploadedImageUrl, // Use the new Cloudinary URL or the existing one
+      imageUrl: uploadedImageUrl, 
     };
 
-    // If it's an existing product, include its ID
     if (product?.id) {
       (finalProductData as Product).id = product.id;
     }
@@ -264,7 +264,6 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
             <Image src={imagePreview} alt="Aperçu" fill sizes="128px" className="object-cover" />
           </div>
         )}
-        {/* Hidden input to satisfy react-hook-form for imageUrl, it's set programmatically */}
         <input type="hidden" {...register('imageUrl')} /> 
         {errors.imageUrl && !imageFile && <p className="text-sm text-destructive mt-1">{errors.imageUrl.message}</p>}
       </div>

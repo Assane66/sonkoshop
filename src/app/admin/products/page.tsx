@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Edit3, Trash2, Search, Eye, Package } from 'lucide-react';
 import Image from 'next/image';
-import type { Product } from '@/types';
+import type { Product, SiteCategory } from '@/types'; // Updated to import SiteCategory
 import { categoryIcons } from '@/types';
 import Link from 'next/link';
 import {
@@ -37,7 +37,7 @@ export default function AdminProductsPage() {
   useEffect(() => {
     setIsLoading(true);
     const productsCollectionRef = collection(db, 'products');
-    const q = query(productsCollectionRef, orderBy("name", "asc")); // Example: order by name
+    const q = query(productsCollectionRef, orderBy("name", "asc")); 
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const fetchedProducts: Product[] = querySnapshot.docs.map(doc => ({
@@ -52,7 +52,7 @@ export default function AdminProductsPage() {
       setIsLoading(false);
     });
 
-    return () => unsubscribe(); // Cleanup listener on component unmount
+    return () => unsubscribe(); 
   }, [toast]);
 
   const filteredProducts = products.filter(product =>
@@ -74,29 +74,32 @@ export default function AdminProductsPage() {
     try {
       await deleteDoc(doc(db, 'products', productId));
       toast({ title: "Produit supprimé", description: `Le produit "${productName}" a été supprimé de Firestore.` });
-      // Real-time updates from onSnapshot will refresh the list
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur de suppression du produit:", error);
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de supprimer le produit." });
+      toast({ variant: "destructive", title: "Erreur", description: `Impossible de supprimer le produit. ${error.message}` });
     }
   };
 
-  const handleFormSubmit = async (productData: Omit<Product, 'id'>) => { // ProductForm now submits Omit<Product,'id'> or full Product
+  const handleFormSubmit = async (productData: Omit<Product, 'id'> | Product) => {
     try {
       if (editingProduct && editingProduct.id) {
         const productDocRef = doc(db, 'products', editingProduct.id);
-        await updateDoc(productDocRef, productData);
+        const dataToUpdate: Partial<Product> = { ...(productData as Product) };
+        // Ensure 'id' is not part of the update payload itself, it's in the doc ref.
+        if ('id' in dataToUpdate) delete (dataToUpdate as any).id;
+        
+        await updateDoc(productDocRef, dataToUpdate);
         toast({ title: "Produit modifié", description: `${productData.name} a été mis à jour dans Firestore.` });
       } else {
-        await addDoc(collection(db, 'products'), productData);
+        await addDoc(collection(db, 'products'), productData as Omit<Product, 'id'>);
         toast({ title: "Produit ajouté", description: `${productData.name} a été ajouté à Firestore.` });
       }
       setIsFormOpen(false);
       setEditingProduct(null);
-      // Real-time updates from onSnapshot will refresh the list
-    } catch (error) {
-      console.error("Erreur de sauvegarde du produit:", error);
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de sauvegarder le produit." });
+    } catch (error: any) {
+      console.error("Erreur détaillée de sauvegarde du produit:", error);
+      console.error("Détails de l'erreur Firestore:", error.code, error.message);
+      toast({ variant: "destructive", title: "Erreur de Sauvegarde", description: `Impossible de sauvegarder le produit. Erreur: ${error.message}` });
     }
   };
   
@@ -157,7 +160,7 @@ export default function AdminProductsPage() {
             </TableHeader>
             <TableBody>
               {filteredProducts.length > 0 ? filteredProducts.map((product) => {
-                const CategoryIcon = product.category ? categoryIcons[product.category] || Package : Package;
+                const CategoryIcon = product.category ? categoryIcons[product.category as keyof typeof categoryIcons] || Package : Package;
                 return (
                   <TableRow key={product.id}>
                     <TableCell>
@@ -184,7 +187,7 @@ export default function AdminProductsPage() {
                         {product.stock > 0 ? product.stock : 'Épuisé'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-center space-x-1"> {/* Reduced space-x-2 to space-x-1 */}
+                    <TableCell className="text-center space-x-1"> 
                       <Button variant="ghost" size="icon" onClick={() => handleEditProduct(product)} title="Modifier">
                         <Edit3 className="h-4 w-4" />
                       </Button>
@@ -217,7 +220,7 @@ export default function AdminProductsPage() {
               }) : (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    Aucun produit trouvé dans Firestore.
+                    Aucun produit trouvé dans Firestore. Commencez par en ajouter un !
                   </TableCell>
                 </TableRow>
               )}
@@ -228,5 +231,3 @@ export default function AdminProductsPage() {
     </div>
   );
 }
-
-    
