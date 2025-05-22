@@ -1,13 +1,13 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Shirt, Footprints, Layers, Baby, Sparkles, Shield, Dumbbell, ListOrdered, LayoutGrid } from 'lucide-react';
+import { Shirt, Footprints, Layers, Baby, Sparkles, Shield, Dumbbell, LayoutGrid } from 'lucide-react';
 
 export type Product = {
   id: string;
   name: string;
   description: string;
   price: number; // in FCFA
-  category: ProductCategory | string; // Allow string for dynamically added categories
+  category: ProductCategory | string; 
   imageUrl: string;
   stock: number;
   sizes?: string[];
@@ -25,13 +25,9 @@ export enum ProductCategory {
   EquipementsSportifs = "Équipements Sportifs",
 }
 
-// This will be managed in the admin UI, but keep initial values
-export let productCategories: string[] = Object.values(ProductCategory);
-
-export const updateProductCategories = (newCategories: string[]) => {
-  productCategories = newCategories;
-};
-
+// productCategories will now be a static list derived from the enum,
+// as the admin UI for dynamic management is being removed.
+export const productCategories: string[] = Object.values(ProductCategory);
 
 export type Banner = {
   id: string;
@@ -50,11 +46,10 @@ export const categoryIcons: Record<string, LucideIcon> = {
   [ProductCategory.Modes]: Sparkles,
   [ProductCategory.Gardiens]: Shield,
   [ProductCategory.EquipementsSportifs]: Dumbbell,
-  // Add a default or placeholder icon for new categories if needed
-  "Default": LayoutGrid,
+  "Default": LayoutGrid, // Kept for potential use in filters if a category doesn't match
 };
 
-// Types for Orders
+// Types for Orders (kept for potential customer-facing features like order history)
 export enum OrderStatus {
   Pending = "En attente",
   Processing = "En traitement",
@@ -92,10 +87,5 @@ export interface Order {
   shippingAddress: string; 
 }
 
-// Type for Categories in Admin
-export interface SiteCategory {
-  id: string;
-  name: string;
-  description?: string;
-  iconName?: keyof typeof categoryIcons | "Default"; // Optional: reference to an icon key
-}
+// SiteCategory type removed as it was admin-specific
+// updateProductCategories function removed

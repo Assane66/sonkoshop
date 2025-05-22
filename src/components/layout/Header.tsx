@@ -2,7 +2,7 @@
 'use client'; // Required because we use a hook (useCart)
 
 import Link from 'next/link';
-import { ShoppingBag, User } from 'lucide-react';
+import { ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext'; // Import useCart
 
@@ -38,11 +38,7 @@ export default function Header() {
               <span className="sr-only">Panier</span>
             </Link>
           </Button>
-          <Link href="/admin">
-            <Button variant="outline" size="sm">
-              <User className="mr-2 h-4 w-4" /> Admin
-            </Button>
-          </Link>
+          {/* Admin button removed */}
         </div>
       </div>
     </header>
