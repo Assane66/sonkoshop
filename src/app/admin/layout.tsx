@@ -16,7 +16,8 @@ export default function AdminLayout({
   return (
     <div className="flex h-screen bg-background">
       <AdminSidebar />
-      <main className="flex-1 p-4 md:ml-64 pt-20 overflow-auto">
+      {/* Ajustement pour le desktop: ml-64 pour laisser la place à la sidebar fixe */}
+      <main className="flex-1 p-4 md:ml-64 pt-20 overflow-auto"> 
         <div className="container mx-auto px-4 py-8">
          {children}
         </div>

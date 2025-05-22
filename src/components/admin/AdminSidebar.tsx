@@ -33,7 +33,7 @@ const AdminSidebar = () => {
   ];
 
   return (
-    <aside className="fixed top-0 left-0 z-40 w-64 h-screen pt-16 transition-transform -translate-x-full md:translate-x-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
+    <aside className="fixed top-0 left-0 z-30 w-64 h-screen pt-16 bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
       <ScrollArea className="h-full py-4 px-3">
         <ul className="space-y-2 font-medium">
           {navItems.map((item) => (
