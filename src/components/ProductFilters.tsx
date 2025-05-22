@@ -1,13 +1,16 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
-import { productCategories, categoryIcons, type ProductCategory } from '@/types'; 
+import { categoryIcons, type SiteCategory } from '@/types';
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProductFiltersProps {
   onFilterChange: (filters: any) => void; // Define a proper filter type later
@@ -17,21 +20,44 @@ const SIZES = ['S', 'M', 'L', 'XL', 'XXL', '38', '39', '40', '41', '42', '43', '
 const MAX_PRICE = 100000; // Example max price in FCFA
 
 export default function ProductFilters({ onFilterChange }: ProductFiltersProps) {
+  const [availableCategories, setAvailableCategories] = useState<SiteCategory[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, MAX_PRICE]);
   
   const [minPriceDisplay, setMinPriceDisplay] = useState<string>(priceRange[0].toString());
   const [maxPriceDisplay, setMaxPriceDisplay] = useState<string>(priceRange[1].toString());
+  const { toast } = useToast();
 
   useEffect(() => {
+    setIsLoadingCategories(true);
+    const categoriesCollectionRef = collection(db, 'categories');
+    const unsubscribe = onSnapshot(categoriesCollectionRef, (querySnapshot) => {
+      const fetchedCategories: SiteCategory[] = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data() as Omit<SiteCategory, 'id'>
+      }));
+      setAvailableCategories(fetchedCategories);
+      setIsLoadingCategories(false);
+    }, (error) => {
+      console.error("Erreur de récupération des catégories pour les filtres:", error);
+      toast({ variant: "destructive", title: "Erreur Filtres", description: "Impossible de charger les filtres de catégories." });
+      setIsLoadingCategories(false);
+    });
+
+    return () => unsubscribe(); // Cleanup listener on component unmount
+  }, [toast]);
+
+  useEffect(() => {
+    // Ensure this effect runs only on the client after initial hydration
     setMinPriceDisplay(priceRange[0].toLocaleString('fr-FR'));
     setMaxPriceDisplay(priceRange[1].toLocaleString('fr-FR'));
   }, [priceRange]);
 
-  const handleCategoryChange = (category: string) => {
+  const handleCategoryChange = (categoryName: string) => {
     setSelectedCategories(prev =>
-      prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category]
+      prev.includes(categoryName) ? prev.filter(c => c !== categoryName) : [...prev, categoryName]
     );
   };
 
@@ -64,20 +90,26 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
         <AccordionItem value="categories">
           <AccordionTrigger className="text-base font-medium">Catégories</AccordionTrigger>
           <AccordionContent className="space-y-2 pt-2">
-            {productCategories.map(category => {
-              const IconComponent = categoryIcons[category as ProductCategory];
-              return (
-                <div key={category} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`category-${category}`}
-                    checked={selectedCategories.includes(category)}
-                    onCheckedChange={() => handleCategoryChange(category)}
-                  />
-                  {IconComponent && <IconComponent className="h-4 w-4 text-muted-foreground" />}
-                  <Label htmlFor={`category-${category}`} className="text-sm font-normal">{category}</Label>
-                </div>
-              );
-            })}
+            {isLoadingCategories ? (
+              <p className="text-sm text-muted-foreground">Chargement des catégories...</p>
+            ) : availableCategories.length > 0 ? (
+              availableCategories.map(category => {
+                const IconComponent = category.iconName ? categoryIcons[category.iconName] : categoryIcons["Default"];
+                return (
+                  <div key={category.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`category-filter-${category.id}`}
+                      checked={selectedCategories.includes(category.name)}
+                      onCheckedChange={() => handleCategoryChange(category.name)}
+                    />
+                    {IconComponent && <IconComponent className="h-4 w-4 text-muted-foreground" />}
+                    <Label htmlFor={`category-filter-${category.id}`} className="text-sm font-normal">{category.name}</Label>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-sm text-muted-foreground">Aucune catégorie disponible.</p>
+            )}
           </AccordionContent>
         </AccordionItem>
 
