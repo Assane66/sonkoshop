@@ -1,26 +1,34 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
-import { productCategories } from '@/types'; // ProductCategory enum removed as it's not directly used here
+import { productCategories } from '@/types'; 
 
 interface ProductFiltersProps {
   onFilterChange: (filters: any) => void; // Define a proper filter type later
 }
 
 const SIZES = ['S', 'M', 'L', 'XL', 'XXL', '38', '39', '40', '41', '42', '43', '44', '45'];
-// const COLORS = ['Noir', 'Blanc', 'Rouge', 'Vert', 'Bleu', 'Jaune', 'Gris']; // Colors removed
 const MAX_PRICE = 100000; // Example max price in FCFA
 
 export default function ProductFilters({ onFilterChange }: ProductFiltersProps) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-  // const [selectedColors, setSelectedColors] = useState<string[]>([]); // Colors removed
   const [priceRange, setPriceRange] = useState<[number, number]>([0, MAX_PRICE]);
+  
+  // State for display-formatted prices to avoid hydration mismatch
+  const [minPriceDisplay, setMinPriceDisplay] = useState<string>(priceRange[0].toString());
+  const [maxPriceDisplay, setMaxPriceDisplay] = useState<string>(priceRange[1].toString());
+
+  useEffect(() => {
+    setMinPriceDisplay(priceRange[0].toLocaleString('fr-FR'));
+    setMaxPriceDisplay(priceRange[1].toLocaleString('fr-FR'));
+  }, [priceRange]);
 
   const handleCategoryChange = (category: string) => {
     setSelectedCategories(prev =>
@@ -33,22 +41,20 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
       prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]
     );
   };
-
-  // const handleColorChange = (color: string) => { // Colors removed
-  //   setSelectedColors(prev =>
-  //     prev.includes(color) ? prev.filter(c => c !== color) : [...prev, color]
-  //   );
-  // };
   
   const handlePriceChange = (value: number[]) => {
-    setPriceRange([value[0], value[1]]);
+    // Ensure value is always an array of two numbers
+    if (Array.isArray(value) && value.length === 2) {
+        setPriceRange([value[0], value[1]]);
+    } else if (typeof value === 'number') { // Fallback for potential single number value from slider during interaction
+        setPriceRange([value, priceRange[1]]); // Or handle as appropriate
+    }
   };
 
   const applyFilters = () => {
     onFilterChange({
       categories: selectedCategories,
       sizes: selectedSizes,
-      // colors: selectedColors, // Colors removed
       priceRange,
     });
   };
@@ -77,17 +83,16 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
           <AccordionTrigger className="text-base font-medium">Prix (FCFA)</AccordionTrigger>
           <AccordionContent className="pt-4">
             <Slider
-              defaultValue={[0, MAX_PRICE]}
               min={0}
               max={MAX_PRICE}
               step={1000}
-              onValueChange={handlePriceChange}
-              value={priceRange}
+              onValueChange={handlePriceChange} // Directly pass the handler
+              value={priceRange} // Use priceRange for the slider's controlled value
               className="mb-2"
             />
             <div className="flex justify-between text-sm text-muted-foreground">
-              <span>{priceRange[0].toLocaleString()}</span>
-              <span>{priceRange[1].toLocaleString()}</span>
+              <span>{minPriceDisplay}</span>
+              <span>{maxPriceDisplay}</span>
             </div>
           </AccordionContent>
         </AccordionItem>
@@ -108,7 +113,6 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
           </AccordionContent>
         </AccordionItem>
 
-        {/* Colors AccordionItem removed */}
       </Accordion>
       <Button onClick={applyFilters} className="w-full bg-primary hover:bg-primary/90">Appliquer Filtres</Button>
     </div>
