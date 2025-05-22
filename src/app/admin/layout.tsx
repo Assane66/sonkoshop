@@ -1,11 +1,10 @@
 
-import AdminSidebar from '@/components/admin/AdminSidebar';
-import { Toaster } from "@/components/ui/toaster";
 import type { Metadata } from 'next';
+import AdminSidebar from '@/components/admin/AdminSidebar';
 
 export const metadata: Metadata = {
   title: 'Admin - Sonko Shop',
-  description: "Panneau d'administration pour Sonko Shop.",
+  description: 'Section d\'administration de Sonko Shop.',
 };
 
 export default function AdminLayout({
@@ -14,15 +13,11 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-background"> {/* Use min-h-screen for full height */}
+    <div className="flex min-h-screen bg-[hsl(var(--admin-content-background))]">
       <AdminSidebar />
-      {/* Ajustement pour le desktop: ml-64 pour laisser la place à la sidebar fixe */}
-      <main className="flex-1 md:ml-64 overflow-auto"> 
-        <div className="container mx-auto px-6 py-8"> {/* Increased padding */}
-         {children}
-        </div>
+      <main className="flex-1 p-6 md:p-8 ml-64"> {/* ml-64 for sidebar width */}
+        {children}
       </main>
-      <Toaster />
     </div>
   );
 }

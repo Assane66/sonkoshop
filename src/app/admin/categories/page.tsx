@@ -1,272 +1,224 @@
 
 'use client';
-
-import { useState, useEffect } from 'react';
-import type { SiteCategory, ProductCategory } from '@/types';
-import { productCategories as initialProductCategoriesEnum, categoryIcons, updateProductCategories } from '@/types';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit, Trash2, LayoutGrid } from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { PlusCircle, Edit3, Trash2, LayoutGrid } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
+  DialogTrigger,
   DialogClose,
-} from '@/components/ui/dialog';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+} from "@/components/ui/dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { productCategories as initialProductCategories, categoryIcons, ProductCategory, updateProductCategories } from '@/types'; // Import a way to update categories
+import type { LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface SiteCategory {
+  id: string;
+  name: string;
+  iconName?: keyof typeof categoryIcons; // Store icon name for simplicity
+}
 
 const categoryFormSchema = z.object({
-  name: z.string().min(2, { message: "Le nom de la catégorie doit contenir au moins 2 caractères." }),
-  description: z.string().optional(),
-  iconName: z.string().optional(),
+  name: z.string().min(2, { message: "Le nom doit contenir au moins 2 caractères." }),
+  iconName: z.string().optional(), // Icon name as string
 });
 
 type CategoryFormValues = z.infer<typeof categoryFormSchema>;
 
-// Initialize categories from the enum for the initial state
-const initialCategories: SiteCategory[] = initialProductCategoriesEnum.map((catName, index) => ({
-  id: `cat-${index + 1}`,
-  name: catName,
-  description: `Description pour ${catName}`,
-  iconName: Object.keys(categoryIcons).find(key => categoryIcons[key as keyof typeof categoryIcons] === categoryIcons[catName as ProductCategory]) as keyof typeof categoryIcons || "Default"
+const iconOptions = Object.keys(categoryIcons).map(name => ({
+  name: name as keyof typeof categoryIcons,
+  Icon: categoryIcons[name as keyof typeof categoryIcons]
 }));
 
 
 export default function AdminCategoriesPage() {
-  const [categories, setCategories] = useState<SiteCategory[]>(initialCategories);
-  const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
+  const [categories, setCategories] = useState<SiteCategory[]>(
+    initialProductCategories.map((cat, index) => {
+        // Try to find a matching icon, default otherwise
+        const iconKey = Object.keys(categoryIcons).find(key => categoryIcons[key as keyof typeof categoryIcons].displayName?.toLowerCase().includes(cat.toLowerCase()) || key.toLowerCase() === cat.toLowerCase()) as keyof typeof categoryIcons || "Default";
+        return { id: (index + 1).toString(), name: cat, iconName: iconKey};
+    })
+  );
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<SiteCategory | null>(null);
   const { toast } = useToast();
 
   const form = useForm<CategoryFormValues>({
     resolver: zodResolver(categoryFormSchema),
-    defaultValues: {
-      name: '',
-      description: '',
-      iconName: 'Default',
-    },
+    defaultValues: { name: '', iconName: 'Default' },
   });
 
   useEffect(() => {
     if (editingCategory) {
-      form.reset({
-        name: editingCategory.name,
-        description: editingCategory.description || '',
-        iconName: editingCategory.iconName || 'Default',
-      });
+      form.reset({ name: editingCategory.name, iconName: editingCategory.iconName || 'Default' });
     } else {
-      form.reset({ name: '', description: '', iconName: 'Default' });
+      form.reset({ name: '', iconName: 'Default' });
     }
-  }, [editingCategory, form]);
-  
-  // Update the global productCategories array when local categories change
-  useEffect(() => {
-    updateProductCategories(categories.map(c => c.name));
-  }, [categories]);
-
+  }, [editingCategory, form, isFormOpen]);
 
   const handleAddCategory = () => {
     setEditingCategory(null);
-    form.reset({ name: '', description: '', iconName: 'Default' });
-    setIsFormDialogOpen(true);
+    setIsFormOpen(true);
   };
 
   const handleEditCategory = (category: SiteCategory) => {
     setEditingCategory(category);
-    setIsFormDialogOpen(true);
+    setIsFormOpen(true);
   };
 
   const handleDeleteCategory = (categoryId: string) => {
-    // Prevent deletion if it's one of the original enum categories - for this demo
-    const isInitialEnumCategory = initialProductCategoriesEnum.includes(categories.find(c=>c.id === categoryId)?.name || "");
-    if (isInitialEnumCategory && categories.length <= initialProductCategoriesEnum.length) {
-        toast({ variant: "destructive", title: "Suppression non autorisée", description: "Les catégories de base ne peuvent pas être supprimées dans cette démo." });
-        return;
-    }
-
-    setCategories(categories.filter((c) => c.id !== categoryId));
-    toast({ title: "Catégorie Supprimée", description: "La catégorie a été supprimée." });
+    setCategories(prev => {
+        const updated = prev.filter(c => c.id !== categoryId);
+        updateProductCategories(updated.map(c => c.name)); // Update global list
+        return updated;
+    });
+    toast({ title: "Catégorie supprimée", description: "La catégorie a été retirée (simulation)." });
   };
 
-  const handleFormSubmit = (data: CategoryFormValues) => {
+  const onSubmit: SubmitHandler<CategoryFormValues> = (data) => {
     if (editingCategory) {
-      setCategories(
-        categories.map((c) => (c.id === editingCategory.id ? { ...editingCategory, ...data } : c))
-      );
-      toast({ title: "Catégorie Mise à Jour", description: "La catégorie a été mise à jour." });
+      setCategories(prev => {
+          const updated = prev.map(c => (c.id === editingCategory.id ? { ...c, ...data } : c));
+          updateProductCategories(updated.map(c => c.name));
+          return updated;
+      });
+      toast({ title: "Catégorie modifiée", description: `${data.name} a été mise à jour.` });
     } else {
-      const newCategory: SiteCategory = {
-        id: `cat-${Date.now()}`,
-        ...data,
-        iconName: data.iconName as keyof typeof categoryIcons || "Default",
-      };
-      setCategories([...categories, newCategory]);
-      toast({ title: "Catégorie Ajoutée", description: "La nouvelle catégorie a été ajoutée." });
+      const newCategory: SiteCategory = { ...data, id: (Math.random() * 10000).toString() };
+      setCategories(prev => {
+          const updated = [newCategory, ...prev];
+          updateProductCategories(updated.map(c => c.name));
+          return updated;
+      });
+      toast({ title: "Catégorie ajoutée", description: `${newCategory.name} a été ajoutée.` });
     }
-    setIsFormDialogOpen(false);
+    setIsFormOpen(false);
     setEditingCategory(null);
-    form.reset({ name: '', description: '', iconName: 'Default' });
   };
-  
-  const availableIcons = Object.keys(categoryIcons);
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-primary">Gérer les Catégories</h1>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-foreground">Gestion des Catégories</h1>
         <Button onClick={handleAddCategory} className="bg-primary hover:bg-primary/90">
-          <PlusCircle className="mr-2 h-4 w-4" /> Ajouter une Catégorie
+          <PlusCircle className="mr-2 h-5 w-5" /> Ajouter une Catégorie
         </Button>
       </div>
 
-      {/* Dialog for Category Form */}
-      <Dialog open={isFormDialogOpen} onOpenChange={(isOpen) => {
-          setIsFormDialogOpen(isOpen);
-          if (!isOpen) setEditingCategory(null);
-        }}>
-        <DialogContent className="sm:max-w-lg">
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingCategory ? 'Modifier la Catégorie' : 'Ajouter une Nouvelle Catégorie'}</DialogTitle>
-            <DialogDescription>
-              {editingCategory ? 'Mettez à jour les détails de cette catégorie.' : 'Remplissez les détails pour la nouvelle catégorie.'}
-            </DialogDescription>
+            <DialogTitle>{editingCategory ? 'Modifier la Catégorie' : 'Ajouter une Catégorie'}</DialogTitle>
           </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nom de la catégorie</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Nouveautés" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description (Optionnel)</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Courte description de la catégorie..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="iconName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Icône (Optionnel)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value || "Default"}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choisir une icône" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {availableIcons.map((iconKey) => {
-                          const IconComponent = categoryIcons[iconKey as keyof typeof categoryIcons];
-                          return (
-                            <SelectItem key={iconKey} value={iconKey}>
-                              <div className="flex items-center">
-                                {IconComponent && <IconComponent className="mr-2 h-4 w-4" />}
-                                {iconKey}
-                              </div>
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <DialogClose asChild>
-                    <Button type="button" variant="outline">Annuler</Button>
-                </DialogClose>
-                <Button type="submit" className="bg-primary hover:bg-primary/90">
-                  {editingCategory ? 'Mettre à jour' : 'Créer'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div>
+              <Label htmlFor="name">Nom de la catégorie</Label>
+              <Input id="name" {...form.register('name')} className="mt-1" />
+              {form.formState.errors.name && <p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>}
+            </div>
+            <div>
+                <Label htmlFor="iconName">Icône</Label>
+                <div className="grid grid-cols-5 gap-2 mt-1 border p-2 rounded-md max-h-48 overflow-y-auto">
+                    {iconOptions.map(({ name: iconKey, Icon }) => (
+                        <button
+                            type="button"
+                            key={iconKey}
+                            onClick={() => form.setValue('iconName', iconKey, { shouldValidate: true })}
+                            className={cn(
+                                "flex flex-col items-center justify-center p-2 border rounded-md hover:bg-accent hover:text-accent-foreground",
+                                form.watch('iconName') === iconKey && "bg-accent text-accent-foreground ring-2 ring-primary"
+                            )}
+                            title={iconKey}
+                        >
+                            <Icon className="h-6 w-6 mb-1" />
+                            <span className="text-xs truncate">{iconKey}</span>
+                        </button>
+                    ))}
+                </div>
+                {form.formState.errors.iconName && <p className="text-sm text-destructive mt-1">{form.formState.errors.iconName.message}</p>}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Annuler</Button>
+              <Button type="submit" className="bg-primary hover:bg-primary/90">
+                {editingCategory ? 'Sauvegarder' : 'Ajouter'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Liste des Catégories</CardTitle>
-          <CardDescription>Gérez les catégories de produits de votre boutique.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {categories.length > 0 ? (
-            <Table>
-              <TableHeader>
+
+      <Card className="shadow-sm">
+        <CardContent className="pt-6">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-16">Icône</TableHead>
+                <TableHead>Nom</TableHead>
+                <TableHead className="text-center w-32">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {categories.length > 0 ? categories.map((category) => {
+                const IconComponent = category.iconName ? categoryIcons[category.iconName] : LayoutGrid;
+                return (
+                  <TableRow key={category.id}>
+                    <TableCell className="flex justify-center items-center">
+                      <IconComponent className="h-5 w-5 text-muted-foreground" />
+                    </TableCell>
+                    <TableCell className="font-medium">{category.name}</TableCell>
+                    <TableCell className="text-center space-x-1">
+                      <Button variant="ghost" size="icon" onClick={() => handleEditCategory(category)} title="Modifier">
+                        <Edit3 className="h-4 w-4" />
+                      </Button>
+                       <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80" title="Supprimer">
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                              <DialogHeader>
+                                  <DialogTitle>Confirmer la suppression</DialogTitle>
+                                  <DialogDescription>
+                                      Êtes-vous sûr de vouloir supprimer la catégorie "{category.name}" ? Les produits associés ne seront plus catégorisés.
+                                  </DialogDescription>
+                              </DialogHeader>
+                              <DialogFooter>
+                                  <DialogClose asChild>
+                                      <Button variant="outline">Annuler</Button>
+                                  </DialogClose>
+                                  <Button variant="destructive" onClick={() => handleDeleteCategory(category.id)}>
+                                      Supprimer
+                                  </Button>
+                              </DialogFooter>
+                          </DialogContent>
+                      </Dialog>
+                    </TableCell>
+                  </TableRow>
+                );
+              }) : (
                 <TableRow>
-                  <TableHead className="w-[50px]">Icône</TableHead>
-                  <TableHead>Nom</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                    Aucune catégorie trouvée.
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categories.map((category) => {
-                  const IconComponent = categoryIcons[category.iconName || "Default"] || LayoutGrid;
-                  return (
-                    <TableRow key={category.id}>
-                      <TableCell>
-                        <IconComponent className="h-5 w-5 text-muted-foreground" />
-                      </TableCell>
-                      <TableCell className="font-medium">{category.name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground truncate max-w-xs">{category.description || 'N/A'}</TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button variant="outline" size="icon" onClick={() => handleEditCategory(category)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="destructive" size="icon" onClick={() => handleDeleteCategory(category.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <LayoutGrid className="h-16 w-16 mb-4" />
-              <p className="text-lg">Aucune catégorie pour le moment.</p>
-              <p className="text-sm">Ajoutez de nouvelles catégories pour les organiser.</p>
-            </div>
-          )}
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>

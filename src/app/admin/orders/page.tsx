@@ -1,281 +1,190 @@
 
 'use client';
-
-import { useState } from 'react';
-import type { Order, OrderStatus, CustomerInfo, OrderItem } from '@/types';
-import { orderStatusList } from '@/types';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Eye, Edit, Trash2, Package, Filter, MoreHorizontal, CheckCircle, XCircle, Truck, Clock } from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Eye, Filter, Download } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
   DialogClose,
-} from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dialog";
+import { Order, OrderStatus, OrderItem, CustomerInfo } from '@/types'; // Make sure types are correctly defined
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import Image from 'next/image';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
-const initialOrders: Order[] = [
-  {
-    id: 'CMD001',
-    customerInfo: { fullName: 'Moussa Diop', address: 'Dakar, Sicap Baobab', phone: '771234567' },
-    items: [
-      { productId: '1', productName: 'Maillot Sénégal Authentique', quantity: 1, price: 45000, selectedSize: 'L', imageUrl: 'https://placehold.co/40x40.png' },
-      { productId: '2', productName: 'Chaussures "Vitesse Ultime"', quantity: 1, price: 62000, selectedSize: '42', imageUrl: 'https://placehold.co/40x40.png' },
-    ],
-    totalAmount: 107000,
-    status: OrderStatus.Processing,
-    orderDate: new Date(2024, 6, 15, 10, 30).toISOString(),
-    paymentMethod: 'cod',
-    shippingAddress: 'Dakar, Sicap Baobab',
-  },
-  {
-    id: 'CMD002',
-    customerInfo: { fullName: 'Awa Fall', address: 'Thiès, Randoulène Sud', phone: '781112233' },
-    items: [{ productId: '3', productName: 'Pantalon d\'Entraînement Pro', quantity: 2, price: 28000, selectedSize: 'M', imageUrl: 'https://placehold.co/40x40.png' }],
-    totalAmount: 56000,
-    status: OrderStatus.Shipped,
-    orderDate: new Date(2024, 6, 16, 14, 0).toISOString(),
-    paymentMethod: 'wave',
-    shippingAddress: 'Thiès, Randoulène Sud',
-  },
-   {
-    id: 'CMD003',
-    customerInfo: { fullName: 'Ibrahim Sow', address: 'Saint Louis, Sor', phone: '705556677' },
-    items: [{ productId: '4', productName: 'Ensemble Sportif Enfant "Champion"', quantity: 1, price: 22000, selectedSize: '8A', imageUrl: 'https://placehold.co/40x40.png' }],
-    totalAmount: 22000,
-    status: OrderStatus.Delivered,
-    orderDate: new Date(2024, 6, 14, 9, 15).toISOString(),
-    paymentMethod: 'cod',
-    shippingAddress: 'Saint Louis, Sor',
-  },
+const mockOrders: Order[] = [
+  { id: 'ORD001', customerInfo: { fullName: 'Moussa Diop', address: 'Dakar, Sicap Liberté', phone: '771234567' }, items: [{ productId: '1', productName: 'Maillot Sénégal', quantity: 1, price: 45000, selectedSize: 'L' }], totalAmount: 45000, status: OrderStatus.Delivered, orderDate: new Date(2024, 3, 15).toISOString(), paymentMethod: 'cod', shippingAddress: 'Dakar, Sicap Liberté' },
+  { id: 'ORD002', customerInfo: { fullName: 'Aissatou Fall', address: 'Thiès, Grand Standing', phone: '781234567' }, items: [{ productId: '2', productName: 'Chaussures Vitesse', quantity: 1, price: 62000, selectedSize: '42' }, { productId: '6', productName: 'Sac de Sport', quantity: 1, price: 18000 }], totalAmount: 80000, status: OrderStatus.Shipped, orderDate: new Date(2024, 4, 1).toISOString(), paymentMethod: 'wave', shippingAddress: 'Thiès, Grand Standing' },
+  { id: 'ORD003', customerInfo: { fullName: 'Alioune Badara Gueye', address: 'Saint Louis, Nord', phone: '701234567' }, items: [{ productId: '4', productName: 'Ensemble Enfant', quantity: 2, price: 22000 }], totalAmount: 44000, status: OrderStatus.Processing, orderDate: new Date(2024, 4, 5).toISOString(), paymentMethod: 'cod', shippingAddress: 'Saint Louis, Nord' },
+  { id: 'ORD004', customerInfo: { fullName: 'Fatou Ndiaye', address: 'Dakar, Yoff', phone: '761234567' }, items: [{ productId: '7', productName: 'Veste Mode', quantity: 1, price: 55000, selectedSize: 'M' }], totalAmount: 55000, status: OrderStatus.Pending, orderDate: new Date(2024, 4, 10).toISOString(), paymentMethod: 'wave', shippingAddress: 'Dakar, Yoff' },
+  { id: 'ORD005', customerInfo: { fullName: 'Ousmane Sow', address: 'Dakar, Maristes', phone: '751234567' }, items: [{ productId: '1', productName: 'Maillot Sénégal', quantity: 1, price: 45000, selectedSize: 'M' }], totalAmount: 45000, status: OrderStatus.Cancelled, orderDate: new Date(2024, 4, 2).toISOString(), paymentMethod: 'cod', shippingAddress: 'Dakar, Maristes' },
 ];
 
-const getStatusBadgeVariant = (status: OrderStatus) => {
+const getStatusBadgeClass = (status: OrderStatus): string => {
   switch (status) {
-    case OrderStatus.Pending: return 'outline';
-    case OrderStatus.Processing: return 'default';
-    case OrderStatus.Shipped: return 'secondary';
-    case OrderStatus.Delivered: return 'default'; // Consider a success variant if added
-    case OrderStatus.Cancelled: return 'destructive';
-    default: return 'secondary';
+    case OrderStatus.Delivered: return 'bg-green-100 text-green-700 border border-green-200';
+    case OrderStatus.Shipped: return 'bg-blue-100 text-blue-700 border border-blue-200';
+    case OrderStatus.Processing: return 'bg-purple-100 text-purple-700 border border-purple-200';
+    case OrderStatus.Pending: return 'bg-yellow-100 text-yellow-700 border border-yellow-200';
+    case OrderStatus.Cancelled: return 'bg-red-100 text-red-700 border border-red-200';
+    default: return 'bg-gray-100 text-gray-700 border border-gray-200';
   }
 };
-
-const getStatusIcon = (status: OrderStatus) => {
-  switch (status) {
-    case OrderStatus.Pending: return <Clock className="h-3 w-3" />;
-    case OrderStatus.Processing: return <Filter className="h-3 w-3" />; // Using Filter as a placeholder
-    case OrderStatus.Shipped: return <Truck className="h-3 w-3" />;
-    case OrderStatus.Delivered: return <CheckCircle className="h-3 w-3" />;
-    case OrderStatus.Cancelled: return <XCircle className="h-3 w-3" />;
-    default: return <Package className="h-3 w-3" />;
-  }
-};
-
 
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [orders, setOrders] = useState<Order[]>(mockOrders);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
-  const { toast } = useToast();
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const handleViewDetails = (order: Order) => {
     setSelectedOrder(order);
-    setIsDetailDialogOpen(true);
+    setIsDetailModalOpen(true);
   };
-
-  const handleDeleteOrder = (orderId: string) => {
-    // Add confirmation dialog here in a real app
-    setOrders(orders.filter((o) => o.id !== orderId));
-    toast({ title: "Commande Supprimée", description: `La commande ${orderId} a été supprimée.` });
-  };
-
-  const handleUpdateStatus = (orderId: string, newStatus: OrderStatus) => {
-    setOrders(
-      orders.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
+  
+  const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
+    setOrders(prevOrders => 
+      prevOrders.map(order => 
+        order.id === orderId ? { ...order, status: newStatus } : order
+      )
     );
-    toast({ title: "Statut Mis à Jour", description: `Le statut de la commande ${orderId} est maintenant ${newStatus}.` });
+    // Here you would typically call an API to update the order status
   };
 
+  const filteredOrders = orders.filter(order => 
+    order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    order.customerInfo.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    order.status.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-primary">Gérer les Commandes</h1>
-        <p className="text-muted-foreground">
-          Consultez et gérez les commandes des clients.
-        </p>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-foreground">Gestion des Commandes</h1>
+        <div className="flex items-center space-x-2">
+          <Button variant="outline" disabled><Filter className="mr-2 h-4 w-4" /> Filtrer (Bientôt)</Button>
+          <Button variant="outline" disabled><Download className="mr-2 h-4 w-4" /> Exporter (Bientôt)</Button>
+        </div>
       </div>
 
-      {/* Dialog for Order Details */}
-      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Détails de la Commande: {selectedOrder?.id}</DialogTitle>
-            <DialogDescription>
-              Informations complètes de la commande.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedOrder && (
-            <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto">
-              <Card>
-                <CardHeader><CardTitle className="text-lg">Informations Client</CardTitle></CardHeader>
-                <CardContent className="text-sm space-y-1">
-                  <p><strong>Nom:</strong> {selectedOrder.customerInfo.fullName}</p>
-                  <p><strong>Adresse:</strong> {selectedOrder.customerInfo.address}</p>
-                  <p><strong>Téléphone:</strong> {selectedOrder.customerInfo.phone}</p>
-                  {selectedOrder.customerInfo.email && <p><strong>Email:</strong> {selectedOrder.customerInfo.email}</p>}
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader><CardTitle className="text-lg">Articles Commandés</CardTitle></CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Produit</TableHead>
-                        <TableHead className="w-[50px]">Qté</TableHead>
-                        <TableHead className="text-right">Prix Unitaire</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedOrder.items.map(item => (
-                        <TableRow key={item.productId + (item.selectedSize || '')}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Image src={item.imageUrl || 'https://placehold.co/40x40.png'} alt={item.productName} width={30} height={30} className="rounded" data-ai-hint="product thumbnail" />
-                              <div>
-                                {item.productName}
-                                {item.selectedSize && <span className="text-xs text-muted-foreground ml-1">({item.selectedSize})</span>}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>{item.quantity}</TableCell>
-                          <TableCell className="text-right">{item.price.toLocaleString('fr-FR')} FCFA</TableCell>
-                          <TableCell className="text-right">{(item.price * item.quantity).toLocaleString('fr-FR')} FCFA</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-              <Card>
-                 <CardHeader><CardTitle className="text-lg">Résumé Financier et Statut</CardTitle></CardHeader>
-                 <CardContent className="text-sm space-y-2">
-                    <p><strong>Méthode de Paiement:</strong> <Badge variant="outline">{selectedOrder.paymentMethod.toUpperCase()}</Badge></p>
-                    <p><strong>Montant Total:</strong> <span className="font-semibold text-primary">{selectedOrder.totalAmount.toLocaleString('fr-FR')} FCFA</span></p>
-                    <p><strong>Date Commande:</strong> {format(new Date(selectedOrder.orderDate), "dd MMMM yyyy 'à' HH:mm", { locale: fr })}</p>
-                    <div className="flex items-center gap-2">
-                        <strong>Statut Actuel:</strong> 
-                        <Badge variant={getStatusBadgeVariant(selectedOrder.status)} className="inline-flex items-center gap-1">
-                            {getStatusIcon(selectedOrder.status)}
-                            {selectedOrder.status}
-                        </Badge>
-                    </div>
-                 </CardContent>
-              </Card>
-            </div>
-          )}
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="outline">Fermer</Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Card>
+       <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle>Liste des Commandes</CardTitle>
-          <CardDescription>Voici toutes les commandes passées sur votre boutique.</CardDescription>
+            <Input 
+                type="search"
+                placeholder="Rechercher par ID, Client, Statut..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full md:w-1/3"
+            />
         </CardHeader>
         <CardContent>
-          {orders.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID Commande</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-medium">{order.id}</TableCell>
-                    <TableCell>{order.customerInfo.fullName}</TableCell>
-                    <TableCell>{format(new Date(order.orderDate), "dd/MM/yy HH:mm", { locale: fr })}</TableCell>
-                    <TableCell className="text-right">{order.totalAmount.toLocaleString('fr-FR')} FCFA</TableCell>
-                    <TableCell>
-                        <Select value={order.status} onValueChange={(newStatus) => handleUpdateStatus(order.id, newStatus as OrderStatus)}>
-                            <SelectTrigger className="h-8 w-[150px] text-xs">
-                                <SelectValue placeholder="Changer statut" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {orderStatusList.map(statusValue => (
-                                <SelectItem key={statusValue} value={statusValue} className="text-xs">
-                                    <div className="flex items-center gap-2">
-                                     {getStatusIcon(statusValue)} {statusValue}
-                                    </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID Commande</TableHead>
+                <TableHead>Client</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Total</TableHead>
+                <TableHead>Statut</TableHead>
+                <TableHead className="text-center">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredOrders.length > 0 ? filteredOrders.map((order) => (
+                <TableRow key={order.id}>
+                  <TableCell className="font-medium">{order.id}</TableCell>
+                  <TableCell>{order.customerInfo.fullName}</TableCell>
+                  <TableCell>{new Date(order.orderDate).toLocaleDateString('fr-FR')}</TableCell>
+                  <TableCell>{order.totalAmount.toLocaleString('fr-FR')} FCFA</TableCell>
+                  <TableCell>
+                     <Select 
+                        value={order.status} 
+                        onValueChange={(value) => handleStatusChange(order.id, value as OrderStatus)}
+                      >
+                        <SelectTrigger className={cn("h-8 text-xs w-36 border-0 focus:ring-0 focus:ring-offset-0 shadow-none p-0", getStatusBadgeClass(order.status))}>
+                           <SelectValue placeholder="Statut" asChild>
+                             <span className="px-2 py-0.5 rounded-full font-semibold">{order.status}</span>
+                           </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                            {Object.values(OrderStatus).map(statusVal => (
+                                <SelectItem key={statusVal} value={statusVal} className="text-xs">
+                                    {statusVal}
                                 </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order)} title="Voir détails">
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              )) : (
+                 <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        Aucune commande trouvée.
                     </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Actions</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleViewDetails(order)}>
-                            <Eye className="mr-2 h-4 w-4" /> Voir Détails
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleDeleteOrder(order.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                            <Trash2 className="mr-2 h-4 w-4" /> Supprimer
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <Package className="h-16 w-16 mb-4" />
-              <p className="text-lg">Aucune commande pour le moment.</p>
-              <p className="text-sm">Les nouvelles commandes s'afficheront ici.</p>
-            </div>
-          )}
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
+
+      {selectedOrder && (
+        <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+          <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Détails de la Commande : {selectedOrder.id}</DialogTitle>
+              <DialogDescription>
+                Date : {new Date(selectedOrder.orderDate).toLocaleString('fr-FR', {dateStyle: 'full', timeStyle: 'short'})}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div>
+                <h3 className="font-semibold mb-1">Informations Client</h3>
+                <p><strong>Nom:</strong> {selectedOrder.customerInfo.fullName}</p>
+                <p><strong>Adresse:</strong> {selectedOrder.customerInfo.address}</p>
+                <p><strong>Téléphone:</strong> {selectedOrder.customerInfo.phone}</p>
+              </div>
+              <hr/>
+              <div>
+                <h3 className="font-semibold mb-1">Articles Commandés</h3>
+                {selectedOrder.items.map((item, index) => (
+                  <div key={index} className="mb-2 p-2 border rounded-md">
+                    <p><strong>Produit:</strong> {item.productName} {item.selectedSize && `(Taille: ${item.selectedSize})`}</p>
+                    <p><strong>Quantité:</strong> {item.quantity}</p>
+                    <p><strong>Prix unitaire:</strong> {item.price.toLocaleString('fr-FR')} FCFA</p>
+                  </div>
+                ))}
+              </div>
+               <hr/>
+              <div>
+                <p><strong>Adresse de livraison:</strong> {selectedOrder.shippingAddress}</p>
+                <p><strong>Méthode de paiement:</strong> {selectedOrder.paymentMethod === 'cod' ? 'Paiement à la livraison' : 'Wave'}</p>
+                <p className="text-lg font-bold mt-2">Total Commande: {selectedOrder.totalAmount.toLocaleString('fr-FR')} FCFA</p>
+                <p><strong>Statut Actuel:</strong> <Badge className={cn("text-sm", getStatusBadgeClass(selectedOrder.status))}>{selectedOrder.status}</Badge></p>
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">Fermer</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
+

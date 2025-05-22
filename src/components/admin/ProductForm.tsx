@@ -1,216 +1,196 @@
 
 'use client';
 
+import React, { useEffect } from 'react';
+import { useForm, SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import type { Product } from '@/types';
-// Import the dynamic productCategories array
-import { productCategories } from '@/types';
+import { productCategories } from '@/types'; // This will now be the dynamic list
 
 const productFormSchema = z.object({
-  name: z.string().min(3, { message: 'Product name must be at least 3 characters.' }),
-  description: z.string().min(10, { message: 'Description must be at least 10 characters.' }),
-  price: z.coerce.number().positive({ message: 'Price must be a positive number.' }),
-  category: z.string().min(1, { message: "La catégorie est requise."}), // Now a string, validated against dynamic list
-  imageUrl: z.string().url({ message: 'Please enter a valid URL.' }),
-  stock: z.coerce.number().int().min(0, { message: 'Stock cannot be negative.' }),
-  sizes: z.string().optional(), // Comma-separated
-  featured: z.boolean().default(false),
+  name: z.string().min(3, "Le nom doit contenir au moins 3 caractères."),
+  description: z.string().min(10, "La description doit contenir au moins 10 caractères."),
+  price: z.coerce.number().min(0, "Le prix doit être positif."),
+  category: z.string().min(1, "Une catégorie est requise."),
+  stock: z.coerce.number().min(0, "Le stock doit être positif ou nul."),
+  imageUrl: z.string().url("L'URL de l'image n'est pas valide.").or(z.literal('')),
   imageAiHint: z.string().optional(),
+  sizes: z.array(z.string()).optional(), // Array of strings for sizes
+  featured: z.boolean().optional(),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
 
 interface ProductFormProps {
   product?: Product | null;
-  onSubmit: (data: ProductFormValues) => void;
+  onSubmit: (data: Product) => void;
   onCancel: () => void;
 }
 
-export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
-  const defaultValues: Partial<ProductFormValues> = product
-    ? {
-        ...product,
-        category: product.category as string, // Ensure category is string
-        sizes: product.sizes?.join(','),
-      }
-    : {
-        name: '',
-        description: '',
-        price: 0,
-        category: productCategories.length > 0 ? productCategories[0] : '', // Default to first dynamic category
-        imageUrl: '',
-        stock: 0,
-        featured: false,
-        imageAiHint: '',
-      };
+// Example sizes, you might want to manage these dynamically too
+const availableSizes = ['S', 'M', 'L', 'XL', 'XXL', '38', '39', '40', '41', '42', '43', '44', '45', 'Taille unique'];
 
-  const form = useForm<ProductFormValues>({
+export default function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
+  const { register, handleSubmit, control, reset, watch, setValue, formState: { errors } } = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
-    defaultValues,
+    defaultValues: {
+      name: '',
+      description: '',
+      price: 0,
+      category: '',
+      stock: 0,
+      imageUrl: '',
+      imageAiHint: '',
+      sizes: [],
+      featured: false,
+    },
   });
 
-  const handleSubmit = (data: ProductFormValues) => {
-    onSubmit(data);
+  useEffect(() => {
+    if (product) {
+      reset({
+        ...product,
+        price: product.price || 0,
+        stock: product.stock || 0,
+        sizes: product.sizes || [],
+        featured: product.featured || false,
+      });
+    } else {
+        reset({
+            name: '', description: '', price: 0, category: productCategories.length > 0 ? productCategories[0] : '', 
+            stock: 0, imageUrl: '', imageAiHint: '', sizes: [], featured: false,
+        });
+    }
+  }, [product, reset]);
+
+  const selectedSizes = watch('sizes') || [];
+
+  const handleSizeToggle = (size: string) => {
+    const currentSizes = selectedSizes;
+    if (currentSizes.includes(size)) {
+      setValue('sizes', currentSizes.filter(s => s !== size), { shouldValidate: true });
+    } else {
+      setValue('sizes', [...currentSizes, size], { shouldValidate: true });
+    }
+  };
+
+  const processSubmit: SubmitHandler<ProductFormValues> = (data) => {
+    onSubmit({
+      ...data,
+      id: product?.id || '', // Keep existing ID or let parent handle new ID
+    });
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Product Name</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., Maillot Pro" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Detailed product description..." {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-            control={form.control}
-            name="price"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>Price (FCFA)</FormLabel>
-                <FormControl>
-                    <Input type="number" placeholder="35000" {...field} />
-                </FormControl>
-                <FormMessage />
-                </FormItem>
-            )}
-            />
-            <FormField
-            control={form.control}
-            name="stock"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>Stock Quantity</FormLabel>
-                <FormControl>
-                    <Input type="number" placeholder="50" {...field} />
-                </FormControl>
-                <FormMessage />
-                </FormItem>
-            )}
-            />
+    <form onSubmit={handleSubmit(processSubmit)} className="space-y-6">
+      <div>
+        <Label htmlFor="name">Nom du Produit</Label>
+        <Input id="name" {...register('name')} className="mt-1" />
+        {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
+      </div>
+
+      <div>
+        <Label htmlFor="description">Description</Label>
+        <Textarea id="description" {...register('description')} className="mt-1" />
+        {errors.description && <p className="text-sm text-destructive mt-1">{errors.description.message}</p>}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <Label htmlFor="price">Prix (FCFA)</Label>
+          <Input id="price" type="number" {...register('price')} className="mt-1" />
+          {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}
         </div>
-        <FormField
-          control={form.control}
+        <div>
+          <Label htmlFor="stock">Stock</Label>
+          <Input id="stock" type="number" {...register('stock')} className="mt-1" />
+          {errors.stock && <p className="text-sm text-destructive mt-1">{errors.stock.message}</p>}
+        </div>
+      </div>
+      
+      <div>
+        <Label htmlFor="category">Catégorie</Label>
+        <Controller
           name="category"
+          control={control}
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Category</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {productCategories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
+            <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+              <SelectTrigger id="category" className="mt-1">
+                <SelectValue placeholder="Sélectionner une catégorie" />
+              </SelectTrigger>
+              <SelectContent>
+                {productCategories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
         />
-        <FormField
-          control={form.control}
-          name="imageUrl"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Image URL</FormLabel>
-              <FormControl>
-                <Input type="url" placeholder="https://placehold.co/400x400.png" {...field} />
-              </FormControl>
-              <FormDescription>Use placeholders like https://placehold.co/WIDTHxHEIGHT.png</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-         <FormField
-          control={form.control}
-          name="imageAiHint"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Image AI Hint (Optional)</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., football jersey" {...field} />
-              </FormControl>
-              <FormDescription>One or two keywords for placeholder image search.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-            control={form.control}
-            name="sizes"
+        {errors.category && <p className="text-sm text-destructive mt-1">{errors.category.message}</p>}
+      </div>
+
+      <div>
+        <Label htmlFor="imageUrl">URL de l'Image</Label>
+        <Input id="imageUrl" {...register('imageUrl')} className="mt-1" placeholder="https://placehold.co/400x400.png"/>
+        {errors.imageUrl && <p className="text-sm text-destructive mt-1">{errors.imageUrl.message}</p>}
+      </div>
+       <div>
+        <Label htmlFor="imageAiHint">Indice IA pour l'image (1-2 mots)</Label>
+        <Input id="imageAiHint" {...register('imageAiHint')} className="mt-1" placeholder="ex: chaussure sport"/>
+        {errors.imageAiHint && <p className="text-sm text-destructive mt-1">{errors.imageAiHint.message}</p>}
+      </div>
+
+      <div>
+        <Label>Tailles disponibles</Label>
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 mt-2 p-3 border rounded-md">
+          {availableSizes.map(size => (
+            <div key={size} className="flex items-center space-x-2">
+              <Checkbox
+                id={`size-${size}`}
+                checked={selectedSizes.includes(size)}
+                onCheckedChange={() => handleSizeToggle(size)}
+              />
+              <Label htmlFor={`size-${size}`} className="text-sm font-normal cursor-pointer">{size}</Label>
+            </div>
+          ))}
+        </div>
+        {errors.sizes && <p className="text-sm text-destructive mt-1">{errors.sizes.message}</p>}
+      </div>
+      
+      <div className="flex items-center space-x-2">
+        <Controller
+            name="featured"
+            control={control}
             render={({ field }) => (
-                <FormItem>
-                <FormLabel>Sizes (comma-separated)</FormLabel>
-                <FormControl>
-                    <Input placeholder="S,M,L,XL" {...field} />
-                </FormControl>
-                <FormMessage />
-                </FormItem>
+                <Checkbox
+                    id="featured"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                />
             )}
         />
-        <FormField
-          control={form.control}
-          name="featured"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-              <FormControl>
-                <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-              </FormControl>
-              <div className="space-y-1 leading-none">
-                <FormLabel>Featured Product</FormLabel>
-                <FormDescription>Display this product on the homepage.</FormDescription>
-              </div>
-            </FormItem>
-          )}
-        />
-        <div className="flex justify-end space-x-2 pt-4">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit" className="bg-primary hover:bg-primary/90">{product ? 'Update' : 'Create'} Product</Button>
-        </div>
-      </form>
-    </Form>
+        <Label htmlFor="featured" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+            Mettre en vedette sur la page d'accueil
+        </Label>
+      </div>
+
+
+      <div className="flex justify-end space-x-3 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Annuler
+        </Button>
+        <Button type="submit" className="bg-primary hover:bg-primary/90">
+          {product ? 'Sauvegarder les Modifications' : 'Ajouter le Produit'}
+        </Button>
+      </div>
+    </form>
   );
 }
+

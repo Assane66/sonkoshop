@@ -43,7 +43,12 @@ body {
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
 
-    /* Sidebar specific colors removed */
+    /* Admin Sidebar specific colors */
+    --admin-sidebar-background: 0 60% 45%; /* Red from image */
+    --admin-sidebar-foreground: 0 0% 100%; /* White */
+    --admin-sidebar-active-background: 0 60% 35%; /* Darker Red for active item */
+    --admin-sidebar-hover-background: 0 60% 40%; /* Slightly lighter Red for hover */
+    --admin-content-background: 0 0% 96%; /* Light gray for admin content area */
   }
 
   .dark {
@@ -73,7 +78,12 @@ body {
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
 
-    /* Sidebar specific colors removed */
+    /* Admin Sidebar specific colors for dark mode if needed */
+    --admin-sidebar-background: 0 60% 35%; 
+    --admin-sidebar-foreground: 0 0% 95%;
+    --admin-sidebar-active-background: 0 60% 25%;
+    --admin-sidebar-hover-background: 0 60% 30%;
+    --admin-content-background: 0 0% 10%;
   }
 }
 

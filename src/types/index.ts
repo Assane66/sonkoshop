@@ -7,7 +7,7 @@ export type Product = {
   name: string;
   description: string;
   price: number; // in FCFA
-  category: ProductCategory | string; 
+  category: string; // Now a string, managed by admin
   imageUrl: string;
   stock: number;
   sizes?: string[];
@@ -15,6 +15,7 @@ export type Product = {
   imageAiHint?: string;
 };
 
+// ProductCategory enum can still be useful for initial values or strongly-typed references elsewhere if needed.
 export enum ProductCategory {
   Maillots = "Maillots",
   Chaussures = "Chaussures",
@@ -25,9 +26,15 @@ export enum ProductCategory {
   EquipementsSportifs = "Équipements Sportifs",
 }
 
-// productCategories will now be a static list derived from the enum,
-// as the admin UI for dynamic management is being removed.
-export const productCategories: string[] = Object.values(ProductCategory);
+// This list will be managed dynamically by the admin categories page.
+// It's initialized here with some default values.
+export let productCategories: string[] = Object.values(ProductCategory);
+
+// Function to update the productCategories array from admin UI
+export const updateProductCategories = (newCategories: string[]) => {
+  productCategories = newCategories;
+};
+
 
 export type Banner = {
   id: string;
@@ -46,16 +53,20 @@ export const categoryIcons: Record<string, LucideIcon> = {
   [ProductCategory.Modes]: Sparkles,
   [ProductCategory.Gardiens]: Shield,
   [ProductCategory.EquipementsSportifs]: Dumbbell,
-  "Default": LayoutGrid, // Kept for potential use in filters if a category doesn't match
+  "Default": LayoutGrid, // Default/Fallback icon
+  // Add more mappings as needed, keys should be icon names for selection
+  "Chemise": Shirt,
+  "Baskets": Footprints,
+  "Accessoires": LayoutGrid,
 };
 
-// Types for Orders (kept for potential customer-facing features like order history)
+// Types for Orders 
 export enum OrderStatus {
   Pending = "En attente",
   Processing = "En traitement",
   Shipped = "Expédiée",
   Delivered = "Livrée",
-  Cancelled = "Annulée",
+  Cancelled = "Annulé", // Corrected spelling from image
 }
 
 export const orderStatusList = Object.values(OrderStatus);
@@ -64,16 +75,16 @@ export interface OrderItem {
   productId: string;
   productName: string;
   quantity: number;
-  price: number; // Price per unit at time of order
+  price: number; 
   selectedSize?: string;
-  imageUrl?: string; // For display in order details
+  imageUrl?: string; 
 }
 
 export interface CustomerInfo {
   fullName: string;
   address: string;
   phone: string;
-  email?: string; // Optional
+  email?: string; 
 }
 
 export interface Order {
@@ -87,5 +98,9 @@ export interface Order {
   shippingAddress: string; 
 }
 
-// SiteCategory type removed as it was admin-specific
-// updateProductCategories function removed
+// Represents a category as managed in the admin UI
+export interface SiteCategory {
+  id: string;
+  name: string;
+  iconName?: keyof typeof categoryIcons; // Refers to a key in categoryIcons
+}

@@ -1,13 +1,13 @@
 
-'use client'; // Required because we use a hook (useCart)
+'use client'; 
 
 import Link from 'next/link';
-import { ShoppingBag } from 'lucide-react';
+import { ShoppingBag, UserCircle } from 'lucide-react'; // Added UserCircle for Admin
 import { Button } from '@/components/ui/button';
-import { useCart } from '@/context/CartContext'; // Import useCart
+import { useCart } from '@/context/CartContext'; 
 
 export default function Header() {
-  const { getCartTotalItems } = useCart(); // Use the cart hook
+  const { getCartTotalItems } = useCart(); 
   const totalItems = getCartTotalItems();
 
   return (
@@ -38,7 +38,12 @@ export default function Header() {
               <span className="sr-only">Panier</span>
             </Link>
           </Button>
-          {/* Admin button removed */}
+          <Button variant="ghost" size="icon" asChild title="Administration">
+            <Link href="/admin">
+              <UserCircle className="h-5 w-5" />
+              <span className="sr-only">Admin</span>
+            </Link>
+          </Button>
         </div>
       </div>
     </header>
