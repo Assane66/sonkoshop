@@ -8,20 +8,19 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Input as ShadcnInput } from '@/components/ui/input';
-import { ShoppingCart, Zap, Star, CheckCircle, ShieldCheck, Tag, Minus, Plus } from 'lucide-react';
+import { ShoppingCart, Zap, Star, CheckCircle, ShieldCheck, Tag, Minus, Plus, ArrowLeft } from 'lucide-react';
 import type { Product } from '@/types';
-import { categoryIcons } from '@/types'; // Removed ProductCategoryEnum import, using string category
+import { categoryIcons } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/context/CartContext';
-import { doc, getDoc } from 'firebase/firestore'; // Import Firestore functions
-import { db } from '@/lib/firebase'; // Import db instance
-
-// Removed allMockProducts array
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import Link from 'next/link';
 
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
   const [product, setProduct] = useState<Product | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Add loading state
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedSize, setSelectedSize] = useState<string | undefined>(undefined);
   const [quantity, setQuantity] = useState(1);
   const { toast } = useToast();
@@ -30,6 +29,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   useEffect(() => {
     const fetchProduct = async () => {
       if (!params.id) {
+        setProduct(null);
         setIsLoading(false);
         return;
       }
@@ -43,23 +43,24 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           const fetchedProduct: Product = { id: productSnap.id, ...fetchedProductData };
           setProduct(fetchedProduct);
           if (fetchedProduct.sizes && fetchedProduct.sizes.length > 0) {
-            setSelectedSize(fetchedProduct.sizes[0]);
+            setSelectedSize(fetchedProduct.sizes[0]); // Default to first size
           }
         } else {
-          console.log("Aucun produit trouvé avec cet ID!");
-          setProduct(null); // Explicitly set to null if not found
+          console.log("Aucun produit trouvé avec cet ID dans Firestore:", params.id);
+          setProduct(null);
           toast({ variant: "destructive", title: "Produit non trouvé", description: "Ce produit n'existe pas ou plus." });
         }
       } catch (error) {
         console.error("Erreur de récupération du produit:", error);
         toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les détails du produit." });
+        setProduct(null);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchProduct();
-    setQuantity(1);
+    setQuantity(1); // Reset quantity when product ID changes
   }, [params.id, toast]);
 
   const handleAddToCart = () => {
@@ -84,7 +85,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     cart.addToCart(product, quantity, selectedSize);
     toast({
       title: "Produit ajouté au panier!",
-      description: `${product.name} (Qté: ${quantity}${selectedSize ? ', Taille: ' + selectedSize : ''}) a été ajouté à votre panier.`,
+      description: `${product.name} (Qté: ${quantity}${selectedSize ? ', Taille: ' + selectedSize : ''}) a été ajouté.`,
       action: <CheckCircle className="text-green-500" />,
     });
   };
@@ -92,9 +93,11 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
-        <Zap className="mx-auto h-24 w-24 text-primary mb-4 animate-pulse" />
-        <h1 className="text-2xl font-semibold text-muted-foreground">Chargement du produit...</h1>
-        <p className="text-muted-foreground">Veuillez patienter pendant que nous récupérons les détails.</p>
+        <div className="animate-pulse flex flex-col items-center">
+          <Zap className="h-24 w-24 text-primary mb-4" />
+          <h1 className="text-2xl font-semibold text-muted-foreground">Chargement du produit...</h1>
+          <p className="text-muted-foreground">Veuillez patienter.</p>
+        </div>
       </div>
     );
   }
@@ -105,8 +108,11 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         <Zap className="mx-auto h-24 w-24 text-destructive mb-4" />
         <h1 className="text-2xl font-semibold text-destructive">Produit Non Trouvé</h1>
         <p className="text-muted-foreground">Désolé, le produit que vous recherchez n'est pas disponible.</p>
-        <Button asChild className="mt-4">
-          <Link href="/products">Retour aux produits</Link>
+        <Button asChild className="mt-6 bg-primary hover:bg-primary/90">
+          <Link href="/products" className="flex items-center">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Retour aux produits
+          </Link>
         </Button>
       </div>
     );
@@ -114,11 +120,16 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
 
   const CategoryIcon = product.category ? categoryIcons[product.category as keyof typeof categoryIcons] || categoryIcons["Default"] : categoryIcons["Default"];
 
-
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">
+      <Button variant="outline" asChild className="mb-6">
+        <Link href="/products" className="flex items-center text-sm">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Tous les produits
+        </Link>
+      </Button>
       <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-start">
-        <Card className="shadow-xl overflow-hidden">
+        <Card className="shadow-xl overflow-hidden rounded-lg">
           <div className="relative w-full aspect-square">
             <Image
               src={product.imageUrl || 'https://placehold.co/600x600.png'}
@@ -129,23 +140,28 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
               className="object-cover transition-transform duration-300 group-hover:scale-105"
               data-ai-hint={product.imageAiHint || 'product image detail'}
             />
+             {product.stock === 0 && (
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                <Badge variant="destructive" className="text-lg px-4 py-2">ÉPUISÉ</Badge>
+              </div>
+            )}
           </div>
         </Card>
 
         <div className="space-y-6">
-          <Card className="shadow-lg">
+          <Card className="shadow-lg rounded-lg">
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
                   {product.category && (
-                    <Badge variant="outline" className="mb-2 inline-flex items-center gap-1">
-                      {CategoryIcon && <CategoryIcon className="h-4 w-4" />}
+                    <Badge variant="secondary" className="mb-2 inline-flex items-center gap-1.5 py-1 px-2.5 text-xs">
+                      {CategoryIcon && <CategoryIcon className="h-3.5 w-3.5" />}
                       {product.category}
                     </Badge>
                   )}
                   <CardTitle className="text-3xl lg:text-4xl font-bold text-primary">{product.name}</CardTitle>
                 </div>
-                <Badge variant={product.stock > 0 ? "default" : "destructive"} className="text-sm py-1 px-3">
+                <Badge variant={product.stock > 0 ? "default" : "destructive"} className={`text-sm py-1 px-3 ${product.stock > 0 && product.stock <=5 ? 'bg-yellow-500 text-black' : ''}`}>
                   {product.stock > 0 ? `En Stock (${product.stock})` : "Épuisé"}
                 </Badge>
               </div>
@@ -153,7 +169,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} className={`h-5 w-5 ${i < 4 ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
                 ))}
-                <span className="ml-2 text-sm text-muted-foreground">(12 avis)</span>
+                <span className="ml-2 text-sm text-muted-foreground">(12 avis)</span> {/* Avis fictifs */}
               </div>
             </CardHeader>
             <CardContent>
@@ -201,7 +217,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                           setQuantity(Math.max(1, Math.min(product.stock === 0 ? 1 : product.stock, val)));
                         }
                       }}
-                      className="w-16 text-center text-base"
+                      className="w-16 text-center text-base h-9"
                       min="1"
                       max={product.stock === 0 ? 1 : product.stock}
                       disabled={product.stock === 0}
@@ -225,7 +241,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-lg">
             <CardContent className="p-6 space-y-3">
                 <div className="flex items-center text-sm text-muted-foreground">
                     <CheckCircle className="h-5 w-5 mr-2 text-green-500" />
@@ -253,5 +269,4 @@ const Label = ({ htmlFor, children, className }: { htmlFor?: string; children: R
     {children}
   </label>
 );
-
     

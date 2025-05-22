@@ -5,40 +5,44 @@ import { useState, useEffect } from 'react';
 import ProductCard from '@/components/ProductCard';
 import ProductFilters from '@/components/ProductFilters';
 import type { Product } from '@/types';
-// Removed import { ProductCategoryEnum } from '@/types';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
-
-// Mock data - in a real app, this would be fetched
-// const allMockProducts: Product[] = [
-//   { id: '1', name: 'Maillot Sénégal Authentique 2024', description: 'Portez les couleurs des Lions avec fierté. Tissu respirant haute performance.', price: 45000, category: ProductCategoryEnum.Maillots, imageUrl: 'https://placehold.co/400x400.png', stock: 50, sizes: ['S', 'M', 'L'], imageAiHint: 'senegal football jersey' },
-//   { id: '2', name: 'Chaussures de Foot "Vitesse Ultime"', description: 'Légères et réactives pour des accélérations explosives.', price: 62000, category: ProductCategoryEnum.Chaussures, imageUrl: 'https://placehold.co/400x400.png', stock: 30, sizes: ['40', '41', '42'], imageAiHint: 'soccer cleats dynamic' },
-//   { id: '3', name: 'Pantalon d\'Entraînement Pro', description: 'Confort thermique et liberté de mouvement pour vos sessions.', price: 28000, category: ProductCategoryEnum.Pantalons, imageUrl: 'https://placehold.co/400x400.png', stock: 40, sizes: ['M', 'L'], imageAiHint: 'training pants athlete' },
-//   { id: '4', name: 'Ensemble Sportif Enfant "Champion"', description: 'Maillot et short pour les futures stars du sport.', price: 22000, category: ProductCategoryEnum.Enfants, imageUrl: 'https://placehold.co/400x400.png', stock: 25, sizes: ['6A', '8A'], imageAiHint: 'kids sports kit' },
-//   { id: '5', name: 'Gants de Gardien "Muraille"', description: 'Adhérence maximale et protection supérieure pour des arrêts décisifs.', price: 35000, category: ProductCategoryEnum.Gardiens, imageUrl: 'https://placehold.co/400x400.png', stock: 15, sizes: ['8', '9', '10'], imageAiHint: 'goalkeeper gloves' },
-//   { id: '6', name: 'Sac de Sport "Expédition"', description: 'Grand volume et multiples compartiments pour tous vos équipements.', price: 18000, category: ProductCategoryEnum.EquipementsSportifs, imageUrl: 'https://placehold.co/400x400.png', stock: 30, imageAiHint: 'sports duffel bag' },
-//   { id: '7', name: 'Veste de Mode Sportive Urbaine', description: 'Style et confort pour un look athleisure tendance.', price: 55000, category: ProductCategoryEnum.Modes, imageUrl: 'https://placehold.co/400x400.png', stock: 20, sizes: ['S', 'M', 'L'], imageAiHint: 'sporty fashion jacket' },
-// ];
+import { Search, PackageOpen } from 'lucide-react';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ProductsPage() {
-  // const [filteredProducts, setFilteredProducts] = useState<Product[]>(allMockProducts);
-  // For now, products will be empty until fetched from Firestore
-  const [allProducts, setAllProducts] = useState<Product[]>([]); // Will be fetched from Firestore
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeFilters, setActiveFilters] = useState<any>({});
-  const [isLoading, setIsLoading] = useState(true); // Add loading state
-
-  // TODO: Implement fetching products from Firestore here
-  useEffect(() => {
-    // Placeholder: In a real app, fetch products from Firestore
-    // For now, we'll keep it empty and show a loading/empty message
-    setIsLoading(false); // Simulate loading finished
-  }, []);
-
+  const [activeFilters, setActiveFilters] = useState<any>({}); // Consider defining a more specific type
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    let productsToFilter = allProducts;
+    setIsLoading(true);
+    const productsCollectionRef = collection(db, 'products');
+    const q = query(productsCollectionRef, orderBy("name", "asc"));
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const fetchedProducts: Product[] = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data() as Omit<Product, 'id'>
+      }));
+      setAllProducts(fetchedProducts);
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Erreur de récupération des produits (snapshot):", error);
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les produits en temps réel." });
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [toast]);
+
+
+  useEffect(() => {
+    let productsToFilter = [...allProducts];
 
     if (searchTerm) {
       productsToFilter = productsToFilter.filter(p =>
@@ -51,7 +55,7 @@ export default function ProductsPage() {
       productsToFilter = productsToFilter.filter(p => p.category && activeFilters.categories.includes(p.category));
     }
     if (activeFilters.sizes && activeFilters.sizes.length > 0) {
-      productsToFilter = productsToFilter.filter(p => p.sizes && p.sizes.some(s => activeFilters.sizes.includes(s)));
+      productsToFilter = productsToFilter.filter(p => p.sizes && p.sizes.some((s: string) => activeFilters.sizes.includes(s)));
     }
     if (activeFilters.priceRange) {
       productsToFilter = productsToFilter.filter(p => p.price >= activeFilters.priceRange[0] && p.price <= activeFilters.priceRange[1]);
@@ -67,7 +71,10 @@ export default function ProductsPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
-        <p className="text-xl text-muted-foreground">Chargement des produits...</p>
+        <div className="animate-pulse flex flex-col items-center">
+          <PackageOpen className="h-24 w-24 text-primary mb-4" />
+          <p className="text-xl text-muted-foreground">Chargement des produits...</p>
+        </div>
       </div>
     );
   }
@@ -100,8 +107,9 @@ export default function ProductsPage() {
             </div>
           ) : (
             <div className="text-center py-10">
-              <p className="text-xl text-muted-foreground">Aucun produit ne correspond à vos critères de recherche ou aucun produit disponible.</p>
-              <p className="text-muted-foreground mt-2">Les produits seront bientôt chargés depuis la base de données.</p>
+              <PackageOpen className="mx-auto h-20 w-20 text-muted-foreground mb-4" />
+              <p className="text-xl text-muted-foreground">Aucun produit ne correspond à vos critères.</p>
+              {allProducts.length === 0 && <p className="text-sm text-muted-foreground mt-2">Aucun produit n'est actuellement disponible dans la boutique.</p>}
             </div>
           )}
         </main>
@@ -109,5 +117,4 @@ export default function ProductsPage() {
     </div>
   );
 }
-
     

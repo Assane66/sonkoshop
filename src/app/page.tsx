@@ -1,29 +1,47 @@
 
+'use client';
+
+import { useState, useEffect } from 'react';
 import BannerCarousel from '@/components/BannerCarousel';
 import ProductCard from '@/components/ProductCard';
 import type { Banner, Product } from '@/types';
-// Removed import { ProductCategoryEnum } from '@/types';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, limit, onSnapshot } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { PackageOpen } from 'lucide-react';
 
-// Mock data - in a real app, this would be fetched.
 const mockBanners: Banner[] = [
   { id: '1', title: 'Nouvelle Collection Maillots 2024!', subtitle: 'Découvrez les derniers styles et supportez votre équipe.', imageUrl: 'https://placehold.co/1200x500.png', link: '/products?category=Maillots', imageAiHint: 'football jersey stadium' },
   { id: '2', title: 'Promo Chaussures de Sport', subtitle: 'Jusqu\'à -30% sur une sélection.', imageUrl: 'https://placehold.co/1200x500.png', link: '/products?category=Chaussures', imageAiHint: 'sports shoes running' },
   { id: '3', title: 'Équipements Pro pour Gardiens', subtitle: 'Performance et protection maximales.', imageUrl: 'https://placehold.co/1200x500.png', link: '/products?category=Gardiens', imageAiHint: 'goalkeeper gloves save' },
 ];
 
-// const mockProducts: Product[] = [
-//   { id: '1', name: 'Maillot Sénégal Authentique', description: 'Portez les couleurs des Lions avec fierté. Tissu respirant haute performance.', price: 45000, category: ProductCategoryEnum.Maillots, imageUrl: 'https://placehold.co/400x400.png', stock: 50, featured: true, imageAiHint: 'senegal football jersey' },
-//   { id: '2', name: 'Chaussures de Foot "Vitesse Ultime"', description: 'Légères et réactives pour des accélérations explosives.', price: 62000, category: ProductCategoryEnum.Chaussures, imageUrl: 'https://placehold.co/400x400.png', stock: 30, featured: true, imageAiHint: 'soccer cleats dynamic' },
-//   { id: '3', name: 'Pantalon d\'Entraînement Pro', description: 'Confort thermique et liberté de mouvement pour vos sessions.', price: 28000, category: ProductCategoryEnum.Pantalons, imageUrl: 'https://placehold.co/400x400.png', stock: 40, featured: true, imageAiHint: 'training pants athlete' },
-//   { id: '4', name: 'Ensemble Sportif Enfant "Champion"', description: 'Maillot et short pour les futures stars du sport.', price: 22000, category: ProductCategoryEnum.Enfants, imageUrl: 'https://placehold.co/400x400.png', stock: 25, featured: false, imageAiHint: 'kids sports kit' },
-// ];
-
-
 export default function HomePage() {
-  // const featuredProducts = mockProducts.filter(p => p.featured);
-  // For now, featuredProducts will be empty until fetched from Firestore
-  const featuredProducts: Product[] = [];
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
+  useEffect(() => {
+    setIsLoading(true);
+    const productsCollectionRef = collection(db, 'products');
+    const q = query(productsCollectionRef, where("featured", "==", true), limit(8)); // Fetch up to 8 featured products
+
+    // Using onSnapshot for real-time updates, though getDocs might be sufficient if real-time isn't critical here.
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const fetchedProducts: Product[] = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data() as Omit<Product, 'id'>
+      }));
+      setFeaturedProducts(fetchedProducts);
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Erreur de récupération des produits en vedette:", error);
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les produits en vedette." });
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [toast]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -33,20 +51,28 @@ export default function HomePage() {
 
       <section>
         <h2 className="text-3xl font-bold text-center mb-8 text-primary">Produits en Vedette</h2>
-        {featuredProducts.length > 0 ? (
+        {isLoading ? (
+          <div className="text-center py-10">
+             <div className="animate-pulse flex flex-col items-center">
+                <PackageOpen className="h-24 w-24 text-primary mb-4" />
+                <p className="text-xl text-muted-foreground">Chargement des produits en vedette...</p>
+            </div>
+          </div>
+        ) : featuredProducts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {featuredProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
         ) : (
-          <p className="text-center text-muted-foreground">
-            Chargement des produits en vedette... (Bientôt depuis Firestore)
-          </p>
+          <div className="text-center py-10">
+            <PackageOpen className="mx-auto h-20 w-20 text-muted-foreground mb-4" />
+            <p className="text-xl text-muted-foreground">Aucun produit en vedette pour le moment.</p>
+            <p className="text-sm text-muted-foreground mt-2">Revenez bientôt ou explorez tous nos <a href="/products" className="text-primary hover:underline">produits</a>.</p>
+          </div>
         )}
       </section>
     </div>
   );
 }
-
     
