@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Shirt, Footprints, Layers, Child, Sparkles, Shield, Dumbbell } from 'lucide-react';
+import { Shirt, Footprints, Layers, Baby, Sparkles, Shield, Dumbbell } from 'lucide-react';
 
 export type Product = {
   id: string;
@@ -41,8 +41,9 @@ export const categoryIcons: Record<ProductCategory, LucideIcon> = {
   [ProductCategory.Maillots]: Shirt,
   [ProductCategory.Chaussures]: Footprints,
   [ProductCategory.Pantalons]: Layers,
-  [ProductCategory.Enfants]: Child,
+  [ProductCategory.Enfants]: Baby, // Changed from Child to Baby
   [ProductCategory.Modes]: Sparkles,
   [ProductCategory.Gardiens]: Shield,
   [ProductCategory.EquipementsSportifs]: Dumbbell,
 };
+
