@@ -1,22 +1,20 @@
 
 'use client';
 
-import * as React from 'react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Input as ShadcnInput } from '@/components/ui/input'; // Renamed to avoid conflict
+import { Input as ShadcnInput } from '@/components/ui/input';
 import { ShoppingCart, Zap, Star, CheckCircle, ShieldCheck, Tag, Minus, Plus } from 'lucide-react';
 import type { Product } from '@/types';
-import { ProductCategory } from '@/types';
+import { ProductCategory, categoryIcons } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useCart } from '@/context/CartContext'; // Import useCart
+import { useCart } from '@/context/CartContext';
 
-// Mock data - in a real app, this would be fetched based on the ID
 const allMockProducts: Product[] = [
   { id: '1', name: 'Maillot Sénégal Authentique 2024', description: 'Portez les couleurs des Lions de la Teranga avec fierté. Ce maillot authentique est fabriqué avec un tissu respirant haute performance, conçu pour un confort optimal sur et en dehors du terrain. Design officiel avec détails premium.', price: 45000, category: ProductCategory.Maillots, imageUrl: 'https://placehold.co/600x600.png', stock: 50, sizes: ['S', 'M', 'L', 'XL'], featured: true, imageAiHint: 'senegal football jersey' },
   { id: '2', name: 'Chaussures de Foot "Vitesse Ultime"', description: 'Dominez le terrain avec ces chaussures de football légères et réactives. Conçues pour des accélérations explosives et des changements de direction rapides. Crampons optimisés pour une adhérence maximale.', price: 62000, category: ProductCategory.Chaussures, imageUrl: 'https://placehold.co/600x600.png', stock: 30, sizes: ['40', '41', '42', '43', '44'], imageAiHint: 'soccer cleats dynamic' },
@@ -31,10 +29,9 @@ const allMockProducts: Product[] = [
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
   const [product, setProduct] = useState<Product | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | undefined>(undefined);
-  // const [selectedColor, setSelectedColor] = useState<string | undefined>(undefined); // Color selection removed
   const [quantity, setQuantity] = useState(1);
   const { toast } = useToast();
-  const cart = useCart(); // Use cart context
+  const cart = useCart(); 
 
   useEffect(() => {
     const foundProduct = allMockProducts.find(p => p.id === params.id);
@@ -43,11 +40,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       if (foundProduct.sizes && foundProduct.sizes.length > 0) {
         setSelectedSize(foundProduct.sizes[0]);
       }
-      // Color selection removed
-      // if (foundProduct.colors && foundProduct.colors.length > 0) {
-      //   setSelectedColor(foundProduct.colors[0]);
-      // }
-      setQuantity(1); // Reset quantity when product changes
+      setQuantity(1); 
     }
   }, [params.id]);
 
@@ -87,6 +80,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       </div>
     );
   }
+  
+  const CategoryIcon = categoryIcons[product.category as ProductCategory];
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">
@@ -110,7 +105,10 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
-                  <Badge variant="outline" className="mb-2">{product.category}</Badge>
+                  <Badge variant="outline" className="mb-2 inline-flex items-center gap-1">
+                     {CategoryIcon && <CategoryIcon className="h-4 w-4" />}
+                     {product.category}
+                  </Badge>
                   <CardTitle className="text-3xl lg:text-4xl font-bold text-primary">{product.name}</CardTitle>
                 </div>
                 <Badge variant={product.stock > 0 ? "default" : "destructive"} className="text-sm py-1 px-3">
@@ -150,8 +148,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                     </Select>
                   </div>
                 )}
-
-                {/* Color select removed */}
                 
                 <div className="grid grid-cols-3 items-center gap-4">
                   <Label htmlFor="quantity" className="text-base font-medium">Quantité:</Label>
@@ -213,18 +209,12 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           </Card>
         </div>
       </div>
-      
-      {/* TODO: Add related products section or reviews section */}
     </div>
   );
 }
 
-// Helper component that might be defined elsewhere
 const Label = ({ htmlFor, children, className }: { htmlFor: string, children: React.ReactNode, className?: string }) => (
   <label htmlFor={htmlFor} className={`block text-sm font-medium text-gray-700 dark:text-gray-300 ${className}`}>
     {children}
   </label>
 );
-
-// Input component removed as ShadcnInput is used directly from ui/input
-

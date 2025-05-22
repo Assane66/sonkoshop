@@ -1,4 +1,7 @@
 
+import type { LucideIcon } from 'lucide-react';
+import { Shirt, Footprints, Layers, Child, Sparkles, Shield, Dumbbell } from 'lucide-react';
+
 export type Product = {
   id: string;
   name: string;
@@ -8,7 +11,6 @@ export type Product = {
   imageUrl: string;
   stock: number;
   sizes?: string[];
-  // colors?: string[]; // Supprimé
   featured?: boolean;
   imageAiHint?: string;
 };
@@ -34,3 +36,13 @@ export type Banner = {
   imageAiHint?: string;
 };
 
+// New: Category to Icon mapping
+export const categoryIcons: Record<ProductCategory, LucideIcon> = {
+  [ProductCategory.Maillots]: Shirt,
+  [ProductCategory.Chaussures]: Footprints,
+  [ProductCategory.Pantalons]: Layers,
+  [ProductCategory.Enfants]: Child,
+  [ProductCategory.Modes]: Sparkles,
+  [ProductCategory.Gardiens]: Shield,
+  [ProductCategory.EquipementsSportifs]: Dumbbell,
+};

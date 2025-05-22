@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState } from 'react';
-import type { Product } from '@/types';
-import { ProductCategory } from '@/types';
+import type { Product, ProductCategory } from '@/types';
+import { categoryIcons } from '@/types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import {
@@ -19,15 +20,15 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'; // DialogTrigger, DialogFooter, DialogClose removed as they are not used
+} from '@/components/ui/dialog'; 
 import { ProductForm } from '@/components/admin/ProductForm';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 
 const initialProducts: Product[] = [
-  { id: '1', name: 'Maillot Sénégal Authentique', description: 'Portez les couleurs des Lions avec fierté.', price: 45000, category: ProductCategory.Maillots, imageUrl: 'https://placehold.co/40x40.png', stock: 50, featured: true, imageAiHint: 'senegal football jersey', sizes: ['S', 'M', 'L'] }, // colors removed
-  { id: '2', name: 'Chaussures "Vitesse Ultime"', description: 'Légères et réactives pour des accélérations.', price: 62000, category: ProductCategory.Chaussures, imageUrl: 'https://placehold.co/40x40.png', stock: 30, imageAiHint: 'soccer cleats', sizes: ['40', '41', '42'] }, // colors removed
+  { id: '1', name: 'Maillot Sénégal Authentique', description: 'Portez les couleurs des Lions avec fierté.', price: 45000, category: ProductCategory.Maillots, imageUrl: 'https://placehold.co/40x40.png', stock: 50, featured: true, imageAiHint: 'senegal football jersey', sizes: ['S', 'M', 'L'] }, 
+  { id: '2', name: 'Chaussures "Vitesse Ultime"', description: 'Légères et réactives pour des accélérations.', price: 62000, category: ProductCategory.Chaussures, imageUrl: 'https://placehold.co/40x40.png', stock: 30, imageAiHint: 'soccer cleats', sizes: ['40', '41', '42'] }, 
 ];
 
 export default function AdminProductsPage() {
@@ -47,7 +48,6 @@ export default function AdminProductsPage() {
   };
 
   const handleDeleteProduct = (productId: string) => {
-    // Add confirmation dialog here in a real app
     setProducts(products.filter((p) => p.id !== productId));
     toast({ title: "Product Deleted", description: "The product has been successfully deleted." });
   };
@@ -56,7 +56,6 @@ export default function AdminProductsPage() {
     const productData = {
       ...data,
       sizes: data.sizes ? data.sizes.split(',').map((s:string) => s.trim()) : [],
-      // colors: data.colors ? data.colors.split(',').map((c:string) => c.trim()) : [], // colors removed
     };
 
     if (editingProduct) {
@@ -115,33 +114,41 @@ export default function AdminProductsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {products.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell>
-                    <Image
-                      src={product.imageUrl}
-                      alt={product.name}
-                      width={40}
-                      height={40}
-                      className="rounded"
-                      data-ai-hint={product.imageAiHint || 'product icon'}
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium">{product.name}</TableCell>
-                  <TableCell><Badge variant="outline">{product.category}</Badge></TableCell>
-                  <TableCell>{product.price.toLocaleString()} FCFA</TableCell>
-                  <TableCell>{product.stock}</TableCell>
-                  <TableCell>{product.featured ? <Badge>Yes</Badge> : <Badge variant="secondary">No</Badge>}</TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <Button variant="outline" size="icon" onClick={() => handleEditProduct(product)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="destructive" size="icon" onClick={() => handleDeleteProduct(product.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {products.map((product) => {
+                const CategoryIcon = categoryIcons[product.category as ProductCategory];
+                return (
+                  <TableRow key={product.id}>
+                    <TableCell>
+                      <Image
+                        src={product.imageUrl}
+                        alt={product.name}
+                        width={40}
+                        height={40}
+                        className="rounded"
+                        data-ai-hint={product.imageAiHint || 'product icon'}
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium">{product.name}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="inline-flex items-center gap-1">
+                        {CategoryIcon && <CategoryIcon className="h-3 w-3" />}
+                        {product.category}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{product.price.toLocaleString()} FCFA</TableCell>
+                    <TableCell>{product.stock}</TableCell>
+                    <TableCell>{product.featured ? <Badge>Yes</Badge> : <Badge variant="secondary">No</Badge>}</TableCell>
+                    <TableCell className="text-right space-x-2">
+                      <Button variant="outline" size="icon" onClick={() => handleEditProduct(product)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="destructive" size="icon" onClick={() => handleDeleteProduct(product.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         ) : (

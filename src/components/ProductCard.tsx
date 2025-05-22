@@ -1,15 +1,16 @@
 
-'use client'; // Required for onClick handler and useCart hook
+'use client'; 
 
-import type { Product } from '@/types';
+import type { Product, ProductCategory } from '@/types';
+import { categoryIcons } from '@/types';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, CheckCircle } from 'lucide-react';
-import { useCart } from '@/context/CartContext'; // Import useCart
-import { useToast } from '@/hooks/use-toast'; // Import useToast
+import { useCart } from '@/context/CartContext'; 
+import { useToast } from '@/hooks/use-toast'; 
 
 interface ProductCardProps {
   product: Product;
@@ -18,10 +19,11 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
   const { toast } = useToast();
+  const CategoryIcon = categoryIcons[product.category as ProductCategory];
 
   const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault(); // Prevent link navigation if button is inside <a>
-    e.stopPropagation(); // Prevent event bubbling
+    e.preventDefault(); 
+    e.stopPropagation(); 
 
     if (product.stock === 0) {
       toast({
@@ -32,15 +34,10 @@ export default function ProductCard({ product }: ProductCardProps) {
       return;
     }
     
-    // If product has sizes but none selected on card, prompt to go to product page or add default
-    // For now, we add with undefined size if product.sizes exists.
-    // A better UX might be to navigate to product page if sizes are mandatory and not selected.
-    // Or disable add to cart on card if sizes are required.
-    // For simplicity, we allow adding with undefined size for now.
     let sizeToAdd = undefined;
     if (product.sizes && product.sizes.length > 0) {
-        // Potentially pick a default size or leave undefined.
-        // For this iteration, we'll leave it undefined, CartContext handles optional size.
+        // For simplicity, allow adding with undefined size. 
+        // CartContext handles optional size.
     }
 
     addToCart(product, 1, sizeToAdd);
@@ -79,7 +76,10 @@ export default function ProductCard({ product }: ProductCardProps) {
           </a>
         </Link>
         <p className="text-sm text-muted-foreground mb-2 h-10 overflow-hidden">{product.description.substring(0,60)}{product.description.length > 60 ? '...' : ''}</p>
-        <Badge variant="secondary" className="text-xs">{product.category}</Badge>
+        <Badge variant="secondary" className="text-xs inline-flex items-center gap-1">
+          {CategoryIcon && <CategoryIcon className="h-3 w-3" />}
+          {product.category}
+        </Badge>
       </CardContent>
       <CardFooter className="p-4 flex justify-between items-center">
         <p className="text-xl font-bold text-primary">{product.price.toLocaleString('fr-FR')} FCFA</p>

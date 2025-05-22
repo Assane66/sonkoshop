@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
-import { productCategories } from '@/types'; 
+import { productCategories, categoryIcons, type ProductCategory } from '@/types'; 
 
 interface ProductFiltersProps {
   onFilterChange: (filters: any) => void; // Define a proper filter type later
@@ -21,7 +21,6 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, MAX_PRICE]);
   
-  // State for display-formatted prices to avoid hydration mismatch
   const [minPriceDisplay, setMinPriceDisplay] = useState<string>(priceRange[0].toString());
   const [maxPriceDisplay, setMaxPriceDisplay] = useState<string>(priceRange[1].toString());
 
@@ -43,11 +42,10 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
   };
   
   const handlePriceChange = (value: number[]) => {
-    // Ensure value is always an array of two numbers
     if (Array.isArray(value) && value.length === 2) {
         setPriceRange([value[0], value[1]]);
-    } else if (typeof value === 'number') { // Fallback for potential single number value from slider during interaction
-        setPriceRange([value, priceRange[1]]); // Or handle as appropriate
+    } else if (typeof value === 'number') { 
+        setPriceRange([value, priceRange[1]]); 
     }
   };
 
@@ -66,16 +64,20 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
         <AccordionItem value="categories">
           <AccordionTrigger className="text-base font-medium">Catégories</AccordionTrigger>
           <AccordionContent className="space-y-2 pt-2">
-            {productCategories.map(category => (
-              <div key={category} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`category-${category}`}
-                  checked={selectedCategories.includes(category)}
-                  onCheckedChange={() => handleCategoryChange(category)}
-                />
-                <Label htmlFor={`category-${category}`} className="text-sm font-normal">{category}</Label>
-              </div>
-            ))}
+            {productCategories.map(category => {
+              const IconComponent = categoryIcons[category as ProductCategory];
+              return (
+                <div key={category} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`category-${category}`}
+                    checked={selectedCategories.includes(category)}
+                    onCheckedChange={() => handleCategoryChange(category)}
+                  />
+                  {IconComponent && <IconComponent className="h-4 w-4 text-muted-foreground" />}
+                  <Label htmlFor={`category-${category}`} className="text-sm font-normal">{category}</Label>
+                </div>
+              );
+            })}
           </AccordionContent>
         </AccordionItem>
 
@@ -86,13 +88,13 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
               min={0}
               max={MAX_PRICE}
               step={1000}
-              onValueChange={handlePriceChange} // Directly pass the handler
-              value={priceRange} // Use priceRange for the slider's controlled value
+              onValueChange={handlePriceChange} 
+              value={priceRange} 
               className="mb-2"
             />
             <div className="flex justify-between text-sm text-muted-foreground">
-              <span>{minPriceDisplay}</span>
-              <span>{maxPriceDisplay}</span>
+              <span>{minPriceDisplay} FCFA</span>
+              <span>{maxPriceDisplay} FCFA</span>
             </div>
           </AccordionContent>
         </AccordionItem>
