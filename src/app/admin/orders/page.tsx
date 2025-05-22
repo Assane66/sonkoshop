@@ -1,11 +1,11 @@
 
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Filter, Download } from 'lucide-react';
+import { Eye, Filter, Download, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -15,18 +15,13 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Order, OrderStatus, OrderItem, CustomerInfo } from '@/types'; // Make sure types are correctly defined
+import { Order, OrderStatus, OrderItem as AppOrderItem, CustomerInfo, orderStatusList } from '@/types'; 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-
-const mockOrders: Order[] = [
-  { id: 'ORD001', customerInfo: { fullName: 'Moussa Diop', address: 'Dakar, Sicap Liberté', phone: '771234567' }, items: [{ productId: '1', productName: 'Maillot Sénégal', quantity: 1, price: 45000, selectedSize: 'L' }], totalAmount: 45000, status: OrderStatus.Delivered, orderDate: new Date(2024, 3, 15).toISOString(), paymentMethod: 'cod', shippingAddress: 'Dakar, Sicap Liberté' },
-  { id: 'ORD002', customerInfo: { fullName: 'Aissatou Fall', address: 'Thiès, Grand Standing', phone: '781234567' }, items: [{ productId: '2', productName: 'Chaussures Vitesse', quantity: 1, price: 62000, selectedSize: '42' }, { productId: '6', productName: 'Sac de Sport', quantity: 1, price: 18000 }], totalAmount: 80000, status: OrderStatus.Shipped, orderDate: new Date(2024, 4, 1).toISOString(), paymentMethod: 'wave', shippingAddress: 'Thiès, Grand Standing' },
-  { id: 'ORD003', customerInfo: { fullName: 'Alioune Badara Gueye', address: 'Saint Louis, Nord', phone: '701234567' }, items: [{ productId: '4', productName: 'Ensemble Enfant', quantity: 2, price: 22000 }], totalAmount: 44000, status: OrderStatus.Processing, orderDate: new Date(2024, 4, 5).toISOString(), paymentMethod: 'cod', shippingAddress: 'Saint Louis, Nord' },
-  { id: 'ORD004', customerInfo: { fullName: 'Fatou Ndiaye', address: 'Dakar, Yoff', phone: '761234567' }, items: [{ productId: '7', productName: 'Veste Mode', quantity: 1, price: 55000, selectedSize: 'M' }], totalAmount: 55000, status: OrderStatus.Pending, orderDate: new Date(2024, 4, 10).toISOString(), paymentMethod: 'wave', shippingAddress: 'Dakar, Yoff' },
-  { id: 'ORD005', customerInfo: { fullName: 'Ousmane Sow', address: 'Dakar, Maristes', phone: '751234567' }, items: [{ productId: '1', productName: 'Maillot Sénégal', quantity: 1, price: 45000, selectedSize: 'M' }], totalAmount: 45000, status: OrderStatus.Cancelled, orderDate: new Date(2024, 4, 2).toISOString(), paymentMethod: 'cod', shippingAddress: 'Dakar, Maristes' },
-];
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot, doc, updateDoc, orderBy, query, Timestamp } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 const getStatusBadgeClass = (status: OrderStatus): string => {
   switch (status) {
@@ -40,23 +35,53 @@ const getStatusBadgeClass = (status: OrderStatus): string => {
 };
 
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<Order[]>(mockOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const { toast } = useToast();
+
+  useEffect(() => {
+    setIsLoading(true);
+    const ordersCollectionRef = collection(db, 'orders');
+    const q = query(ordersCollectionRef, orderBy("orderDate", "desc"));
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const fetchedOrders: Order[] = querySnapshot.docs.map(docSnapshot => {
+        const data = docSnapshot.data();
+        return {
+          id: docSnapshot.id,
+          ...data,
+          orderDate: (data.orderDate as Timestamp)?.toDate().toISOString() || new Date().toISOString(), // Convert Timestamp to ISO string
+        } as Order;
+      });
+      setOrders(fetchedOrders);
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Erreur de récupération des commandes (snapshot):", error);
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les commandes en temps réel." });
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [toast]);
 
   const handleViewDetails = (order: Order) => {
     setSelectedOrder(order);
     setIsDetailModalOpen(true);
   };
   
-  const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
-    setOrders(prevOrders => 
-      prevOrders.map(order => 
-        order.id === orderId ? { ...order, status: newStatus } : order
-      )
-    );
-    // Here you would typically call an API to update the order status
+  const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
+    try {
+      const orderDocRef = doc(db, 'orders', orderId);
+      await updateDoc(orderDocRef, { status: newStatus });
+      toast({ title: "Statut mis à jour", description: `Le statut de la commande ${orderId} est maintenant ${newStatus}.`});
+      // Real-time updates from onSnapshot will refresh the list, no need to setOrders manually
+    } catch (error) {
+      console.error("Erreur de mise à jour du statut:", error);
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de mettre à jour le statut de la commande." });
+    }
   };
 
   const filteredOrders = orders.filter(order => 
@@ -64,6 +89,15 @@ export default function AdminOrdersPage() {
     order.customerInfo.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     order.status.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (isLoading) {
+    return (
+        <div className="flex flex-col items-center justify-center h-64 space-y-3">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-muted-foreground">Chargement des commandes...</p>
+        </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -102,7 +136,7 @@ export default function AdminOrdersPage() {
                 <TableRow key={order.id}>
                   <TableCell className="font-medium">{order.id}</TableCell>
                   <TableCell>{order.customerInfo.fullName}</TableCell>
-                  <TableCell>{new Date(order.orderDate).toLocaleDateString('fr-FR')}</TableCell>
+                  <TableCell>{new Date(order.orderDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric'})}</TableCell>
                   <TableCell>{order.totalAmount.toLocaleString('fr-FR')} FCFA</TableCell>
                   <TableCell>
                      <Select 
@@ -115,7 +149,7 @@ export default function AdminOrdersPage() {
                            </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                            {Object.values(OrderStatus).map(statusVal => (
+                            {orderStatusList.map(statusVal => (
                                 <SelectItem key={statusVal} value={statusVal} className="text-xs">
                                     {statusVal}
                                 </SelectItem>
@@ -171,7 +205,7 @@ export default function AdminOrdersPage() {
                <hr/>
               <div>
                 <p><strong>Adresse de livraison:</strong> {selectedOrder.shippingAddress}</p>
-                <p><strong>Méthode de paiement:</strong> {selectedOrder.paymentMethod === 'cod' ? 'Paiement à la livraison' : 'Wave'}</p>
+                <p><strong>Méthode de paiement:</strong> {selectedOrder.paymentMethod === 'cod' ? 'Paiement à la livraison' : selectedOrder.paymentMethod}</p>
                 <p className="text-lg font-bold mt-2">Total Commande: {selectedOrder.totalAmount.toLocaleString('fr-FR')} FCFA</p>
                 <p><strong>Statut Actuel:</strong> <Badge className={cn("text-sm", getStatusBadgeClass(selectedOrder.status))}>{selectedOrder.status}</Badge></p>
               </div>
@@ -187,4 +221,3 @@ export default function AdminOrdersPage() {
     </div>
   );
 }
-
