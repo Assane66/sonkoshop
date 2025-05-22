@@ -15,7 +15,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Line, ResponsiveContainer, 
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-constยอดขายรวมData = [
+const monthlyRevenueData = [
   { month: "Jan", desktop: 186000, mobile: 80000 },
   { month: "Feb", desktop: 305000, mobile: 200000 },
   { month: "Mar", desktop: 237000, mobile: 120000 },
@@ -127,7 +127,7 @@ export default function AdminDashboardPage() {
             <ChartContainer config={chartConfig} className="aspect-auto h-[250px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
-                  data={ยอดขายรวมData}
+                  data={monthlyRevenueData}
                   margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
                 >
                   <CartesianGrid vertical={false} strokeDasharray="3 3" />
