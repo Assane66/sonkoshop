@@ -1,3 +1,4 @@
+
 // For now, using mock data. This would typically come from an API or database.
 // This page should be a server component if data fetching is done server-side.
 // For mock data and client-side components like BannerCarousel, it's fine as is.
@@ -5,7 +6,7 @@
 import BannerCarousel from '@/components/BannerCarousel';
 import ProductCard from '@/components/ProductCard';
 import type { Banner, Product } from '@/types';
-import { ProductCategory } from '@/types';
+import { ProductCategoryEnum } from '@/types'; // Changed ProductCategory to ProductCategoryEnum
 
 // Mock data - in a real app, this would be fetched.
 const mockBanners: Banner[] = [
@@ -15,10 +16,10 @@ const mockBanners: Banner[] = [
 ];
 
 const mockProducts: Product[] = [
-  { id: '1', name: 'Maillot Sénégal Authentique', description: 'Portez les couleurs des Lions avec fierté. Tissu respirant haute performance.', price: 45000, category: ProductCategory.Maillots, imageUrl: 'https://placehold.co/400x400.png', stock: 50, featured: true, imageAiHint: 'senegal football jersey' },
-  { id: '2', name: 'Chaussures de Foot "Vitesse Ultime"', description: 'Légères et réactives pour des accélérations explosives.', price: 62000, category: ProductCategory.Chaussures, imageUrl: 'https://placehold.co/400x400.png', stock: 30, featured: true, imageAiHint: 'soccer cleats dynamic' },
-  { id: '3', name: 'Pantalon d\'Entraînement Pro', description: 'Confort thermique et liberté de mouvement pour vos sessions.', price: 28000, category: ProductCategory.Pantalons, imageUrl: 'https://placehold.co/400x400.png', stock: 40, featured: true, imageAiHint: 'training pants athlete' },
-  { id: '4', name: 'Ensemble Sportif Enfant "Champion"', description: 'Maillot et short pour les futures stars du sport.', price: 22000, category: ProductCategory.Enfants, imageUrl: 'https://placehold.co/400x400.png', stock: 25, featured: false, imageAiHint: 'kids sports kit' },
+  { id: '1', name: 'Maillot Sénégal Authentique', description: 'Portez les couleurs des Lions avec fierté. Tissu respirant haute performance.', price: 45000, category: ProductCategoryEnum.Maillots, imageUrl: 'https://placehold.co/400x400.png', stock: 50, featured: true, imageAiHint: 'senegal football jersey' },
+  { id: '2', name: 'Chaussures de Foot "Vitesse Ultime"', description: 'Légères et réactives pour des accélérations explosives.', price: 62000, category: ProductCategoryEnum.Chaussures, imageUrl: 'https://placehold.co/400x400.png', stock: 30, featured: true, imageAiHint: 'soccer cleats dynamic' },
+  { id: '3', name: 'Pantalon d\'Entraînement Pro', description: 'Confort thermique et liberté de mouvement pour vos sessions.', price: 28000, category: ProductCategoryEnum.Pantalons, imageUrl: 'https://placehold.co/400x400.png', stock: 40, featured: true, imageAiHint: 'training pants athlete' },
+  { id: '4', name: 'Ensemble Sportif Enfant "Champion"', description: 'Maillot et short pour les futures stars du sport.', price: 22000, category: ProductCategoryEnum.Enfants, imageUrl: 'https://placehold.co/400x400.png', stock: 25, featured: false, imageAiHint: 'kids sports kit' },
 ];
 
 

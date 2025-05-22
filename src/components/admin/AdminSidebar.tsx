@@ -2,9 +2,12 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Archive, LayoutGrid, ImageIcon, ShoppingCart, Settings, Users, Tag } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { LayoutDashboard, Archive, LayoutGrid, ImageIcon, ShoppingCart, Settings, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 const sidebarNavItems = [
   { href: '/admin', label: 'Tableau de bord', icon: LayoutDashboard },
@@ -12,13 +15,25 @@ const sidebarNavItems = [
   { href: '/admin/categories', label: 'Catégories', icon: LayoutGrid },
   { href: '/admin/banners', label: 'Bannières', icon: ImageIcon },
   { href: '/admin/orders', label: 'Commandes', icon: ShoppingCart },
-  // { href: '/admin/users', label: 'Utilisateurs', icon: Users }, // Removed based on previous request
-  // { href: '/admin/ad-copy-generator', label: 'Gén. Contenu Pub', icon: Sparkles }, // Removed
   { href: '/admin/settings', label: 'Paramètres', icon: Settings },
 ];
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const { logout } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({ title: 'Déconnexion réussie', description: 'Vous avez été déconnecté.' });
+      router.push('/login');
+    } catch (error) {
+      console.error("Erreur de déconnexion:", error);
+      toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de se déconnecter.' });
+    }
+  };
 
   return (
     <aside className="fixed top-0 left-0 z-40 w-64 h-screen bg-[hsl(var(--admin-sidebar-background))] text-[hsl(var(--admin-sidebar-foreground))] shadow-lg flex flex-col">
@@ -45,6 +60,16 @@ export default function AdminSidebar() {
           );
         })}
       </nav>
+      <div className="p-3 mt-auto">
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-left hover:bg-[hsl(var(--admin-sidebar-hover-background))] text-[hsl(var(--admin-sidebar-foreground))]"
+          onClick={handleLogout}
+        >
+          <LogOut className="mr-3 h-5 w-5" />
+          Déconnexion
+        </Button>
+      </div>
     </aside>
   );
 }

@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Edit3, Trash2, Search, Eye, Package, LayoutGrid } from 'lucide-react';
 import Image from 'next/image';
 import type { Product } from '@/types';
-import { ProductCategory, categoryIcons } from '@/types'; // Assuming ProductCategory is exported from types
+import { ProductCategoryEnum, categoryIcons } from '@/types'; 
 import Link from 'next/link';
 import {
   Dialog,
@@ -20,14 +20,14 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import ProductForm from '@/components/admin/ProductForm'; // We'll create this
+import ProductForm from '@/components/admin/ProductForm'; 
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 
 const initialProducts: Product[] = [
-  { id: '1', name: 'Maillot Sénégal Authentique 2024', description: 'Portez les couleurs des Lions avec fierté.', price: 45000, category: ProductCategory.Maillots, imageUrl: 'https://placehold.co/400x400.png', stock: 50, imageAiHint: 'senegal football jersey', sizes: ['S', 'M', 'L'] },
-  { id: '2', name: 'Chaussures de Foot "Vitesse Ultime"', description: 'Légères et réactives pour des accélérations explosives.', price: 62000, category: ProductCategory.Chaussures, imageUrl: 'https://placehold.co/400x400.png', stock: 30, imageAiHint: 'soccer cleats dynamic', sizes: ['40', '41', '42'] },
-  { id: '3', name: 'Pantalon d\'Entraînement Pro', description: 'Confort thermique et liberté de mouvement.', price: 28000, category: ProductCategory.Pantalons, imageUrl: 'https://placehold.co/400x400.png', stock: 0, imageAiHint: 'training pants athlete', sizes: ['M', 'L'] },
+  { id: '1', name: 'Maillot Sénégal Authentique 2024', description: 'Portez les couleurs des Lions avec fierté.', price: 45000, category: ProductCategoryEnum.Maillots, imageUrl: 'https://placehold.co/400x400.png', stock: 50, imageAiHint: 'senegal football jersey', sizes: ['S', 'M', 'L'] },
+  { id: '2', name: 'Chaussures de Foot "Vitesse Ultime"', description: 'Légères et réactives pour des accélérations explosives.', price: 62000, category: ProductCategoryEnum.Chaussures, imageUrl: 'https://placehold.co/400x400.png', stock: 30, imageAiHint: 'soccer cleats dynamic', sizes: ['40', '41', '42'] },
+  { id: '3', name: 'Pantalon d\'Entraînement Pro', description: 'Confort thermique et liberté de mouvement.', price: 28000, category: ProductCategoryEnum.Pantalons, imageUrl: 'https://placehold.co/400x400.png', stock: 0, imageAiHint: 'training pants athlete', sizes: ['M', 'L'] },
 ];
 
 
@@ -127,7 +127,7 @@ export default function AdminProductsPage() {
             </TableHeader>
             <TableBody>
               {filteredProducts.length > 0 ? filteredProducts.map((product) => {
-                const CategoryIcon = categoryIcons[product.category as ProductCategory] || Package;
+                const CategoryIcon = categoryIcons[product.category] || Package;
                 return (
                   <TableRow key={product.id}>
                     <TableCell>
@@ -142,7 +142,7 @@ export default function AdminProductsPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary" className="text-xs inline-flex items-center gap-1">
-                        <CategoryIcon className="h-3 w-3" />
+                        {CategoryIcon && <CategoryIcon className="h-3 w-3" />}
                         {product.category}
                       </Badge>
                     </TableCell>
