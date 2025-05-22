@@ -20,7 +20,7 @@ import Image from 'next/image';
 
 const checkoutFormSchema = z.object({
   fullName: z.string().min(3, "Le nom complet est requis (minimum 3 caractères)."),
-  address: z.string().min(10, "L'adresse de livraison est requise (minimum 10 caractères)."),
+  address: z.string().min(1, "L'adresse de livraison est requise."),
   phone: z.string().regex(/^(70|75|76|77|78)\d{7}$/, "Le numéro de téléphone doit être un numéro sénégalais valide (ex: 771234567)."),
   paymentMethod: z.enum(['cod', 'wave'], {
     required_error: "Vous devez sélectionner une méthode de paiement."
@@ -249,3 +249,4 @@ export default function CheckoutPage() {
     </div>
   );
 }
+
