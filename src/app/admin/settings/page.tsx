@@ -1,4 +1,5 @@
 
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Settings } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -53,8 +54,14 @@ export default function AdminSettingsPage() {
               <Label htmlFor="cashOnDelivery">Activer le paiement à la livraison</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <Checkbox id="wavePayment" />
-              <Label htmlFor="wavePayment">Activer Wave (Indisponible pour le moment)</Label>
+              <Checkbox id="wavePayment" defaultChecked />
+              <Label htmlFor="wavePayment">Activer Wave</Label>
+            </div>
+            {/* Input field for Wave payment link - for admin reference, not directly used in frontend logic for now */}
+            <div className="space-y-1">
+                <Label htmlFor="waveLink">Lien de Paiement Wave (pour référence)</Label>
+                <Input id="waveLink" defaultValue="https://pay.wave.com/m/M_pIXmQ2smGxRM/c/sn/" />
+                <p className="text-xs text-muted-foreground">Le montant sera ajouté dynamiquement à ce lien.</p>
             </div>
             <Button className="bg-primary hover:bg-primary/90">Sauvegarder les Paramètres de Paiement</Button>
           </CardContent>
@@ -63,3 +70,4 @@ export default function AdminSettingsPage() {
     </div>
   );
 }
+

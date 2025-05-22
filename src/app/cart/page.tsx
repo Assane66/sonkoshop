@@ -4,7 +4,7 @@
 import { useCart, type CartItem } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import { Trash2, Plus, Minus, ShoppingCart, XCircle } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingCart, XCircle, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -23,15 +23,10 @@ export default function CartPage() {
   const handleUpdateQuantity = (item: CartItem, newQuantity: number) => {
     const quantityVal = Number(newQuantity);
     if (isNaN(quantityVal) || quantityVal < 1) {
-      // If input is invalid or less than 1, consider removing or setting to 1.
-      // For simplicity, if it's an invalid input event (not button click), we might reset to current quantity or 1.
-      // Here, we assume valid number from buttons or direct input.
-      // If newQuantity from button click is 0 or less, it means remove.
       if (quantityVal < 1) {
         handleRemoveItem(item.id, item.selectedSize);
         return;
       }
-      // If direct input, ensure it's at least 1
       updateQuantity(item.id, 1, item.selectedSize);
 
     } else if (quantityVal > item.stock) {
@@ -134,8 +129,11 @@ export default function CartPage() {
               </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-3">
-              <Button size="lg" className="w-full bg-primary hover:bg-primary/90">
-                Passer à la caisse
+              <Button size="lg" className="w-full bg-primary hover:bg-primary/90" asChild>
+                <Link href="/checkout">
+                    <CreditCard className="mr-2 h-5 w-5" />
+                    Passer à la caisse
+                </Link>
               </Button>
                <Button asChild variant="outline" className="w-full">
                 <Link href="/products">Continuer les achats</Link>
