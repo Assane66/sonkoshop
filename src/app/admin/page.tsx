@@ -15,7 +15,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Line, ResponsiveContainer }
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { cn } from '@/lib/utils'; // Ensure this import is present
+import { cn } from '@/lib/utils'; 
 
 // Updated data to somewhat match the visual scale of the image (0 to 40k)
 const monthlyRevenueData = [
@@ -169,12 +169,7 @@ export default function AdminDashboardPage() {
             {latestOrdersData.length > 0 ? (
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead className="pl-6">Order</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="text-left pr-6">Status</TableHead> {/* Align left and add padding */}
-                  </TableRow>
+                  <TableRow><TableHead className="pl-6">Order</TableHead><TableHead>Customer</TableHead><TableHead>Date</TableHead><TableHead className="text-left pr-6">Status</TableHead></TableRow>
                 </TableHeader>
                 <TableBody>
                   {latestOrdersData.map((order) => (
