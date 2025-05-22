@@ -28,7 +28,7 @@ const productFormSchema = z.object({
   imageUrl: z.string().url({ message: 'Please enter a valid URL.' }),
   stock: z.coerce.number().int().min(0, { message: 'Stock cannot be negative.' }),
   sizes: z.string().optional(), // Comma-separated
-  colors: z.string().optional(), // Comma-separated
+  // colors: z.string().optional(), // Comma-separated // Supprimé
   featured: z.boolean().default(false),
   imageAiHint: z.string().optional(),
 });
@@ -46,7 +46,7 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
     ? {
         ...product,
         sizes: product.sizes?.join(','),
-        colors: product.colors?.join(','),
+        // colors: product.colors?.join(','), // Supprimé
       }
     : {
         name: '',
@@ -175,8 +175,8 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
             </FormItem>
           )}
         />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
+        {/* Supprimé la section pour les couleurs */}
+        <FormField
             control={form.control}
             name="sizes"
             render={({ field }) => (
@@ -188,21 +188,7 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
                 <FormMessage />
                 </FormItem>
             )}
-            />
-            <FormField
-            control={form.control}
-            name="colors"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>Colors (comma-separated)</FormLabel>
-                <FormControl>
-                    <Input placeholder="Red,Green,Blue" {...field} />
-                </FormControl>
-                <FormMessage />
-                </FormItem>
-            )}
-            />
-        </div>
+        />
         <FormField
           control={form.control}
           name="featured"

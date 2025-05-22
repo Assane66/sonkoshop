@@ -1,66 +1,79 @@
 
 'use client';
 
-import * as React from 'react'; // Added React import
+import * as React from 'react';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ShoppingCart, Zap, Star, CheckCircle, ShieldCheck, Tag } from 'lucide-react';
+import { Input as ShadcnInput } from '@/components/ui/input'; // Renamed to avoid conflict
+import { ShoppingCart, Zap, Star, CheckCircle, ShieldCheck, Tag, Minus, Plus } from 'lucide-react';
 import type { Product } from '@/types';
-import { ProductCategory } from '@/types'; // Assuming ProductCategory is exported from types
+import { ProductCategory } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { useCart } from '@/context/CartContext'; // Import useCart
 
 // Mock data - in a real app, this would be fetched based on the ID
 const allMockProducts: Product[] = [
-  { id: '1', name: 'Maillot Sénégal Authentique 2024', description: 'Portez les couleurs des Lions de la Teranga avec fierté. Ce maillot authentique est fabriqué avec un tissu respirant haute performance, conçu pour un confort optimal sur et en dehors du terrain. Design officiel avec détails premium.', price: 45000, category: ProductCategory.Maillots, imageUrl: 'https://placehold.co/600x600.png', stock: 50, sizes: ['S', 'M', 'L', 'XL'], colors: ['Vert', 'Jaune', 'Blanc'], featured: true, imageAiHint: 'senegal football jersey' },
-  { id: '2', name: 'Chaussures de Foot "Vitesse Ultime"', description: 'Dominez le terrain avec ces chaussures de football légères et réactives. Conçues pour des accélérations explosives et des changements de direction rapides. Crampons optimisés pour une adhérence maximale.', price: 62000, category: ProductCategory.Chaussures, imageUrl: 'https://placehold.co/600x600.png', stock: 30, sizes: ['40', '41', '42', '43', '44'], colors: ['Noir', 'Blanc', 'Rouge Fluo'], imageAiHint: 'soccer cleats dynamic' },
-  { id: '3', name: 'Pantalon d\'Entraînement Pro', description: 'Restez au chaud et performant avec ce pantalon d\'entraînement professionnel. Tissu extensible offrant une grande liberté de mouvement et technologie de gestion de l\'humidité pour vous garder au sec.', price: 28000, category: ProductCategory.Pantalons, imageUrl: 'https://placehold.co/600x600.png', stock: 40, sizes: ['S', 'M', 'L'], colors: ['Gris Foncé', 'Noir'], imageAiHint: 'training pants athlete' },
-  { id: '4', name: 'Ensemble Sportif Enfant "Champion"', description: 'L\'ensemble parfait pour les jeunes champions en herbe. Comprend un maillot et un short assortis, fabriqués dans un tissu doux et résistant. Idéal pour le sport et les loisirs.', price: 22000, category: ProductCategory.Enfants, imageUrl: 'https://placehold.co/600x600.png', stock: 25, sizes: ['6A', '8A', '10A', '12A'], colors: ['Bleu Royal', 'Rouge Vif'], imageAiHint: 'kids sports kit' },
-  { id: '5', name: 'Gants de Gardien "Muraille"', description: 'Devenez un mur infranchissable avec ces gants de gardien professionnels. Paume en latex offrant une adhérence exceptionnelle par tous les temps et protection renforcée des doigts.', price: 35000, category: ProductCategory.Gardiens, imageUrl: 'https://placehold.co/600x600.png', stock: 15, sizes: ['8', '9', '10', '11'], colors: ['Noir Intense', 'Blanc Électrique'], imageAiHint: 'goalkeeper gloves' },
+  { id: '1', name: 'Maillot Sénégal Authentique 2024', description: 'Portez les couleurs des Lions de la Teranga avec fierté. Ce maillot authentique est fabriqué avec un tissu respirant haute performance, conçu pour un confort optimal sur et en dehors du terrain. Design officiel avec détails premium.', price: 45000, category: ProductCategory.Maillots, imageUrl: 'https://placehold.co/600x600.png', stock: 50, sizes: ['S', 'M', 'L', 'XL'], featured: true, imageAiHint: 'senegal football jersey' },
+  { id: '2', name: 'Chaussures de Foot "Vitesse Ultime"', description: 'Dominez le terrain avec ces chaussures de football légères et réactives. Conçues pour des accélérations explosives et des changements de direction rapides. Crampons optimisés pour une adhérence maximale.', price: 62000, category: ProductCategory.Chaussures, imageUrl: 'https://placehold.co/600x600.png', stock: 30, sizes: ['40', '41', '42', '43', '44'], imageAiHint: 'soccer cleats dynamic' },
+  { id: '3', name: 'Pantalon d\'Entraînement Pro', description: 'Restez au chaud et performant avec ce pantalon d\'entraînement professionnel. Tissu extensible offrant une grande liberté de mouvement et technologie de gestion de l\'humidité pour vous garder au sec.', price: 28000, category: ProductCategory.Pantalons, imageUrl: 'https://placehold.co/600x600.png', stock: 40, sizes: ['S', 'M', 'L'], imageAiHint: 'training pants athlete' },
+  { id: '4', name: 'Ensemble Sportif Enfant "Champion"', description: 'L\'ensemble parfait pour les jeunes champions en herbe. Comprend un maillot et un short assortis, fabriqués dans un tissu doux et résistant. Idéal pour le sport et les loisirs.', price: 22000, category: ProductCategory.Enfants, imageUrl: 'https://placehold.co/600x600.png', stock: 25, sizes: ['6A', '8A', '10A', '12A'], imageAiHint: 'kids sports kit' },
+  { id: '5', name: 'Gants de Gardien "Muraille"', description: 'Devenez un mur infranchissable avec ces gants de gardien professionnels. Paume en latex offrant une adhérence exceptionnelle par tous les temps et protection renforcée des doigts.', price: 35000, category: ProductCategory.Gardiens, imageUrl: 'https://placehold.co/600x600.png', stock: 15, sizes: ['8', '9', '10', '11'], imageAiHint: 'goalkeeper gloves' },
   { id: '6', name: 'Sac de Sport "Expédition"', description: 'Transportez tout votre équipement avec style et facilité grâce à ce sac de sport spacieux et durable. Multiples compartiments, y compris un espace ventilé pour les chaussures.', price: 18000, category: ProductCategory.EquipementsSportifs, imageUrl: 'https://placehold.co/600x600.png', stock: 30, imageAiHint: 'sports duffel bag' },
-  { id: '7', name: 'Veste de Mode Sportive Urbaine', description: 'Alliez style et confort avec cette veste tendance au look athleisure. Parfaite pour un style de vie actif, elle offre une protection légère contre les éléments.', price: 55000, category: ProductCategory.Modes, imageUrl: 'https://placehold.co/600x600.png', stock: 20, sizes: ['S', 'M', 'L', 'XL'], colors: ['Noir Urbain', 'Kaki Camo', 'Gris Chiné'], imageAiHint: 'sporty fashion jacket' },
+  { id: '7', name: 'Veste de Mode Sportive Urbaine', description: 'Alliez style et confort avec cette veste tendance au look athleisure. Parfaite pour un style de vie actif, elle offre une protection légère contre les éléments.', price: 55000, category: ProductCategory.Modes, imageUrl: 'https://placehold.co/600x600.png', stock: 20, sizes: ['S', 'M', 'L', 'XL'], imageAiHint: 'sporty fashion jacket' },
 ];
 
 
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
   const [product, setProduct] = useState<Product | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | undefined>(undefined);
-  const [selectedColor, setSelectedColor] = useState<string | undefined>(undefined);
+  // const [selectedColor, setSelectedColor] = useState<string | undefined>(undefined); // Color selection removed
   const [quantity, setQuantity] = useState(1);
   const { toast } = useToast();
+  const cart = useCart(); // Use cart context
 
   useEffect(() => {
-    // In a real app, fetch product details from an API using params.id
     const foundProduct = allMockProducts.find(p => p.id === params.id);
     if (foundProduct) {
       setProduct(foundProduct);
       if (foundProduct.sizes && foundProduct.sizes.length > 0) {
         setSelectedSize(foundProduct.sizes[0]);
       }
-      if (foundProduct.colors && foundProduct.colors.length > 0) {
-        setSelectedColor(foundProduct.colors[0]);
-      }
+      // Color selection removed
+      // if (foundProduct.colors && foundProduct.colors.length > 0) {
+      //   setSelectedColor(foundProduct.colors[0]);
+      // }
+      setQuantity(1); // Reset quantity when product changes
     }
   }, [params.id]);
 
   const handleAddToCart = () => {
     if (!product) return;
-    // Add to cart logic here
-    console.log({
-      productId: product.id,
-      name: product.name,
-      size: selectedSize,
-      color: selectedColor,
-      quantity,
-      price: product.price,
-    });
+    if (product.stock === 0) {
+      toast({
+        variant: "destructive",
+        title: "Produit épuisé",
+        description: "Ce produit n'est actuellement pas en stock.",
+      });
+      return;
+    }
+     if (product.sizes && product.sizes.length > 0 && !selectedSize) {
+      toast({
+        variant: "destructive",
+        title: "Veuillez sélectionner une taille",
+        description: "Une taille est requise pour ce produit.",
+      });
+      return;
+    }
+    
+    cart.addToCart(product, quantity, selectedSize);
     toast({
       title: "Produit ajouté au panier!",
-      description: `${product.name} (Qté: ${quantity}) a été ajouté à votre panier.`,
+      description: `${product.name} (Qté: ${quantity}${selectedSize ? ', Taille: ' + selectedSize : ''}) a été ajouté à votre panier.`,
       action: <CheckCircle className="text-green-500" />,
     });
   };
@@ -138,34 +151,35 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                   </div>
                 )}
 
-                {product.colors && product.colors.length > 0 && (
-                  <div className="grid grid-cols-3 items-center gap-4">
-                    <Label htmlFor="color" className="text-base font-medium">Couleur:</Label>
-                     <Select value={selectedColor} onValueChange={setSelectedColor}>
-                      <SelectTrigger id="color" className="col-span-2 text-base">
-                        <SelectValue placeholder="Choisir une couleur" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {product.colors.map(color => (
-                          <SelectItem key={color} value={color} className="text-base">{color}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+                {/* Color select removed */}
                 
                 <div className="grid grid-cols-3 items-center gap-4">
                   <Label htmlFor="quantity" className="text-base font-medium">Quantité:</Label>
-                  <Input
-                    id="quantity"
-                    type="number"
-                    min="1"
-                    max={product.stock}
-                    value={quantity}
-                    onChange={(e) => setQuantity(Math.max(1, Math.min(product.stock, parseInt(e.target.value) || 1)))}
-                    className="col-span-2 text-base"
-                    disabled={product.stock === 0}
-                  />
+                  <div className="flex items-center space-x-1 col-span-2">
+                    <Button variant="outline" size="icon" onClick={() => setQuantity(q => Math.max(1, q - 1))} disabled={quantity <= 1 || product.stock === 0}>
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <ShadcnInput
+                      id="quantity"
+                      type="number"
+                      value={quantity}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        if (isNaN(val)) {
+                          setQuantity(1);
+                        } else {
+                          setQuantity(Math.max(1, Math.min(product.stock === 0 ? 1 : product.stock, val)));
+                        }
+                      }}
+                      className="w-16 text-center text-base"
+                      min="1"
+                      max={product.stock === 0 ? 1 : product.stock}
+                      disabled={product.stock === 0}
+                    />
+                    <Button variant="outline" size="icon" onClick={() => setQuantity(q => Math.min(product.stock === 0 ? 1 : product.stock, q + 1))} disabled={quantity >= product.stock || product.stock === 0}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -212,13 +226,5 @@ const Label = ({ htmlFor, children, className }: { htmlFor: string, children: Re
   </label>
 );
 
-const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
-  ({ className, ...props }, ref) => (
-    <input
-      ref={ref}
-      className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white ${className}`}
-      {...props}
-    />
-  )
-);
-Input.displayName = 'Input';
+// Input component removed as ShadcnInput is used directly from ui/input
+

@@ -8,7 +8,7 @@ export type Product = {
   imageUrl: string;
   stock: number;
   sizes?: string[];
-  colors?: string[];
+  // colors?: string[]; // Supprimé
   featured?: boolean;
   imageAiHint?: string;
 };
@@ -33,3 +33,4 @@ export type Banner = {
   link: string;
   imageAiHint?: string;
 };
+

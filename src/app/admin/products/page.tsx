@@ -19,18 +19,15 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-  DialogClose,
-} from '@/components/ui/dialog';
+} from '@/components/ui/dialog'; // DialogTrigger, DialogFooter, DialogClose removed as they are not used
 import { ProductForm } from '@/components/admin/ProductForm';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 
 const initialProducts: Product[] = [
-  { id: '1', name: 'Maillot Sénégal Authentique', description: 'Portez les couleurs des Lions avec fierté.', price: 45000, category: ProductCategory.Maillots, imageUrl: 'https://placehold.co/40x40.png', stock: 50, featured: true, imageAiHint: 'senegal football jersey', sizes: ['S', 'M', 'L'], colors: ['Vert', 'Jaune'] },
-  { id: '2', name: 'Chaussures "Vitesse Ultime"', description: 'Légères et réactives pour des accélérations.', price: 62000, category: ProductCategory.Chaussures, imageUrl: 'https://placehold.co/40x40.png', stock: 30, imageAiHint: 'soccer cleats', sizes: ['40', '41', '42'], colors: ['Noir'] },
+  { id: '1', name: 'Maillot Sénégal Authentique', description: 'Portez les couleurs des Lions avec fierté.', price: 45000, category: ProductCategory.Maillots, imageUrl: 'https://placehold.co/40x40.png', stock: 50, featured: true, imageAiHint: 'senegal football jersey', sizes: ['S', 'M', 'L'] }, // colors removed
+  { id: '2', name: 'Chaussures "Vitesse Ultime"', description: 'Légères et réactives pour des accélérations.', price: 62000, category: ProductCategory.Chaussures, imageUrl: 'https://placehold.co/40x40.png', stock: 30, imageAiHint: 'soccer cleats', sizes: ['40', '41', '42'] }, // colors removed
 ];
 
 export default function AdminProductsPage() {
@@ -59,7 +56,7 @@ export default function AdminProductsPage() {
     const productData = {
       ...data,
       sizes: data.sizes ? data.sizes.split(',').map((s:string) => s.trim()) : [],
-      colors: data.colors ? data.colors.split(',').map((c:string) => c.trim()) : [],
+      // colors: data.colors ? data.colors.split(',').map((c:string) => c.trim()) : [], // colors removed
     };
 
     if (editingProduct) {

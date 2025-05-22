@@ -6,20 +6,20 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
-import { productCategories, ProductCategory } from '@/types';
+import { productCategories } from '@/types'; // ProductCategory enum removed as it's not directly used here
 
 interface ProductFiltersProps {
   onFilterChange: (filters: any) => void; // Define a proper filter type later
 }
 
 const SIZES = ['S', 'M', 'L', 'XL', 'XXL', '38', '39', '40', '41', '42', '43', '44', '45'];
-const COLORS = ['Noir', 'Blanc', 'Rouge', 'Vert', 'Bleu', 'Jaune', 'Gris'];
+// const COLORS = ['Noir', 'Blanc', 'Rouge', 'Vert', 'Bleu', 'Jaune', 'Gris']; // Colors removed
 const MAX_PRICE = 100000; // Example max price in FCFA
 
 export default function ProductFilters({ onFilterChange }: ProductFiltersProps) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  // const [selectedColors, setSelectedColors] = useState<string[]>([]); // Colors removed
   const [priceRange, setPriceRange] = useState<[number, number]>([0, MAX_PRICE]);
 
   const handleCategoryChange = (category: string) => {
@@ -34,11 +34,11 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
     );
   };
 
-  const handleColorChange = (color: string) => {
-    setSelectedColors(prev =>
-      prev.includes(color) ? prev.filter(c => c !== color) : [...prev, color]
-    );
-  };
+  // const handleColorChange = (color: string) => { // Colors removed
+  //   setSelectedColors(prev =>
+  //     prev.includes(color) ? prev.filter(c => c !== color) : [...prev, color]
+  //   );
+  // };
   
   const handlePriceChange = (value: number[]) => {
     setPriceRange([value[0], value[1]]);
@@ -48,7 +48,7 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
     onFilterChange({
       categories: selectedCategories,
       sizes: selectedSizes,
-      colors: selectedColors,
+      // colors: selectedColors, // Colors removed
       priceRange,
     });
   };
@@ -108,21 +108,7 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
           </AccordionContent>
         </AccordionItem>
 
-        <AccordionItem value="colors">
-          <AccordionTrigger className="text-base font-medium">Couleurs</AccordionTrigger>
-          <AccordionContent className="space-y-2 pt-2 max-h-48 overflow-y-auto">
-            {COLORS.map(color => (
-              <div key={color} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`color-${color}`}
-                  checked={selectedColors.includes(color)}
-                  onCheckedChange={() => handleColorChange(color)}
-                />
-                <Label htmlFor={`color-${color}`} className="text-sm font-normal">{color}</Label>
-              </div>
-            ))}
-          </AccordionContent>
-        </AccordionItem>
+        {/* Colors AccordionItem removed */}
       </Accordion>
       <Button onClick={applyFilters} className="w-full bg-primary hover:bg-primary/90">Appliquer Filtres</Button>
     </div>
