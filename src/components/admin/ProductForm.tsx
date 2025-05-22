@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,17 +19,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Product } from '@/types';
-import { ProductCategory, productCategories } from '@/types';
+// Import the dynamic productCategories array
+import { productCategories } from '@/types';
 
 const productFormSchema = z.object({
   name: z.string().min(3, { message: 'Product name must be at least 3 characters.' }),
   description: z.string().min(10, { message: 'Description must be at least 10 characters.' }),
   price: z.coerce.number().positive({ message: 'Price must be a positive number.' }),
-  category: z.nativeEnum(ProductCategory),
+  category: z.string().min(1, { message: "La catégorie est requise."}), // Now a string, validated against dynamic list
   imageUrl: z.string().url({ message: 'Please enter a valid URL.' }),
   stock: z.coerce.number().int().min(0, { message: 'Stock cannot be negative.' }),
   sizes: z.string().optional(), // Comma-separated
-  // colors: z.string().optional(), // Comma-separated // Supprimé
   featured: z.boolean().default(false),
   imageAiHint: z.string().optional(),
 });
@@ -45,14 +46,14 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
   const defaultValues: Partial<ProductFormValues> = product
     ? {
         ...product,
+        category: product.category as string, // Ensure category is string
         sizes: product.sizes?.join(','),
-        // colors: product.colors?.join(','), // Supprimé
       }
     : {
         name: '',
         description: '',
         price: 0,
-        category: ProductCategory.Maillots,
+        category: productCategories.length > 0 ? productCategories[0] : '', // Default to first dynamic category
         imageUrl: '',
         stock: 0,
         featured: false,
@@ -175,7 +176,6 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
             </FormItem>
           )}
         />
-        {/* Supprimé la section pour les couleurs */}
         <FormField
             control={form.control}
             name="sizes"
