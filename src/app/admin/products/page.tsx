@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Edit3, Trash2, Search, Eye, Package } from 'lucide-react';
 import Image from 'next/image';
-import type { Product, SiteCategory } from '@/types'; // Updated to import SiteCategory
+import type { Product, SiteCategory } from '@/types'; 
 import { categoryIcons } from '@/types';
 import Link from 'next/link';
 import {
@@ -85,7 +85,6 @@ export default function AdminProductsPage() {
       if (editingProduct && editingProduct.id) {
         const productDocRef = doc(db, 'products', editingProduct.id);
         const dataToUpdate: Partial<Product> = { ...(productData as Product) };
-        // Ensure 'id' is not part of the update payload itself, it's in the doc ref.
         if ('id' in dataToUpdate) delete (dataToUpdate as any).id;
         
         await updateDoc(productDocRef, dataToUpdate);
@@ -161,11 +160,14 @@ export default function AdminProductsPage() {
             <TableBody>
               {filteredProducts.length > 0 ? filteredProducts.map((product) => {
                 const CategoryIcon = product.category ? categoryIcons[product.category as keyof typeof categoryIcons] || Package : Package;
+                const displayImageUrl = product.imageUrl && product.imageUrl.trim() !== '' ? product.imageUrl : 'https://placehold.co/100x100.png';
+                const displayImageAiHint = product.imageUrl && product.imageUrl.trim() !== '' ? (product.imageAiHint || "product thumbnail") : 'placeholder image';
+
                 return (
                   <TableRow key={product.id}>
                     <TableCell>
                       <div className="relative h-12 w-12 rounded-md overflow-hidden border">
-                        <Image src={product.imageUrl || 'https://placehold.co/100x100.png'} alt={product.name} fill sizes="50px" className="object-cover" data-ai-hint={product.imageAiHint || "product thumbnail"}/>
+                        <Image src={displayImageUrl} alt={product.name} fill sizes="50px" className="object-cover" data-ai-hint={displayImageAiHint}/>
                       </div>
                     </TableCell>
                     <TableCell className="font-medium">

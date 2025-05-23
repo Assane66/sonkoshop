@@ -1,7 +1,7 @@
 
 'use client'; 
 
-import type { Product, ProductCategory } from '@/types';
+import type { Product } from '@/types';
 import { categoryIcons } from '@/types';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -19,7 +19,7 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
   const { toast } = useToast();
-  const CategoryIcon = categoryIcons[product.category as keyof typeof categoryIcons] || categoryIcons["Default"];
+  const CategoryIcon = product.category ? categoryIcons[product.category as keyof typeof categoryIcons] || categoryIcons["Default"] : categoryIcons["Default"];
 
   const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault(); 
@@ -38,7 +38,6 @@ export default function ProductCard({ product }: ProductCardProps) {
     if (product.sizes && product.sizes.length > 0) {
         // For simplicity, allow adding with undefined size if no size is pre-selected on card.
         // Product detail page handles mandatory size selection.
-        // If you want to force size selection even from card, a modal or different UI would be needed.
     }
 
     addToCart(product, 1, sizeToAdd);
@@ -49,8 +48,10 @@ export default function ProductCard({ product }: ProductCardProps) {
     });
   };
 
-  const imageUrl = product.imageUrl && product.imageUrl.trim() !== '' ? product.imageUrl : 'https://placehold.co/600x400.png';
-  const imageAiHint = (product.imageUrl && product.imageUrl.trim() !== '') ? (product.imageAiHint || 'product image') : 'placeholder image';
+  // Ensure imageUrl is a valid URL or a placeholder
+  const displayImageUrl = product.imageUrl && product.imageUrl.trim() !== '' ? product.imageUrl : 'https://placehold.co/600x400.png';
+  // Adjust imageAiHint based on whether the original imageUrl was valid
+  const displayImageAiHint = product.imageUrl && product.imageUrl.trim() !== '' ? (product.imageAiHint || 'product image') : 'placeholder image';
 
 
   return (
@@ -59,12 +60,12 @@ export default function ProductCard({ product }: ProductCardProps) {
         <Link href={`/products/${product.id}`} legacyBehavior>
           <a className="block relative w-full h-48 md:h-60">
             <Image
-              src={imageUrl}
+              src={displayImageUrl}
               alt={product.name}
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               className="object-cover transition-transform duration-300 group-hover:scale-105"
-              data-ai-hint={imageAiHint}
+              data-ai-hint={displayImageAiHint}
             />
              {product.stock === 0 && (
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -104,4 +105,3 @@ export default function ProductCard({ product }: ProductCardProps) {
     </Card>
   );
 }
-

@@ -60,7 +60,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     };
 
     fetchProduct();
-    setQuantity(1); // Reset quantity when product ID changes
+    setQuantity(1); 
   }, [params.id, toast]);
 
   const handleAddToCart = () => {
@@ -117,6 +117,12 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       </div>
     );
   }
+  
+  // Ensure imageUrl is a valid URL or a placeholder
+  const displayImageUrl = product.imageUrl && product.imageUrl.trim() !== '' ? product.imageUrl : 'https://placehold.co/600x600.png';
+  // Adjust imageAiHint based on whether the original imageUrl was valid
+  const displayImageAiHint = product.imageUrl && product.imageUrl.trim() !== '' ? (product.imageAiHint || 'product image detail') : 'placeholder image';
+
 
   const CategoryIcon = product.category ? categoryIcons[product.category as keyof typeof categoryIcons] || categoryIcons["Default"] : categoryIcons["Default"];
 
@@ -132,13 +138,13 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         <Card className="shadow-xl overflow-hidden rounded-lg">
           <div className="relative w-full aspect-square">
             <Image
-              src={product.imageUrl || 'https://placehold.co/600x600.png'}
+              src={displayImageUrl}
               alt={product.name}
               fill
               priority
               sizes="(max-width: 768px) 100vw, 50vw"
               className="object-cover transition-transform duration-300 group-hover:scale-105"
-              data-ai-hint={product.imageAiHint || 'product image detail'}
+              data-ai-hint={displayImageAiHint}
             />
              {product.stock === 0 && (
               <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
@@ -169,7 +175,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} className={`h-5 w-5 ${i < 4 ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
                 ))}
-                <span className="ml-2 text-sm text-muted-foreground">(12 avis)</span> {/* Avis fictifs */}
+                <span className="ml-2 text-sm text-muted-foreground">(12 avis)</span> 
               </div>
             </CardHeader>
             <CardContent>
@@ -263,7 +269,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   );
 }
 
-// Ensure Label component is defined or imported if it's a custom component
 const Label = ({ htmlFor, children, className }: { htmlFor?: string; children: React.ReactNode; className?: string }) => (
   <label htmlFor={htmlFor} className={`block text-sm font-medium text-gray-700 dark:text-gray-300 ${className}`}>
     {children}

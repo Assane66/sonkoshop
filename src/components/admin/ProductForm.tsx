@@ -15,7 +15,7 @@ import type { Product, SiteCategory } from '@/types';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, onSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import Image from 'next/image'; // Import Image component
+import Image from 'next/image'; 
 
 const CLOUDINARY_CLOUD_NAME = 'dm6yuokre'; 
 const CLOUDINARY_UPLOAD_PRESET = 'assane_eats'; 
@@ -27,7 +27,7 @@ const productFormSchema = z.object({
   category: z.string().min(1, "Une catégorie est requise."),
   stock: z.coerce.number().min(0, "Le stock doit être positif ou nul."),
   imageUrl: z.string().url("L'URL de l'image n'est pas valide.").or(z.literal('')).optional().default(''),
-  imageAiHint: z.string().optional(),
+  imageAiHint: z.string().optional().default(''),
   sizes: z.array(z.string()).optional(),
   featured: z.boolean().optional(),
 });
@@ -46,7 +46,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
   const [categories, setCategories] = useState<SiteCategory[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(product?.imageUrl || null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
 
@@ -96,8 +96,10 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
         sizes: product.sizes || [],
         featured: product.featured || false,
         category: product.category || (categories.length > 0 ? categories[0].name : ''),
+        imageAiHint: product.imageAiHint || '',
       });
-      setImagePreview(product.imageUrl || null);
+      const initialPreview = product.imageUrl && product.imageUrl.trim() !== '' ? product.imageUrl : null;
+      setImagePreview(initialPreview);
     } else {
       reset({
         name: '', description: '', price: 0,
@@ -131,7 +133,8 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
       reader.readAsDataURL(file);
     } else {
       setImageFile(null);
-      setImagePreview(product?.imageUrl || null); 
+      const initialPreviewOnClear = product?.imageUrl && product.imageUrl.trim() !== '' ? product.imageUrl : null;
+      setImagePreview(initialPreviewOnClear); 
     }
   };
 
@@ -165,7 +168,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
 
   const processSubmit: SubmitHandler<ProductFormValues> = async (data) => {
     setIsUploading(true);
-    let uploadedImageUrl = product?.imageUrl || ''; 
+    let uploadedImageUrl = (product?.imageUrl && product.imageUrl.trim() !== '') ? product.imageUrl : ''; 
 
     if (imageFile) {
       const cloudinaryUrl = await uploadImageToCloudinary(imageFile);
@@ -180,7 +183,8 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
     
     const finalProductData: Omit<Product, 'id'> | Product = {
       ...data,
-      imageUrl: uploadedImageUrl, 
+      imageUrl: uploadedImageUrl,
+      imageAiHint: data.imageAiHint || '',
     };
 
     if (product?.id) {
@@ -259,13 +263,13 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
           className="mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
           disabled={isUploading}
         />
-        {imagePreview && (
+        {imagePreview && imagePreview.trim() !== '' && (
           <div className="mt-4 relative w-32 h-32 border rounded-md overflow-hidden">
             <Image src={imagePreview} alt="Aperçu" fill sizes="128px" className="object-cover" />
           </div>
         )}
-        <input type="hidden" {...register('imageUrl')} /> 
-        {errors.imageUrl && !imageFile && <p className="text-sm text-destructive mt-1">{errors.imageUrl.message}</p>}
+        {/* Removed hidden input for imageUrl, as it's now derived from imageFile upload or existing product data */}
+        {errors.imageUrl && !imageFile && !(product?.imageUrl && product.imageUrl.trim() !== '') && <p className="text-sm text-destructive mt-1">{errors.imageUrl.message}</p>}
       </div>
 
       <div>
