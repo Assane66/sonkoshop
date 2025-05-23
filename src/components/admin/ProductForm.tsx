@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image'; 
 
 const CLOUDINARY_CLOUD_NAME = 'dm6yuokre'; 
-const CLOUDINARY_UPLOAD_PRESET = 'assane_eats'; 
+const CLOUDINARY_UPLOAD_PRESET = 'assane_restau'; // Updated preset name
 
 const productFormSchema = z.object({
   name: z.string().min(3, "Le nom doit contenir au moins 3 caractères."),
@@ -265,10 +265,9 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
         />
         {imagePreview && imagePreview.trim() !== '' && (
           <div className="mt-4 relative w-32 h-32 border rounded-md overflow-hidden">
-            <Image src={imagePreview} alt="Aperçu" fill sizes="128px" className="object-cover" />
+            <Image src={imagePreview} alt="Aperçu" fill sizes="128px" className="object-cover" data-ai-hint="product preview"/>
           </div>
         )}
-        {/* Removed hidden input for imageUrl, as it's now derived from imageFile upload or existing product data */}
         {errors.imageUrl && !imageFile && !(product?.imageUrl && product.imageUrl.trim() !== '') && <p className="text-sm text-destructive mt-1">{errors.imageUrl.message}</p>}
       </div>
 
@@ -325,3 +324,5 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
     </form>
   );
 }
+
+    
