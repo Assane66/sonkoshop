@@ -16,6 +16,10 @@ import { db } from '@/lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
+import { Loader2 } from 'lucide-react';
+
+const CLOUDINARY_CLOUD_NAME = 'dm6yuokre';
+const CLOUDINARY_UPLOAD_PRESET = 'sonko_shop';
 
 const productFormSchema = z.object({
   name: z.string().min(3, "Le nom doit contenir au moins 3 caractères."),
@@ -23,7 +27,7 @@ const productFormSchema = z.object({
   price: z.coerce.number().min(0, "Le prix doit être positif."),
   category: z.string().min(1, "Une catégorie est requise."),
   stock: z.coerce.number().min(0, "Le stock doit être positif ou nul."),
-  imageUrl: z.string().url("L'URL de l'image n'est pas valide, ou laissez vide pour aucune image.").or(z.literal('')).optional().default(''),
+  imageUrl: z.string().optional().default(''), // Will be populated by Cloudinary URL or existing URL
   imageAiHint: z.string().optional().default(''),
   sizes: z.array(z.string()).optional(),
   featured: z.boolean().optional(),
@@ -33,7 +37,7 @@ type ProductFormValues = z.infer<typeof productFormSchema>;
 
 interface ProductFormProps {
   product?: Product | null;
-  onSubmit: (data: Omit<Product, 'id'> | Product) => void;
+  onSubmit: (data: Omit<Product, 'id'> | Product) => Promise<void>; // Make onSubmit async
   onCancel: () => void;
 }
 
@@ -42,6 +46,9 @@ const availableSizes = ['S', 'M', 'L', 'XL', 'XXL', '38', '39', '40', '41', '42'
 export default function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
   const [categories, setCategories] = useState<SiteCategory[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(product?.imageUrl || null);
+  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
 
   const { register, handleSubmit, control, reset, watch, setValue, formState: { errors } } = useForm<ProductFormValues>({
@@ -59,7 +66,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
     },
   });
 
-  const imageUrlValue = watch('imageUrl');
+  const currentImageUrl = watch('imageUrl'); // To reflect existing image if not changed
 
   useEffect(() => {
     setIsLoadingCategories(true);
@@ -72,7 +79,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
       }));
       setCategories(fetchedCategories);
       if (fetchedCategories.length > 0 && !product?.category && !watch('category')) {
-        setValue('category', fetchedCategories[0].name);
+        // setValue('category', fetchedCategories[0].name); // Avoid resetting if already set or during edit
       }
       setIsLoadingCategories(false);
     }, (error) => {
@@ -95,16 +102,34 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
         imageUrl: product.imageUrl || '',
         imageAiHint: product.imageAiHint || '',
       });
+      setImagePreview(product.imageUrl || null);
     } else {
       reset({
         name: '', description: '', price: 0,
         category: categories.length > 0 ? categories[0].name : '',
         stock: 0, imageUrl: '', imageAiHint: '', sizes: [], featured: false,
       });
+      setImagePreview(null);
     }
+    setImageFile(null); // Clear any selected file on product change/reset
   }, [product, reset, categories]);
 
   const selectedSizes = watch('sizes') || [];
+
+  const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setImageFile(null);
+      setImagePreview(product?.imageUrl || null); // Revert to original image if file is deselected
+    }
+  };
 
   const handleSizeToggle = (size: string) => {
     const currentSizes = selectedSizes;
@@ -116,41 +141,88 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
   };
 
   const processSubmit: SubmitHandler<ProductFormValues> = async (data) => {
+    setIsUploading(true);
+    let finalImageUrl = product?.imageUrl || ''; // Keep existing image URL if no new image
+
+    if (imageFile) {
+      const formData = new FormData();
+      formData.append('file', imageFile);
+      formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+      try {
+        console.log(`Uploading to Cloudinary: cloud_name=${CLOUDINARY_CLOUD_NAME}`);
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+          method: 'POST',
+          body: formData,
+        });
+        const cloudinaryData = await response.json();
+        console.log('Cloudinary response:', cloudinaryData);
+
+        if (cloudinaryData.secure_url) {
+          finalImageUrl = cloudinaryData.secure_url;
+        } else {
+          throw new Error(cloudinaryData.error?.message || 'Cloudinary upload failed, no secure_url returned.');
+        }
+      } catch (error: any) {
+        console.error('Erreur de téléversement Cloudinary:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Erreur de Téléversement Image',
+          description: `Impossible de téléverser l'image vers Cloudinary. Erreur: ${error.message || 'Inconnue'}`,
+        });
+        setIsUploading(false);
+        return; // Stop submission if image upload fails
+      }
+    }
+
     const finalProductData: Omit<Product, 'id'> | Product = {
       ...data,
-      imageUrl: data.imageUrl || '', // Ensure imageUrl is an empty string if not provided
+      imageUrl: finalImageUrl,
     };
 
     if (product?.id) {
       (finalProductData as Product).id = product.id;
     }
-
-    onSubmit(finalProductData);
+    
+    try {
+      await onSubmit(finalProductData); // onSubmit should now handle saving to Firestore
+      setImageFile(null); // Clear file input after successful submission
+      // ImagePreview will be updated by useEffect when 'product' prop changes or form is reset
+    } catch (error: any) {
+        // Error handling is expected to be done in the parent component's onSubmit
+        console.error("Erreur lors de la soumission du produit (depuis ProductForm):", error);
+    } finally {
+        setIsUploading(false);
+    }
   };
+  
+
+  const displayPreview = imagePreview || currentImageUrl;
+
 
   return (
     <form onSubmit={handleSubmit(processSubmit)} className="space-y-6">
       <div>
         <Label htmlFor="name">Nom du Produit</Label>
-        <Input id="name" {...register('name')} className="mt-1" />
+        <Input id="name" {...register('name')} className="mt-1" disabled={isUploading} />
         {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
       </div>
 
       <div>
         <Label htmlFor="description">Description</Label>
-        <Textarea id="description" {...register('description')} className="mt-1" />
+        <Textarea id="description" {...register('description')} className="mt-1" disabled={isUploading} />
         {errors.description && <p className="text-sm text-destructive mt-1">{errors.description.message}</p>}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <Label htmlFor="price">Prix (FCFA)</Label>
-          <Input id="price" type="number" {...register('price')} className="mt-1" />
+          <Input id="price" type="number" {...register('price')} className="mt-1" disabled={isUploading} />
           {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}
         </div>
         <div>
           <Label htmlFor="stock">Stock</Label>
-          <Input id="stock" type="number" {...register('stock')} className="mt-1" />
+          <Input id="stock" type="number" {...register('stock')} className="mt-1" disabled={isUploading} />
           {errors.stock && <p className="text-sm text-destructive mt-1">{errors.stock.message}</p>}
         </div>
       </div>
@@ -164,7 +236,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
             <Select
               onValueChange={field.onChange}
               value={field.value}
-              disabled={isLoadingCategories}
+              disabled={isLoadingCategories || isUploading}
             >
               <SelectTrigger id="category" className="mt-1">
                 <SelectValue placeholder={isLoadingCategories ? "Chargement..." : "Sélectionner une catégorie"} />
@@ -187,25 +259,25 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
       </div>
 
       <div>
-        <Label htmlFor="imageUrl">URL de l'Image du Produit</Label>
+        <Label htmlFor="imageFile">Image du Produit</Label>
         <Input
-          id="imageUrl"
-          type="url"
-          {...register('imageUrl')}
+          id="imageFile"
+          type="file"
+          accept="image/*"
+          onChange={handleImageFileChange}
           className="mt-1"
-          placeholder="https://example.com/image.png"
+          disabled={isUploading}
         />
-        {imageUrlValue && imageUrlValue.trim() !== '' && (
+         {displayPreview && (
           <div className="mt-4 relative w-32 h-32 border rounded-md overflow-hidden">
-            <Image src={imageUrlValue} alt="Aperçu" fill sizes="128px" className="object-cover" data-ai-hint="product preview" />
+            <Image src={displayPreview} alt="Aperçu" fill sizes="128px" className="object-cover" data-ai-hint={watch('imageAiHint') || "product preview"}/>
           </div>
         )}
-        {errors.imageUrl && <p className="text-sm text-destructive mt-1">{errors.imageUrl.message}</p>}
       </div>
 
       <div>
         <Label htmlFor="imageAiHint">Indice IA pour l'image (1-2 mots)</Label>
-        <Input id="imageAiHint" {...register('imageAiHint')} className="mt-1" placeholder="ex: chaussure sport" />
+        <Input id="imageAiHint" {...register('imageAiHint')} className="mt-1" placeholder="ex: chaussure sport" disabled={isUploading} />
         {errors.imageAiHint && <p className="text-sm text-destructive mt-1">{errors.imageAiHint.message}</p>}
       </div>
 
@@ -218,6 +290,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
                 id={`size-${size}`}
                 checked={selectedSizes.includes(size)}
                 onCheckedChange={() => handleSizeToggle(size)}
+                disabled={isUploading}
               />
               <Label htmlFor={`size-${size}`} className="text-sm font-normal cursor-pointer">{size}</Label>
             </div>
@@ -235,6 +308,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
               id="featured"
               checked={field.value || false}
               onCheckedChange={field.onChange}
+              disabled={isUploading}
             />
           )}
         />
@@ -244,11 +318,16 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
       </div>
 
       <div className="flex justify-end space-x-3 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isUploading}>
           Annuler
         </Button>
-        <Button type="submit" className="bg-primary hover:bg-primary/90">
-          {product ? 'Sauvegarder les Modifications' : 'Ajouter le Produit'}
+        <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={isUploading}>
+          {isUploading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Sauvegarde...
+            </>
+          ) : (product ? 'Sauvegarder les Modifications' : 'Ajouter le Produit')}
         </Button>
       </div>
     </form>

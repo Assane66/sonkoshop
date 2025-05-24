@@ -23,7 +23,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
-      // Removed Cloudinary domain
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com', // Added Cloudinary domain
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };
