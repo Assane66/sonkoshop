@@ -10,7 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy, limit, Timestamp } from 'firebase/firestore';
-import type { Product, Order, OrderStatus } from '@/types'; // Ajout de l'importation OrderStatus
+import type { Product, Order } from '@/types'; // Import Product and Order as types
+import { OrderStatus } from '@/types';      // Import OrderStatus as a value
 
 // Mock data for Sales Report - can be replaced with real data later
 const monthlyRevenueData = [
