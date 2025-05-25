@@ -6,7 +6,7 @@ import ProductCard from '@/components/ProductCard';
 import ProductFilters from '@/components/ProductFilters';
 import type { Product } from '@/types';
 import { Input } from '@/components/ui/input';
-import { Search, PackageOpen } from 'lucide-react';
+import { Search, PackageOpen, Loader2 } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -21,6 +21,7 @@ export default function ProductsPage() {
 
   useEffect(() => {
     setIsLoading(true);
+    console.log("ProductsPage: Fetching all products...");
     const productsCollectionRef = collection(db, 'products');
     const q = query(productsCollectionRef, orderBy("name", "asc"));
 
@@ -29,11 +30,13 @@ export default function ProductsPage() {
         id: doc.id,
         ...doc.data() as Omit<Product, 'id'>
       }));
+      console.log("ProductsPage: Fetched all products", fetchedProducts);
       setAllProducts(fetchedProducts);
+      setFilteredProducts(fetchedProducts); // Initialize filteredProducts with all products
       setIsLoading(false);
     }, (error) => {
-      console.error("Erreur de récupération des produits (snapshot):", error);
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les produits en temps réel." });
+      console.error("ProductsPage: Erreur de récupération des produits:", error);
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les produits." });
       setIsLoading(false);
     });
 
@@ -47,7 +50,7 @@ export default function ProductsPage() {
     if (searchTerm) {
       productsToFilter = productsToFilter.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.description.toLowerCase().includes(searchTerm.toLowerCase())
+        (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
@@ -71,8 +74,8 @@ export default function ProductsPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
-        <div className="animate-pulse flex flex-col items-center">
-          <PackageOpen className="h-24 w-24 text-primary mb-4" />
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-16 w-16 text-primary animate-spin mb-4" />
           <p className="text-xl text-muted-foreground">Chargement des produits...</p>
         </div>
       </div>
@@ -109,7 +112,8 @@ export default function ProductsPage() {
             <div className="text-center py-10">
               <PackageOpen className="mx-auto h-20 w-20 text-muted-foreground mb-4" />
               <p className="text-xl text-muted-foreground">Aucun produit ne correspond à vos critères.</p>
-              {allProducts.length === 0 && <p className="text-sm text-muted-foreground mt-2">Aucun produit n'est actuellement disponible dans la boutique.</p>}
+              {allProducts.length > 0 && searchTerm && <p className="text-sm text-muted-foreground mt-2">Essayez d'élargir votre recherche.</p>}
+              {allProducts.length === 0 && !isLoading && <p className="text-sm text-muted-foreground mt-2">Aucun produit n'est actuellement disponible dans la boutique.</p>}
             </div>
           )}
         </main>

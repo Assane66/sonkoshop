@@ -11,7 +11,7 @@ import {
   setPersistence,
   browserLocalPersistence // or browserSessionPersistence
 } from 'firebase/auth';
-import { useRouter } from 'next/navigation'; // Import if needed for redirects inside context
+// import { useRouter } from 'next/navigation'; // Not used here directly
 
 interface AuthContextType {
   user: User | null;
@@ -25,26 +25,54 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  // const router = useRouter(); // Example if router is needed here
+  // const router = useRouter(); 
 
   useEffect(() => {
+    console.log("AuthContext: Setting up onAuthStateChanged listener.");
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        console.log("AuthContext: User is signed in:", currentUser.uid);
+      } else {
+        console.log("AuthContext: User is signed out.");
+      }
       setUser(currentUser);
       setLoading(false);
     });
-    return () => unsubscribe(); // Cleanup subscription on unmount
+    return () => {
+      console.log("AuthContext: Cleaning up onAuthStateChanged listener.");
+      unsubscribe(); 
+    }
   }, []);
 
   const login = async (email: string, password: string) => {
-    await setPersistence(auth, browserLocalPersistence); // Persist session locally
-    await signInWithEmailAndPassword(auth, email, password);
-    // User state will be updated by onAuthStateChanged
+    console.log("AuthContext: Attempting login for email:", email);
+    setLoading(true); // Set loading true before login attempt
+    try {
+      await setPersistence(auth, browserLocalPersistence); 
+      await signInWithEmailAndPassword(auth, email, password);
+      console.log("AuthContext: signInWithEmailAndPassword successful.");
+      // User state will be updated by onAuthStateChanged
+    } catch (error) {
+      console.error("AuthContext: Login failed.", error);
+      setLoading(false); // Ensure loading is set to false on error
+      throw error; // Re-throw error to be caught by calling component
+    }
+    // setLoading(false) will be handled by onAuthStateChanged
   };
 
   const logout = async () => {
-    await firebaseSignOut(auth);
-    // User state will be updated by onAuthStateChanged
-    // router.push('/login'); // Optionally redirect after logout
+    console.log("AuthContext: Attempting logout.");
+    setLoading(true);
+    try {
+      await firebaseSignOut(auth);
+      console.log("AuthContext: Logout successful.");
+      // User state will be updated by onAuthStateChanged
+    } catch (error) {
+      console.error("AuthContext: Logout failed.", error);
+      setLoading(false);
+      throw error;
+    }
+    // setLoading(false) will be handled by onAuthStateChanged
   };
 
   return (
