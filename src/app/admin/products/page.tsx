@@ -2,13 +2,13 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card'; // CardTitle removed
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Edit3, Trash2, Search, Eye, Package, Loader2 } from 'lucide-react';
 import Image from 'next/image';
-import type { Product, SiteCategory, ProductCategoryEnum as CatEnum } from '@/types'; 
-import { categoryIcons, productCategoriesArray } from '@/types'; // Using static categories array
+import type { Product, SiteCategory } from '@/types'; 
+import { categoryIcons } from '@/types';
 import Link from 'next/link';
 import {
   Dialog,
@@ -23,34 +23,36 @@ import {
 import ProductForm from '@/components/admin/ProductForm';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-// Firebase imports removed
-// import { db } from '@/lib/firebase';
-// import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
-
-// Initial mock products
-const initialMockProducts: Product[] = [
-  { id: '1', name: 'Maillot Domicile Sénégal 2024', description: 'Authentique maillot des Lions de la Téranga.', price: 35000, category: CatEnum.Maillots, imageUrl: 'https://placehold.co/300x300.png?text=Maillot+Senegal', stock: 50, sizes: ['S', 'M', 'L', 'XL'], featured: true, imageAiHint: 'senegal jersey' },
-  { id: '2', name: 'Chaussures de Foot Pro Model', description: 'Pour des performances optimales sur le terrain.', price: 65000, category: CatEnum.Chaussures, imageUrl: 'https://placehold.co/300x300.png?text=Foot+Shoes', stock: 30, sizes: ['40', '41', '42', '43', '44'], imageAiHint: 'soccer cleats' },
-  { id: '3', name: 'Pantalon de Survêtement Club', description: 'Confortable et stylé pour l_entraînement.', price: 22000, category: CatEnum.Pantalons, imageUrl: 'https://placehold.co/300x300.png?text=Training+Pants', stock: 0, sizes: ['M', 'L'], imageAiHint: 'track pants' },
-];
-
-// Mock categories for the ProductForm, assuming they are managed locally in AdminCategoriesPage
-const mockSiteCategories: SiteCategory[] = productCategoriesArray.map((catName, index) => ({
-  id: (index + 1).toString(),
-  name: catName,
-  iconName: catName as keyof typeof categoryIcons, // Assuming icon names match category names
-}));
-
+import { db } from '@/lib/firebase';
+import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 
 export default function AdminProductsPage() {
-  const [products, setProducts] = useState<Product[]>(initialMockProducts);
-  // const [isLoading, setIsLoading] = useState(true); // No Firebase loading
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const { toast } = useToast();
 
-  // useEffect for Firebase snapshot removed
+  useEffect(() => {
+    setIsLoading(true);
+    const productsCollection = collection(db, 'products');
+    const q = query(productsCollection, orderBy('name', 'asc')); // Or orderBy('createdAt', 'desc') if you add timestamps
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedProducts: Product[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Product));
+      setProducts(fetchedProducts);
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Error fetching products:", error);
+      toast({ variant: "destructive", title: "Erreur de chargement", description: "Impossible de charger les produits." });
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, [toast]);
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -68,32 +70,56 @@ export default function AdminProductsPage() {
   };
 
   const handleDeleteProduct = async (productId: string, productName: string) => {
-    setProducts(prev => prev.filter(p => p.id !== productId));
-    toast({ title: "Produit supprimé (local)", description: `Le produit "${productName}" a été supprimé localement.` });
+     if (!window.confirm(`Êtes-vous sûr de vouloir supprimer le produit "${productName}" ?`)) return;
+    try {
+      await deleteDoc(doc(db, 'products', productId));
+      toast({ title: "Produit supprimé", description: `Le produit "${productName}" a été supprimé.` });
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      toast({ variant: "destructive", title: "Erreur de suppression", description: "Impossible de supprimer le produit." });
+    }
   };
 
   const handleFormSubmit = async (productData: Omit<Product, 'id'> | Product) => {
-    if (editingProduct && editingProduct.id && 'id' in productData) {
-      setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, ...productData } : p));
-      toast({ title: "Produit modifié (local)", description: `${productData.name} a été mis à jour localement.` });
-    } else {
-      const newProduct: Product = { id: Date.now().toString(), ...(productData as Omit<Product, 'id'>) };
-      setProducts(prev => [newProduct, ...prev]);
-      toast({ title: "Produit ajouté (local)", description: `${productData.name} a été ajouté localement.` });
+    try {
+      if (editingProduct && 'id' in productData && productData.id) {
+        const productRef = doc(db, 'products', productData.id);
+        // Ensure all fields are correctly structured for Firestore
+        const dataToUpdate = { ...productData };
+        delete (dataToUpdate as any).id; // Don't store 'id' as a field within the document
+        await updateDoc(productRef, { ...dataToUpdate /*, updatedAt: serverTimestamp() */});
+        toast({ title: "Produit modifié", description: `${productData.name} a été mis à jour.` });
+      } else {
+        const dataToAdd = { ...productData };
+        delete (dataToAdd as any).id; // Ensure id is not part of the data being added
+        await addDoc(collection(db, 'products'), { ...dataToAdd /*, createdAt: serverTimestamp() */ });
+        toast({ title: "Produit ajouté", description: `${productData.name} a été ajouté.` });
+      }
+      setIsFormOpen(false);
+      setEditingProduct(null);
+    } catch (error) {
+       console.error("Error saving product:", error);
+       toast({ variant: "destructive", title: "Erreur de sauvegarde", description: "Impossible de sauvegarder le produit." });
     }
-    setIsFormOpen(false);
-    setEditingProduct(null);
   };
   
-  // if (isLoading) { // No Firebase loading
-  //   return <div className="flex justify-center items-center h-64"><p>Chargement des produits...</p></div>;
-  // }
+  if (isLoading) {
+    return (
+        <div className="flex flex-col items-center justify-center h-64 space-y-3">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-muted-foreground">Chargement des produits...</p>
+        </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-foreground">Gestion des Produits</h1>
-        <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setEditingProduct(null);}}>
+        {/* Dialog Trigger is part of the Dialog component structure, not a separate button here */}
+      </div>
+      
+      <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setEditingProduct(null);}}>
           <DialogTrigger asChild>
             <Button onClick={handleAddProduct} className="bg-primary hover:bg-primary/90">
               <PlusCircle className="mr-2 h-5 w-5" /> Ajouter un Produit
@@ -110,13 +136,11 @@ export default function AdminProductsPage() {
               product={editingProduct}
               onSubmit={handleFormSubmit}
               onCancel={() => { setIsFormOpen(false); setEditingProduct(null); }}
-              categories={mockSiteCategories} // Pass local categories
             />
           </DialogContent>
         </Dialog>
-      </div>
 
-      <Card className="shadow-sm">
+      <Card className="shadow-sm mt-4"> {/* Added margin-top */}
         <CardHeader>
           <div className="relative">
             <Input
@@ -143,7 +167,7 @@ export default function AdminProductsPage() {
             </TableHeader>
             <TableBody>
               {filteredProducts.length > 0 ? filteredProducts.map((product) => {
-                const CategoryIcon = product.category ? categoryIcons[product.category as keyof typeof categoryIcons] || Package : Package;
+                const CategoryIconComponent = product.category ? categoryIcons[product.category as keyof typeof categoryIcons] || categoryIcons["Package"] : categoryIcons["Package"];
                 const displayImageUrl = product.imageUrl && product.imageUrl.trim() !== '' ? product.imageUrl : 'https://placehold.co/100x100.png';
                 const displayImageAiHint = product.imageUrl && product.imageUrl.trim() !== '' ? (product.imageAiHint || "product thumbnail") : 'placeholder image';
 
@@ -151,7 +175,7 @@ export default function AdminProductsPage() {
                   <TableRow key={product.id}>
                     <TableCell>
                       <div className="relative h-12 w-12 rounded-md overflow-hidden border">
-                        <Image src={displayImageUrl} alt={product.name} fill sizes="50px" className="object-cover" data-ai-hint={displayImageAiHint}/>
+                        <Image src={displayImageUrl} alt={product.name} fill sizes="50px" className="object-cover" data-ai-hint={displayImageAiHint} onError={(e) => e.currentTarget.src = 'https://placehold.co/100x100.png'}/>
                       </div>
                     </TableCell>
                     <TableCell className="font-medium">
@@ -162,7 +186,7 @@ export default function AdminProductsPage() {
                     <TableCell>
                       {product.category && (
                         <Badge variant="secondary" className="text-xs inline-flex items-center gap-1">
-                          {CategoryIcon && <CategoryIcon className="h-3 w-3" />}
+                          {CategoryIconComponent && <CategoryIconComponent className="h-3 w-3" />}
                           {product.category}
                         </Badge>
                       )}
@@ -187,7 +211,7 @@ export default function AdminProductsPage() {
                               <DialogHeader>
                                   <DialogTitle>Confirmer la suppression</DialogTitle>
                                   <DialogDescription>
-                                      Êtes-vous sûr de vouloir supprimer le produit "{product.name}" ?
+                                      Êtes-vous sûr de vouloir supprimer le produit "{product.name}" ? Cette action est irréversible.
                                   </DialogDescription>
                               </DialogHeader>
                               <DialogFooter>

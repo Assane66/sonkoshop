@@ -5,49 +5,65 @@ import { useState, useEffect } from 'react';
 import BannerCarousel from '@/components/BannerCarousel';
 import ProductCard from '@/components/ProductCard';
 import type { Banner, Product } from '@/types';
-import { ProductCategoryEnum as CatEnum } from '@/types'; // For mock data
-// Firebase imports removed
-// import { db } from '@/lib/firebase';
-// import { collection, query, where, getDocs, limit, onSnapshot, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { PackageOpen, Image as ImageIconLucide, Loader2 } from 'lucide-react';
-
-// Mock data
-const mockBanners: Banner[] = [
-  { id: '1', title: 'Collection Maillots 2024!', subtitle: 'Supportez votre équipe.', imageUrl: 'https://placehold.co/1200x500/E91E63/white?text=Nouveaux+Maillots', link: '/products', imageAiHint: 'football jersey stadium' },
-  { id: '2', title: 'Chaussures de Sport', subtitle: 'Performance et style.', imageUrl: 'https://placehold.co/1200x500/2196F3/white?text=Chaussures+Sport', link: '/products', imageAiHint: 'sports shoes running' },
-];
-
-const mockProducts: Product[] = [
-  { id: 'p1', name: 'Maillot Sénégal Domicile', description: 'Maillot officiel 2024.', price: 35000, category: CatEnum.Maillots, imageUrl: 'https://placehold.co/600x400/4CAF50/white?text=Maillot+Sénégal', stock: 20, featured: true, imageAiHint: 'senegal jersey' },
-  { id: 'p2', name: 'Baskets Pro Max', description: 'Confort et durabilité.', price: 45000, category: CatEnum.Chaussures, imageUrl: 'https://placehold.co/600x400/FFC107/black?text=Baskets+Pro', stock: 15, featured: true, imageAiHint: 'pro sneakers' },
-  { id: 'p3', name: 'Survêtement Club Élite', description: 'Pour l_entraînement.', price: 28000, category: CatEnum.Pantalons, imageUrl: 'https://placehold.co/600x400/9C27B0/white?text=Survêtement', stock: 10, imageAiHint: 'tracksuit' },
-  { id: 'p4', name: 'Ensemble Bébé Lionceau', description: 'Pour les futurs champions.', price: 18000, category: CatEnum.Enfants, imageUrl: 'https://placehold.co/600x400/00BCD4/black?text=Ensemble+Bébé', stock: 25, featured: true, imageAiHint: 'baby clothes' },
-];
-
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, limit, onSnapshot, orderBy } from 'firebase/firestore';
 
 export default function HomePage() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
-  const [banners, setBanners] = useState<Banner[]>(mockBanners);
+  const [banners, setBanners] = useState<Banner[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
-  const [isLoadingBanners, setIsLoadingBanners] = useState(true); // Keep for consistency, though mock data loads instantly
-  // const { toast } = useToast(); // Toast not used without Firebase
+  const [isLoadingBanners, setIsLoadingBanners] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     setIsLoadingProducts(true);
-    // Simulate loading mock products
-    setTimeout(() => {
-      setFeaturedProducts(mockProducts.filter(p => p.featured).slice(0, 8));
+    console.log("HomePage: Fetching featured products...");
+    const productsCollection = collection(db, 'products');
+    // Query for featured products, ordered by name, limit to 8
+    // Add orderBy('createdAt', 'desc') if you have timestamps and want newest featured
+    const qProducts = query(productsCollection, where('featured', '==', true), orderBy('name', 'asc'), limit(8));
+
+    const unsubscribeProducts = onSnapshot(qProducts, (snapshot) => {
+      const fetchedProducts: Product[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Product));
+      setFeaturedProducts(fetchedProducts);
       setIsLoadingProducts(false);
-    }, 500);
+      console.log("HomePage: Featured products fetched:", fetchedProducts.length);
+    }, (error) => {
+      console.error("HomePage: Error fetching featured products:", error);
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les produits en vedette." });
+      setIsLoadingProducts(false);
+    });
 
     setIsLoadingBanners(true);
-    // Simulate loading mock banners
-     setTimeout(() => {
-      setBanners(mockBanners);
+    console.log("HomePage: Fetching banners...");
+    const bannersCollection = collection(db, 'banners');
+    // Add orderBy('createdAt', 'desc') if you want to order banners
+    const qBanners = query(bannersCollection, limit(5)); // Limit to 5 banners for example
+
+    const unsubscribeBanners = onSnapshot(qBanners, (snapshot) => {
+      const fetchedBanners: Banner[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Banner));
+      setBanners(fetchedBanners);
       setIsLoadingBanners(false);
-    }, 300);
-  }, []);
+      console.log("HomePage: Banners fetched:", fetchedBanners.length);
+    }, (error) => {
+      console.error("HomePage: Error fetching banners:", error);
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les bannières." });
+      setIsLoadingBanners(false);
+    });
+
+    return () => {
+      unsubscribeProducts();
+      unsubscribeBanners();
+    };
+  }, [toast]);
 
 
   return (
@@ -65,7 +81,8 @@ export default function HomePage() {
         ) : (
            <div className="text-center py-10 h-[300px] md:h-[400px] lg:h-[500px] bg-muted rounded-lg flex flex-col items-center justify-center">
               <ImageIconLucide className="h-24 w-24 text-primary mb-4" />
-              <p className="text-xl text-muted-foreground">Aucune bannière disponible.</p>
+              <p className="text-xl text-muted-foreground">Aucune bannière disponible pour le moment.</p>
+              <p className="text-sm text-muted-foreground mt-2">Revenez bientôt ou configurez des bannières dans le panneau d'administration.</p>
           </div>
         )}
       </section>

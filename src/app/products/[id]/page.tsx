@@ -7,25 +7,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Input as ShadcnInput } from '@/components/ui/input';
-import { ShoppingCart, Zap, Star, CheckCircle, ShieldCheck, Tag, Minus, Plus, ArrowLeft } from 'lucide-react';
+import { Input as ShadcnInput } from '@/components/ui/input'; // Renamed to avoid conflict with HTML input
+import { ShoppingCart, Zap, Star, CheckCircle, ShieldCheck, Tag, Minus, Plus, ArrowLeft, Loader2 } from 'lucide-react';
 import type { Product } from '@/types';
-import { categoryIcons, ProductCategoryEnum as CatEnum } from '@/types';
+import { categoryIcons } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/context/CartContext';
-// Firebase imports removed
-// import { doc, getDoc } from 'firebase/firestore';
-// import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import Link from 'next/link';
-
-// Re-introduce mock products for detail page fallback
-const allMockProducts: Product[] = [
-  { id: 'p1', name: 'Maillot Sénégal Domicile', description: 'Maillot officiel 2024.', price: 35000, category: CatEnum.Maillots, imageUrl: 'https://placehold.co/600x400/4CAF50/white?text=Maillot+Sénégal', stock: 20, featured: true, sizes: ['S', 'M', 'L'], imageAiHint: 'senegal home jersey' },
-  { id: 'p2', name: 'Baskets Pro Max', description: 'Confort et durabilité.', price: 45000, category: CatEnum.Chaussures, imageUrl: 'https://placehold.co/600x400/FFC107/black?text=Baskets+Pro', stock: 15, sizes: ['40', '41', '42'], imageAiHint: 'pro sneakers' },
-  { id: 'p3', name: 'Survêtement Club Élite', description: 'Pour l_entraînement.', price: 28000, category: CatEnum.Pantalons, imageUrl: 'https://placehold.co/600x400/9C27B0/white?text=Survêtement', stock: 0, sizes: ['M', 'L'], imageAiHint: 'elite tracksuit' },
-  { id: 'p4', name: 'Ensemble Bébé Lionceau', description: 'Pour les futurs champions.', price: 18000, category: CatEnum.Enfants, imageUrl: 'https://placehold.co/600x400/00BCD4/black?text=Ensemble+Bébé', stock: 25, sizes: ['3M', '6M', '9M'], imageAiHint: 'baby lion kit' },
-];
 
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
   const [product, setProduct] = useState<Product | null>(null);
@@ -36,22 +27,44 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const cart = useCart();
 
   useEffect(() => {
-    setIsLoading(true);
-    // Simulate fetching product from mock data
-    setTimeout(() => {
-      const foundProduct = allMockProducts.find(p => p.id === params.id);
-      if (foundProduct) {
-        setProduct(foundProduct);
-        if (foundProduct.sizes && foundProduct.sizes.length > 0) {
-          setSelectedSize(foundProduct.sizes[0]); 
+    const fetchProduct = async () => {
+      setIsLoading(true);
+      setQuantity(1); // Reset quantity on new product load
+      console.log(`ProductDetailPage: Fetching product with ID: ${params.id}`);
+      try {
+        const productDocRef = doc(db, 'products', params.id);
+        const productSnap = await getDoc(productDocRef);
+
+        if (productSnap.exists()) {
+          const productData = { id: productSnap.id, ...productSnap.data() } as Product;
+          setProduct(productData);
+          console.log("ProductDetailPage: Product fetched:", productData);
+          if (productData.sizes && productData.sizes.length > 0) {
+            setSelectedSize(productData.sizes[0]); // Default to first size
+          } else {
+            setSelectedSize(undefined); // No sizes available
+          }
+        } else {
+          console.warn(`ProductDetailPage: No product found with ID: ${params.id}`);
+          setProduct(null);
+          toast({ variant: "destructive", title: "Produit non trouvé", description: "Ce produit n'existe pas ou plus." });
         }
-      } else {
+      } catch (error) {
+        console.error("ProductDetailPage: Error fetching product:", error);
+        toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les détails du produit." });
         setProduct(null);
-        toast({ variant: "destructive", title: "Produit non trouvé", description: "Ce produit n'existe pas ou plus." });
+      } finally {
+        setIsLoading(false);
       }
+    };
+
+    if (params.id) {
+      fetchProduct();
+    } else {
       setIsLoading(false);
-    }, 500);
-    setQuantity(1); 
+      setProduct(null);
+      toast({ variant: "destructive", title: "ID de produit manquant."});
+    }
   }, [params.id, toast]);
 
   const handleAddToCart = () => {
@@ -84,10 +97,9 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
-        <div className="animate-pulse flex flex-col items-center">
-          <Zap className="h-24 w-24 text-primary mb-4" />
-          <h1 className="text-2xl font-semibold text-muted-foreground">Chargement du produit...</h1>
-          <p className="text-muted-foreground">Veuillez patienter.</p>
+        <div className="flex flex-col items-center justify-center h-64 space-y-3">
+            <Loader2 className="h-16 w-16 animate-spin text-primary" />
+            <p className="text-muted-foreground text-xl">Chargement du produit...</p>
         </div>
       </div>
     );
@@ -112,7 +124,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const displayImageUrl = product.imageUrl && product.imageUrl.trim() !== '' ? product.imageUrl : 'https://placehold.co/600x600.png';
   const displayImageAiHint = product.imageUrl && product.imageUrl.trim() !== '' ? (product.imageAiHint || 'product image detail') : 'placeholder image';
 
-  const CategoryIcon = product.category ? categoryIcons[product.category as keyof typeof categoryIcons] || categoryIcons["Default"] : categoryIcons["Default"];
+  const CategoryIconComponent = product.category ? categoryIcons[product.category as keyof typeof categoryIcons] || categoryIcons["Default"] : categoryIcons["Default"];
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">
@@ -123,7 +135,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         </Link>
       </Button>
       <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-start">
-        <Card className="shadow-xl overflow-hidden rounded-lg">
+        <Card className="shadow-xl overflow-hidden rounded-lg group"> {/* Added group for hover effect */}
           <div className="relative w-full aspect-square">
             <Image
               src={displayImageUrl}
@@ -133,6 +145,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
               sizes="(max-width: 768px) 100vw, 50vw"
               className="object-cover transition-transform duration-300 group-hover:scale-105"
               data-ai-hint={displayImageAiHint}
+              onError={(e) => e.currentTarget.src = 'https://placehold.co/600x600.png'}
             />
              {product.stock === 0 && (
               <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
@@ -149,7 +162,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 <div>
                   {product.category && (
                     <Badge variant="secondary" className="mb-2 inline-flex items-center gap-1.5 py-1 px-2.5 text-xs">
-                      {CategoryIcon && <CategoryIcon className="h-3.5 w-3.5" />}
+                      {CategoryIconComponent && <CategoryIconComponent className="h-3.5 w-3.5" />}
                       {product.category}
                     </Badge>
                   )}
@@ -163,7 +176,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} className={`h-5 w-5 ${i < 4 ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
                 ))}
-                <span className="ml-2 text-sm text-muted-foreground">(Avis fictifs)</span> 
+                <span className="ml-2 text-sm text-muted-foreground">(4.0 / 12 Avis)</span> {/* Example avis */}
               </div>
             </CardHeader>
             <CardContent>
@@ -257,8 +270,9 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   );
 }
 
+// Custom Label to avoid conflict if ShadCN Label is not globally available as 'Label'
 const Label = ({ htmlFor, children, className }: { htmlFor?: string; children: React.ReactNode; className?: string }) => (
-  <label htmlFor={htmlFor} className={`block text-sm font-medium text-gray-700 dark:text-gray-300 ${className}`}>
+  <label htmlFor={htmlFor} className={`block text-sm font-medium text-gray-700 dark:text-gray-300 ${className || ''}`}>
     {children}
   </label>
 );

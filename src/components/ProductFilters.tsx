@@ -7,11 +7,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
-import { categoryIcons, type SiteCategory, productCategoriesArray } from '@/types'; // productCategoriesArray for static categories
-// Firebase imports removed
-// import { db } from '@/lib/firebase';
-// import { collection, onSnapshot } from 'firebase/firestore';
-// import { useToast } from '@/hooks/use-toast';
+import { categoryIcons, type SiteCategory } from '@/types';
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
 
 interface ProductFiltersProps {
   onFilterChange: (filters: any) => void;
@@ -20,26 +20,37 @@ interface ProductFiltersProps {
 const SIZES = ['S', 'M', 'L', 'XL', 'XXL', '38', '39', '40', '41', '42', '43', '44', '45'];
 const MAX_PRICE = 100000; 
 
-// Use static categories for filters
-const staticCategories: SiteCategory[] = productCategoriesArray.map((name, index) => ({
-  id: (index + 1).toString(),
-  name,
-  iconName: name as keyof typeof categoryIcons,
-}));
-
-
 export default function ProductFilters({ onFilterChange }: ProductFiltersProps) {
-  const [availableCategories, setAvailableCategories] = useState<SiteCategory[]>(staticCategories);
-  // const [isLoadingCategories, setIsLoadingCategories] = useState(false); // No loading from Firebase
+  const [availableCategories, setAvailableCategories] = useState<SiteCategory[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, MAX_PRICE]);
   
-  const [minPriceDisplay, setMinPriceDisplay] = useState<string>(priceRange[0].toString());
-  const [maxPriceDisplay, setMaxPriceDisplay] = useState<string>(priceRange[1].toString());
-  // const { toast } = useToast(); // Toast not used without Firebase
+  const [minPriceDisplay, setMinPriceDisplay] = useState<string>(priceRange[0].toLocaleString('fr-FR'));
+  const [maxPriceDisplay, setMaxPriceDisplay] = useState<string>(priceRange[1].toLocaleString('fr-FR'));
+  const { toast } = useToast();
 
-  // useEffect for Firebase categories removed
+  useEffect(() => {
+    setIsLoadingCategories(true);
+    const categoriesCollection = collection(db, 'categories');
+    const q = query(categoriesCollection, orderBy('name', 'asc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedCategories: SiteCategory[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as SiteCategory));
+      setAvailableCategories(fetchedCategories);
+      setIsLoadingCategories(false);
+    }, (error) => {
+      console.error("Error fetching categories for filters:", error);
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les filtres de catégories." });
+      setIsLoadingCategories(false);
+    });
+
+    return () => unsubscribe();
+  }, [toast]);
 
   useEffect(() => {
     setMinPriceDisplay(priceRange[0].toLocaleString('fr-FR'));
@@ -58,11 +69,9 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
     );
   };
   
-  const handlePriceChange = (value: number[]) => {
+  const handlePriceSliderChange = (value: number[]) => {
     if (Array.isArray(value) && value.length === 2) {
         setPriceRange([value[0], value[1]]);
-    } else if (typeof value === 'number') { 
-        setPriceRange([value, priceRange[1]]); 
     }
   };
 
@@ -81,10 +90,12 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
         <AccordionItem value="categories">
           <AccordionTrigger className="text-base font-medium">Catégories</AccordionTrigger>
           <AccordionContent className="space-y-2 pt-2">
-            {/* {isLoadingCategories ? ( // No loading
-              <p className="text-sm text-muted-foreground">Chargement des catégories...</p>
-            ) :  */}
-            {availableCategories.length > 0 ? (
+            {isLoadingCategories ? (
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Chargement...</span>
+              </div>
+            ) : availableCategories.length > 0 ? (
               availableCategories.map(category => {
                 const IconComponent = category.iconName ? categoryIcons[category.iconName] : categoryIcons["Default"];
                 return (
@@ -112,7 +123,7 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
               min={0}
               max={MAX_PRICE}
               step={1000}
-              onValueChange={handlePriceChange} 
+              onValueChange={handlePriceSliderChange} 
               value={priceRange} 
               className="mb-2"
             />

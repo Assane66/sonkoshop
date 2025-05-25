@@ -5,24 +5,11 @@ import { useState, useEffect } from 'react';
 import ProductCard from '@/components/ProductCard';
 import ProductFilters from '@/components/ProductFilters';
 import type { Product } from '@/types';
-import { ProductCategoryEnum as CatEnum } from '@/types'; // For mock data
 import { Input } from '@/components/ui/input';
 import { Search, PackageOpen, Loader2 } from 'lucide-react';
-// Firebase imports removed
-// import { db } from '@/lib/firebase';
-// import { collection, getDocs, onSnapshot, query, orderBy } from 'firebase/firestore';
-// import { useToast } from '@/hooks/use-toast';
-
-// Mock products for the products page
-const allMockProducts: Product[] = [
-  { id: 'p1', name: 'Maillot Sénégal Domicile', description: 'Maillot officiel 2024.', price: 35000, category: CatEnum.Maillots, imageUrl: 'https://placehold.co/600x400/4CAF50/white?text=Maillot+Sénégal', stock: 20, featured: true, sizes: ['S', 'M', 'L'], imageAiHint: 'senegal home jersey' },
-  { id: 'p2', name: 'Baskets Pro Max', description: 'Confort et durabilité.', price: 45000, category: CatEnum.Chaussures, imageUrl: 'https://placehold.co/600x400/FFC107/black?text=Baskets+Pro', stock: 15, sizes: ['40', '41', '42'], imageAiHint: 'pro sneakers' },
-  { id: 'p3', name: 'Survêtement Club Élite', description: 'Pour l_entraînement.', price: 28000, category: CatEnum.Pantalons, imageUrl: 'https://placehold.co/600x400/9C27B0/white?text=Survêtement', stock: 0, sizes: ['M', 'L'], imageAiHint: 'elite tracksuit' },
-  { id: 'p4', name: 'Ensemble Bébé Lionceau', description: 'Pour les futurs champions.', price: 18000, category: CatEnum.Enfants, imageUrl: 'https://placehold.co/600x400/00BCD4/black?text=Ensemble+Bébé', stock: 25, sizes: ['3M', '6M', '9M'], imageAiHint: 'baby lion kit' },
-  { id: 'p5', name: 'Maillot Extérieur Sénégal', description: 'Design audacieux pour les matchs à l_extérieur.', price: 35000, category: CatEnum.Maillots, imageUrl: 'https://placehold.co/600x400/795548/white?text=Maillot+Sénégal+Ext', stock: 18, sizes: ['S', 'M', 'XL'], imageAiHint: 'senegal away jersey' },
-  { id: 'p6', name: 'Chaussures de Running Légères', description: 'Idéales pour le jogging quotidien.', price: 52000, category: CatEnum.Chaussures, imageUrl: 'https://placehold.co/600x400/FF9800/black?text=Running+Shoes', stock: 12, sizes: ['39', '40', '43'], imageAiHint: 'light running shoes' },
-];
-
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ProductsPage() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -30,17 +17,32 @@ export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilters, setActiveFilters] = useState<any>({}); 
   const [isLoading, setIsLoading] = useState(true);
-  // const { toast } = useToast(); // Toast not used without Firebase
+  const { toast } = useToast();
 
   useEffect(() => {
     setIsLoading(true);
-    // Simulate loading mock products
-    setTimeout(() => {
-      setAllProducts(allMockProducts);
-      setFilteredProducts(allMockProducts); 
+    console.log("ProductsPage: Fetching all products...");
+    const productsCollection = collection(db, 'products');
+    // Add orderBy('createdAt', 'desc') if you have timestamps
+    const q = query(productsCollection, orderBy('name', 'asc')); 
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedProducts: Product[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Product));
+      setAllProducts(fetchedProducts);
+      setFilteredProducts(fetchedProducts); // Initially show all products
       setIsLoading(false);
-    }, 500);
-  }, []);
+      console.log("ProductsPage: All products fetched:", fetchedProducts.length);
+    }, (error) => {
+      console.error("ProductsPage: Error fetching products:", error);
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les produits." });
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [toast]);
 
 
   useEffect(() => {
@@ -111,7 +113,7 @@ export default function ProductsPage() {
             <div className="text-center py-10">
               <PackageOpen className="mx-auto h-20 w-20 text-muted-foreground mb-4" />
               <p className="text-xl text-muted-foreground">Aucun produit ne correspond à vos critères.</p>
-              {allProducts.length > 0 && searchTerm && <p className="text-sm text-muted-foreground mt-2">Essayez d'élargir votre recherche.</p>}
+              {allProducts.length > 0 && (searchTerm || Object.keys(activeFilters).length > 0) && <p className="text-sm text-muted-foreground mt-2">Essayez d'élargir votre recherche ou de modifier vos filtres.</p>}
               {allProducts.length === 0 && !isLoading && <p className="text-sm text-muted-foreground mt-2">Aucun produit n'est actuellement disponible dans la boutique.</p>}
             </div>
           )}

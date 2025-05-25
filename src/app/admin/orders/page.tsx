@@ -19,9 +19,8 @@ import { Order, OrderStatus, OrderItem as AppOrderItem, CustomerInfo, orderStatu
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-// Firebase imports removed
-// import { db } from '@/lib/firebase';
-// import { collection, onSnapshot, doc, updateDoc, orderBy, query, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot, doc, updateDoc, orderBy, query, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 const getStatusBadgeClass = (status: OrderStatus): string => {
@@ -35,43 +34,39 @@ const getStatusBadgeClass = (status: OrderStatus): string => {
   }
 };
 
-// Mock data for orders
-const mockOrders: Order[] = [
-  {
-    id: 'ORD001',
-    customerInfo: { fullName: 'Aminata Fall', address: 'Cité Keur Gorgui, Dakar', phone: '771234567' },
-    items: [{ productId: 'p1', productName: 'Maillot Sénégal Domicile', quantity: 1, price: 35000, selectedSize: 'M' }],
-    totalAmount: 35000,
-    status: OrderStatus.Processing,
-    orderDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
-    paymentMethod: 'cod',
-    shippingAddress: 'Cité Keur Gorgui, Dakar',
-  },
-  {
-    id: 'ORD002',
-    customerInfo: { fullName: 'Babacar Diop', address: 'Sacré Coeur 3, Dakar', phone: '781112233' },
-    items: [
-      { productId: 'p2', productName: 'Baskets Pro Max', quantity: 1, price: 45000, selectedSize: '42' },
-      { productId: 'p3', productName: 'Survêtement Club Élite', quantity: 1, price: 28000, selectedSize: 'L' }
-    ],
-    totalAmount: 73000,
-    status: OrderStatus.Shipped,
-    orderDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
-    paymentMethod: 'wave',
-    shippingAddress: 'Sacré Coeur 3, Dakar',
-  },
-];
-
-
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<Order[]>(mockOrders);
-  // const [isLoading, setIsLoading] = useState(true); // No Firebase loading
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
-  // useEffect for Firebase snapshot removed
+  useEffect(() => {
+    setIsLoading(true);
+    const ordersCollection = collection(db, 'orders');
+    const q = query(ordersCollection, orderBy('orderDate', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedOrders: Order[] = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          // Convert Firestore Timestamp to ISO string for easier handling, or keep as Timestamp
+          orderDate: data.orderDate instanceof Timestamp ? data.orderDate.toDate().toISOString() : data.orderDate,
+        } as Order;
+      });
+      setOrders(fetchedOrders);
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Error fetching orders:", error);
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les commandes." });
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [toast]);
 
   const handleViewDetails = (order: Order) => {
     setSelectedOrder(order);
@@ -79,12 +74,14 @@ export default function AdminOrdersPage() {
   };
   
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
-    setOrders(prevOrders => 
-      prevOrders.map(order => 
-        order.id === orderId ? { ...order, status: newStatus } : order
-      )
-    );
-    toast({ title: "Statut mis à jour (local)", description: `Le statut de la commande ${orderId} est maintenant ${newStatus}.`});
+    try {
+        const orderRef = doc(db, 'orders', orderId);
+        await updateDoc(orderRef, { status: newStatus });
+        toast({ title: "Statut mis à jour", description: `Le statut de la commande ${orderId} est maintenant ${newStatus}.`});
+    } catch (error) {
+        console.error("Error updating order status:", error);
+        toast({ variant: "destructive", title: "Erreur", description: "Impossible de mettre à jour le statut."});
+    }
   };
 
   const filteredOrders = orders.filter(order => 
@@ -93,22 +90,23 @@ export default function AdminOrdersPage() {
     order.status.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // if (isLoading) { // No Firebase loading
-  //   return (
-  //       <div className="flex flex-col items-center justify-center h-64 space-y-3">
-  //           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-  //           <p className="text-muted-foreground">Chargement des commandes...</p>
-  //       </div>
-  //   );
-  // }
+  if (isLoading) {
+    return (
+        <div className="flex flex-col items-center justify-center h-64 space-y-3">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-muted-foreground">Chargement des commandes...</p>
+        </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-foreground">Gestion des Commandes</h1>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" disabled><Filter className="mr-2 h-4 w-4" /> Filtrer (Bientôt)</Button>
-          <Button variant="outline" disabled><Download className="mr-2 h-4 w-4" /> Exporter (Bientôt)</Button>
+          {/* Filter and Export buttons can be implemented later */}
+          {/* <Button variant="outline" disabled><Filter className="mr-2 h-4 w-4" /> Filtrer (Bientôt)</Button>
+          <Button variant="outline" disabled><Download className="mr-2 h-4 w-4" /> Exporter (Bientôt)</Button> */}
         </div>
       </div>
 
@@ -137,7 +135,7 @@ export default function AdminOrdersPage() {
             <TableBody>
               {filteredOrders.length > 0 ? filteredOrders.map((order) => (
                 <TableRow key={order.id}>
-                  <TableCell className="font-medium">{order.id}</TableCell>
+                  <TableCell className="font-medium">{order.id.substring(0, 8)}...</TableCell>
                   <TableCell>{order.customerInfo.fullName}</TableCell>
                   <TableCell>{new Date(order.orderDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric'})}</TableCell>
                   <TableCell>{order.totalAmount.toLocaleString('fr-FR')} FCFA</TableCell>
@@ -146,7 +144,7 @@ export default function AdminOrdersPage() {
                         value={order.status} 
                         onValueChange={(value) => handleStatusChange(order.id, value as OrderStatus)}
                       >
-                        <SelectTrigger className={cn("h-8 text-xs w-36 border-0 focus:ring-0 focus:ring-offset-0 shadow-none p-0", getStatusBadgeClass(order.status))}>
+                        <SelectTrigger className={cn("h-8 text-xs w-36 border-0 focus:ring-0 focus:ring-offset-0 shadow-none p-0 data-[state=open]:ring-0 data-[state=open]:ring-offset-0", getStatusBadgeClass(order.status))}>
                            <SelectValue placeholder="Statut" asChild>
                              <span className="px-2 py-0.5 rounded-full font-semibold">{order.status}</span>
                            </SelectValue>

@@ -3,18 +3,22 @@ import type { LucideIcon } from 'lucide-react';
 import { Shirt, Footprints, Layers, Baby, Sparkles, Shield, Dumbbell, LayoutGrid, Package } from 'lucide-react';
 
 export type Product = {
-  id: string;
+  id: string; // Firestore document ID
   name: string;
   description: string;
   price: number; 
-  category: string; 
+  category: string; // Category name or ID, to be linked with SiteCategory
   imageUrl: string;
   stock: number;
   sizes?: string[];
   featured?: boolean;
   imageAiHint?: string;
+  // Timestamps for Firestore if needed
+  // createdAt?: any; 
+  // updatedAt?: any;
 };
 
+// Kept for reference or if a fixed list is ever needed, but categories are dynamic from Firestore
 export enum ProductCategoryEnum {
   Maillots = "Maillots",
   Chaussures = "Chaussures",
@@ -27,24 +31,24 @@ export enum ProductCategoryEnum {
   Baskets = "Baskets",
   Accessoires = "Accessoires",
 }
-
-// Static list of categories for forms and filters if not using dynamic categories
 export const productCategoriesArray: string[] = Object.values(ProductCategoryEnum);
 
 
 export type Banner = {
-  id: string;
+  id: string; // Firestore document ID
   imageUrl: string;
   title: string;
   subtitle?: string;
   link: string;
   imageAiHint?: string;
+  // createdAt?: any;
 };
 
 export interface SiteCategory {
-  id: string; 
+  id: string; // Firestore document ID
   name: string;
-  iconName?: keyof typeof categoryIcons;
+  iconName?: keyof typeof categoryIcons; // Should match keys in categoryIcons
+  // createdAt?: any;
 }
 
 export const categoryIcons: Record<string, LucideIcon> = {
@@ -55,11 +59,11 @@ export const categoryIcons: Record<string, LucideIcon> = {
   [ProductCategoryEnum.Modes]: Sparkles,
   [ProductCategoryEnum.Gardiens]: Shield,
   [ProductCategoryEnum.EquipementsSportifs]: Dumbbell,
-  [ProductCategoryEnum.Chemise]: Shirt,
+  [ProductCategoryEnum.Chemise]: Shirt, // Example, ensure keys match category names from Firestore
   [ProductCategoryEnum.Baskets]: Footprints,
   [ProductCategoryEnum.Accessoires]: LayoutGrid,
-  "Default": LayoutGrid,
-  "Package": Package,
+  "Default": LayoutGrid, // Default icon if no match
+  "Package": Package, // For product category badge if no specific icon
 };
 
 
@@ -90,12 +94,13 @@ export interface CustomerInfo {
 }
 
 export interface Order {
-  id: string; 
+  id: string; // Firestore document ID
   customerInfo: CustomerInfo;
   items: OrderItem[];
   totalAmount: number;
   status: OrderStatus;
-  orderDate: string; 
+  orderDate: any; // Will be a Firestore Timestamp or string after conversion
   paymentMethod: 'cod' | 'wave' | string;
-  shippingAddress: string; 
+  shippingAddress: string;
+  // userId?: string; // Optional: if you want to link orders to users
 }

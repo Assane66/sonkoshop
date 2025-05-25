@@ -2,9 +2,9 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card'; // CardHeader, CardTitle removed for simplicity
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Edit3, Trash2, LayoutGrid } from 'lucide-react';
+import { PlusCircle, Edit3, Trash2, LayoutGrid, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -21,37 +21,31 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { categoryIcons, SiteCategory, ProductCategoryEnum } from '@/types'; // ProductCategoryEnum for mock data
+import { categoryIcons, SiteCategory } from '@/types';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-// Firebase imports removed
-// import { db } from '@/lib/firebase';
-// import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, onSnapshot, serverTimestamp, query, orderBy } from 'firebase/firestore';
 
 const categoryFormSchema = z.object({
   name: z.string().min(2, { message: "Le nom doit contenir au moins 2 caractères." }),
-  iconName: z.string().optional(),
+  iconName: z.string().min(1, "Une icône est requise.").default('Default'),
 });
 
 type CategoryFormValues = z.infer<typeof categoryFormSchema>;
 
-const iconOptions = Object.keys(categoryIcons).map(name => ({
-  name: name as keyof typeof categoryIcons,
-  Icon: categoryIcons[name as keyof typeof categoryIcons]
-}));
-
-// Mock data for categories
-const initialMockCategories: SiteCategory[] = [
-  { id: '1', name: ProductCategoryEnum.Maillots, iconName: ProductCategoryEnum.Maillots },
-  { id: '2', name: ProductCategoryEnum.Chaussures, iconName: ProductCategoryEnum.Chaussures },
-  { id: '3', name: ProductCategoryEnum.Pantalons, iconName: ProductCategoryEnum.Pantalons },
-];
+const iconOptions = Object.keys(categoryIcons)
+  .filter(name => name !== "Package") // Exclude "Package" icon specific to product display
+  .map(name => ({
+    name: name as keyof typeof categoryIcons,
+    Icon: categoryIcons[name as keyof typeof categoryIcons]
+  }));
 
 export default function AdminCategoriesPage() {
-  const [categories, setCategories] = useState<SiteCategory[]>(initialMockCategories);
+  const [categories, setCategories] = useState<SiteCategory[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<SiteCategory | null>(null);
-  // const [isLoading, setIsLoading] = useState(false); // No loading from Firebase
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   const form = useForm<CategoryFormValues>({
@@ -59,7 +53,26 @@ export default function AdminCategoriesPage() {
     defaultValues: { name: '', iconName: 'Default' },
   });
 
-  // useEffect for Firebase removed
+  useEffect(() => {
+    setIsLoading(true);
+    const categoriesCollection = collection(db, 'categories');
+    const q = query(categoriesCollection, orderBy('name', 'asc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedCategories: SiteCategory[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as SiteCategory));
+      setCategories(fetchedCategories);
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Error fetching categories:", error);
+      toast({ variant: "destructive", title: "Erreur de chargement", description: "Impossible de charger les catégories." });
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [toast]);
 
   useEffect(() => {
     if (editingCategory) {
@@ -80,26 +93,42 @@ export default function AdminCategoriesPage() {
   };
 
   const handleDeleteCategory = async (categoryId: string, categoryName: string) => {
-    setCategories(prev => prev.filter(cat => cat.id !== categoryId));
-    toast({ title: "Catégorie supprimée (local)", description: `La catégorie "${categoryName}" a été supprimée localement.` });
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer la catégorie "${categoryName}" ?`)) return;
+    try {
+      await deleteDoc(doc(db, 'categories', categoryId));
+      toast({ title: "Catégorie supprimée", description: `La catégorie "${categoryName}" a été supprimée.` });
+    } catch (error) {
+      console.error("Error deleting category:", error);
+      toast({ variant: "destructive", title: "Erreur de suppression", description: "Impossible de supprimer la catégorie." });
+    }
   };
 
   const onSubmit: SubmitHandler<CategoryFormValues> = async (data) => {
-    if (editingCategory) {
-      setCategories(prev => prev.map(cat => cat.id === editingCategory.id ? { ...cat, ...data } : cat));
-      toast({ title: "Catégorie modifiée (local)", description: `${data.name} a été mise à jour localement.` });
-    } else {
-      const newCategory: SiteCategory = { id: Date.now().toString(), ...data };
-      setCategories(prev => [...prev, newCategory]);
-      toast({ title: "Catégorie ajoutée (local)", description: `${data.name} a été ajoutée localement.` });
+    try {
+      if (editingCategory) {
+        const categoryRef = doc(db, 'categories', editingCategory.id);
+        await updateDoc(categoryRef, { ...data /*, updatedAt: serverTimestamp() */ });
+        toast({ title: "Catégorie modifiée", description: `La catégorie "${data.name}" a été mise à jour.` });
+      } else {
+        await addDoc(collection(db, 'categories'), { ...data /*, createdAt: serverTimestamp() */ });
+        toast({ title: "Catégorie ajoutée", description: `La catégorie "${data.name}" a été ajoutée.` });
+      }
+      setIsFormOpen(false);
+      setEditingCategory(null);
+    } catch (error) {
+      console.error("Error saving category:", error);
+      toast({ variant: "destructive", title: "Erreur de sauvegarde", description: "Impossible de sauvegarder la catégorie." });
     }
-    setIsFormOpen(false);
-    setEditingCategory(null);
   };
 
-  // if (isLoading) { // No loading from Firebase
-  //   return <div className="flex justify-center items-center h-64"><p>Chargement des catégories...</p></div>;
-  // }
+  if (isLoading) {
+    return (
+        <div className="flex flex-col items-center justify-center h-64 space-y-3">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-muted-foreground">Chargement des catégories...</p>
+        </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -110,12 +139,12 @@ export default function AdminCategoriesPage() {
         </Button>
       </div>
 
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+      <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setEditingCategory(null);}}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editingCategory ? 'Modifier la Catégorie' : 'Ajouter une Catégorie'}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
             <div>
               <Label htmlFor="name">Nom de la catégorie</Label>
               <Input id="name" {...form.register('name')} className="mt-1" />
@@ -123,20 +152,20 @@ export default function AdminCategoriesPage() {
             </div>
             <div>
                 <Label htmlFor="iconName">Icône</Label>
-                <div className="grid grid-cols-5 gap-2 mt-1 border p-2 rounded-md max-h-48 overflow-y-auto">
+                <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 mt-1 border p-2 rounded-md max-h-48 overflow-y-auto">
                     {iconOptions.map(({ name: iconKey, Icon }) => (
                         <button
                             type="button"
                             key={iconKey}
                             onClick={() => form.setValue('iconName', iconKey, { shouldValidate: true })}
                             className={cn(
-                                "flex flex-col items-center justify-center p-2 border rounded-md hover:bg-accent hover:text-accent-foreground",
+                                "flex flex-col items-center justify-center p-2 border rounded-md hover:bg-accent hover:text-accent-foreground aspect-square",
                                 form.watch('iconName') === iconKey && "bg-accent text-accent-foreground ring-2 ring-primary"
                             )}
                             title={iconKey}
                         >
-                            <Icon className="h-6 w-6 mb-1" />
-                            <span className="text-xs truncate">{iconKey}</span>
+                            <Icon className="h-5 w-5 mb-1 sm:h-6 sm:w-6" />
+                            <span className="text-xs truncate w-full text-center">{iconKey}</span>
                         </button>
                     ))}
                 </div>
@@ -185,7 +214,7 @@ export default function AdminCategoriesPage() {
                               <DialogHeader>
                                   <DialogTitle>Confirmer la suppression</DialogTitle>
                                   <DialogDescription>
-                                      Êtes-vous sûr de vouloir supprimer la catégorie "{category.name}" ?
+                                      Êtes-vous sûr de vouloir supprimer la catégorie "{category.name}" ? Cette action est irréversible.
                                   </DialogDescription>
                               </DialogHeader>
                               <DialogFooter>
