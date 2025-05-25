@@ -18,14 +18,15 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Textarea } from '@/components/ui/textarea'; // Not used, can be removed if not needed
 import { useToast } from '@/hooks/use-toast';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import type { Banner } from '@/types';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
+// Firebase imports removed
+// import { db } from '@/lib/firebase';
+// import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import Image from 'next/image';
 
 const bannerFormSchema = z.object({
@@ -38,9 +39,16 @@ const bannerFormSchema = z.object({
 
 type BannerFormValues = z.infer<typeof bannerFormSchema>;
 
+// Mock data for banners
+const initialMockBanners: Banner[] = [
+  { id: 'b1', title: 'Nouvelle Collection Arrivée!', subtitle: 'Découvrez nos derniers produits.', imageUrl: 'https://placehold.co/1200x400/FF5722/white?text=Collection+2024', link: '/products', imageAiHint: 'fashion collection new' },
+  { id: 'b2', title: 'Promotions Spéciales', subtitle: 'Jusqu_à -50% sur une sélection.', imageUrl: 'https://placehold.co/1200x400/4CAF50/white?text=Grosses+Promos', link: '/products?filter=sale', imageAiHint: 'sale discount offer' },
+];
+
+
 export default function AdminBannersPage() {
-  const [banners, setBanners] = useState<Banner[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [banners, setBanners] = useState<Banner[]>(initialMockBanners);
+  // const [isLoading, setIsLoading] = useState(true); // No Firebase loading
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
   const { toast } = useToast();
@@ -56,26 +64,7 @@ export default function AdminBannersPage() {
     },
   });
 
-  useEffect(() => {
-    setIsLoading(true);
-    const bannersCollectionRef = collection(db, 'banners');
-    const q = query(bannersCollectionRef, orderBy("title", "asc"));
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const fetchedBanners: Banner[] = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data() as Omit<Banner, 'id'>
-      }));
-      setBanners(fetchedBanners);
-      setIsLoading(false);
-    }, (error) => {
-      console.error("Erreur de récupération des bannières:", error);
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les bannières." });
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [toast]);
+  // useEffect for Firebase snapshot removed
 
   useEffect(() => {
     if (editingBanner) {
@@ -96,36 +85,26 @@ export default function AdminBannersPage() {
   };
 
   const handleDeleteBanner = async (bannerId: string, bannerTitle: string) => {
-    try {
-      await deleteDoc(doc(db, 'banners', bannerId));
-      toast({ title: "Bannière supprimée", description: `La bannière "${bannerTitle}" a été supprimée.` });
-    } catch (error) {
-      console.error("Erreur de suppression de bannière:", error);
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de supprimer la bannière." });
-    }
+    setBanners(prev => prev.filter(b => b.id !== bannerId));
+    toast({ title: "Bannière supprimée (local)", description: `La bannière "${bannerTitle}" a été supprimée localement.` });
   };
 
   const onSubmit: SubmitHandler<BannerFormValues> = async (data) => {
-    try {
-      if (editingBanner) {
-        const bannerDocRef = doc(db, 'banners', editingBanner.id);
-        await updateDoc(bannerDocRef, data);
-        toast({ title: "Bannière modifiée", description: `La bannière "${data.title}" a été mise à jour.` });
-      } else {
-        await addDoc(collection(db, 'banners'), data);
-        toast({ title: "Bannière ajoutée", description: `La bannière "${data.title}" a été ajoutée.` });
-      }
-      setIsFormOpen(false);
-      setEditingBanner(null);
-    } catch (error) {
-      console.error("Erreur de sauvegarde de bannière:", error);
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de sauvegarder la bannière." });
+    if (editingBanner) {
+      setBanners(prev => prev.map(b => b.id === editingBanner.id ? { ...b, ...data } : b));
+      toast({ title: "Bannière modifiée (local)", description: `La bannière "${data.title}" a été mise à jour localement.` });
+    } else {
+      const newBanner: Banner = { id: Date.now().toString(), ...data };
+      setBanners(prev => [...prev, newBanner]);
+      toast({ title: "Bannière ajoutée (local)", description: `La bannière "${data.title}" a été ajoutée localement.` });
     }
+    setIsFormOpen(false);
+    setEditingBanner(null);
   };
   
-  if (isLoading) {
-    return <div className="flex justify-center items-center h-64"><p>Chargement des bannières...</p></div>;
-  }
+  // if (isLoading) { // No Firebase loading
+  //   return <div className="flex justify-center items-center h-64"><p>Chargement des bannières...</p></div>;
+  // }
 
   return (
     <div className="space-y-6">

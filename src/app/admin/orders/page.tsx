@@ -19,8 +19,9 @@ import { Order, OrderStatus, OrderItem as AppOrderItem, CustomerInfo, orderStatu
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { db } from '@/lib/firebase';
-import { collection, onSnapshot, doc, updateDoc, orderBy, query, Timestamp } from 'firebase/firestore';
+// Firebase imports removed
+// import { db } from '@/lib/firebase';
+// import { collection, onSnapshot, doc, updateDoc, orderBy, query, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 const getStatusBadgeClass = (status: OrderStatus): string => {
@@ -34,38 +35,43 @@ const getStatusBadgeClass = (status: OrderStatus): string => {
   }
 };
 
+// Mock data for orders
+const mockOrders: Order[] = [
+  {
+    id: 'ORD001',
+    customerInfo: { fullName: 'Aminata Fall', address: 'Cité Keur Gorgui, Dakar', phone: '771234567' },
+    items: [{ productId: 'p1', productName: 'Maillot Sénégal Domicile', quantity: 1, price: 35000, selectedSize: 'M' }],
+    totalAmount: 35000,
+    status: OrderStatus.Processing,
+    orderDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+    paymentMethod: 'cod',
+    shippingAddress: 'Cité Keur Gorgui, Dakar',
+  },
+  {
+    id: 'ORD002',
+    customerInfo: { fullName: 'Babacar Diop', address: 'Sacré Coeur 3, Dakar', phone: '781112233' },
+    items: [
+      { productId: 'p2', productName: 'Baskets Pro Max', quantity: 1, price: 45000, selectedSize: '42' },
+      { productId: 'p3', productName: 'Survêtement Club Élite', quantity: 1, price: 28000, selectedSize: 'L' }
+    ],
+    totalAmount: 73000,
+    status: OrderStatus.Shipped,
+    orderDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
+    paymentMethod: 'wave',
+    shippingAddress: 'Sacré Coeur 3, Dakar',
+  },
+];
+
+
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [orders, setOrders] = useState<Order[]>(mockOrders);
+  // const [isLoading, setIsLoading] = useState(true); // No Firebase loading
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
-  useEffect(() => {
-    setIsLoading(true);
-    const ordersCollectionRef = collection(db, 'orders');
-    const q = query(ordersCollectionRef, orderBy("orderDate", "desc"));
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const fetchedOrders: Order[] = querySnapshot.docs.map(docSnapshot => {
-        const data = docSnapshot.data();
-        return {
-          id: docSnapshot.id,
-          ...data,
-          orderDate: (data.orderDate as Timestamp)?.toDate().toISOString() || new Date().toISOString(), // Convert Timestamp to ISO string
-        } as Order;
-      });
-      setOrders(fetchedOrders);
-      setIsLoading(false);
-    }, (error) => {
-      console.error("Erreur de récupération des commandes (snapshot):", error);
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les commandes en temps réel." });
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [toast]);
+  // useEffect for Firebase snapshot removed
 
   const handleViewDetails = (order: Order) => {
     setSelectedOrder(order);
@@ -73,15 +79,12 @@ export default function AdminOrdersPage() {
   };
   
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
-    try {
-      const orderDocRef = doc(db, 'orders', orderId);
-      await updateDoc(orderDocRef, { status: newStatus });
-      toast({ title: "Statut mis à jour", description: `Le statut de la commande ${orderId} est maintenant ${newStatus}.`});
-      // Real-time updates from onSnapshot will refresh the list, no need to setOrders manually
-    } catch (error) {
-      console.error("Erreur de mise à jour du statut:", error);
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de mettre à jour le statut de la commande." });
-    }
+    setOrders(prevOrders => 
+      prevOrders.map(order => 
+        order.id === orderId ? { ...order, status: newStatus } : order
+      )
+    );
+    toast({ title: "Statut mis à jour (local)", description: `Le statut de la commande ${orderId} est maintenant ${newStatus}.`});
   };
 
   const filteredOrders = orders.filter(order => 
@@ -90,14 +93,14 @@ export default function AdminOrdersPage() {
     order.status.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (isLoading) {
-    return (
-        <div className="flex flex-col items-center justify-center h-64 space-y-3">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="text-muted-foreground">Chargement des commandes...</p>
-        </div>
-    );
-  }
+  // if (isLoading) { // No Firebase loading
+  //   return (
+  //       <div className="flex flex-col items-center justify-center h-64 space-y-3">
+  //           <Loader2 className="h-12 w-12 animate-spin text-primary" />
+  //           <p className="text-muted-foreground">Chargement des commandes...</p>
+  //       </div>
+  //   );
+  // }
 
   return (
     <div className="space-y-6">

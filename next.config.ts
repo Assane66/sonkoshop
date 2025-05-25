@@ -19,16 +19,17 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'upload.wikimedia.org',
+        hostname: 'upload.wikimedia.org', // For Wave logo
         port: '',
         pathname: '/**',
       },
-      {
-        protocol: 'https',
-        hostname: 'res.cloudinary.com', // Added Cloudinary domain
-        port: '',
-        pathname: '/**',
-      },
+      // Cloudinary domain removed as per user request
+      // {
+      //   protocol: 'https',
+      //   hostname: 'res.cloudinary.com',
+      //   port: '',
+      //   pathname: '/**',
+      // },
     ],
   },
 };

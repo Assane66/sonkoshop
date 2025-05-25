@@ -5,43 +5,42 @@ import { useState, useEffect } from 'react';
 import ProductCard from '@/components/ProductCard';
 import ProductFilters from '@/components/ProductFilters';
 import type { Product } from '@/types';
+import { ProductCategoryEnum as CatEnum } from '@/types'; // For mock data
 import { Input } from '@/components/ui/input';
 import { Search, PackageOpen, Loader2 } from 'lucide-react';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast';
+// Firebase imports removed
+// import { db } from '@/lib/firebase';
+// import { collection, getDocs, onSnapshot, query, orderBy } from 'firebase/firestore';
+// import { useToast } from '@/hooks/use-toast';
+
+// Mock products for the products page
+const allMockProducts: Product[] = [
+  { id: 'p1', name: 'Maillot Sénégal Domicile', description: 'Maillot officiel 2024.', price: 35000, category: CatEnum.Maillots, imageUrl: 'https://placehold.co/600x400/4CAF50/white?text=Maillot+Sénégal', stock: 20, featured: true, sizes: ['S', 'M', 'L'], imageAiHint: 'senegal home jersey' },
+  { id: 'p2', name: 'Baskets Pro Max', description: 'Confort et durabilité.', price: 45000, category: CatEnum.Chaussures, imageUrl: 'https://placehold.co/600x400/FFC107/black?text=Baskets+Pro', stock: 15, sizes: ['40', '41', '42'], imageAiHint: 'pro sneakers' },
+  { id: 'p3', name: 'Survêtement Club Élite', description: 'Pour l_entraînement.', price: 28000, category: CatEnum.Pantalons, imageUrl: 'https://placehold.co/600x400/9C27B0/white?text=Survêtement', stock: 0, sizes: ['M', 'L'], imageAiHint: 'elite tracksuit' },
+  { id: 'p4', name: 'Ensemble Bébé Lionceau', description: 'Pour les futurs champions.', price: 18000, category: CatEnum.Enfants, imageUrl: 'https://placehold.co/600x400/00BCD4/black?text=Ensemble+Bébé', stock: 25, sizes: ['3M', '6M', '9M'], imageAiHint: 'baby lion kit' },
+  { id: 'p5', name: 'Maillot Extérieur Sénégal', description: 'Design audacieux pour les matchs à l_extérieur.', price: 35000, category: CatEnum.Maillots, imageUrl: 'https://placehold.co/600x400/795548/white?text=Maillot+Sénégal+Ext', stock: 18, sizes: ['S', 'M', 'XL'], imageAiHint: 'senegal away jersey' },
+  { id: 'p6', name: 'Chaussures de Running Légères', description: 'Idéales pour le jogging quotidien.', price: 52000, category: CatEnum.Chaussures, imageUrl: 'https://placehold.co/600x400/FF9800/black?text=Running+Shoes', stock: 12, sizes: ['39', '40', '43'], imageAiHint: 'light running shoes' },
+];
+
 
 export default function ProductsPage() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeFilters, setActiveFilters] = useState<any>({}); // Consider defining a more specific type
+  const [activeFilters, setActiveFilters] = useState<any>({}); 
   const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
+  // const { toast } = useToast(); // Toast not used without Firebase
 
   useEffect(() => {
     setIsLoading(true);
-    console.log("ProductsPage: Fetching all products...");
-    const productsCollectionRef = collection(db, 'products');
-    const q = query(productsCollectionRef, orderBy("name", "asc"));
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const fetchedProducts: Product[] = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data() as Omit<Product, 'id'>
-      }));
-      console.log("ProductsPage: Fetched all products", fetchedProducts);
-      setAllProducts(fetchedProducts);
-      setFilteredProducts(fetchedProducts); // Initialize filteredProducts with all products
+    // Simulate loading mock products
+    setTimeout(() => {
+      setAllProducts(allMockProducts);
+      setFilteredProducts(allMockProducts); 
       setIsLoading(false);
-    }, (error) => {
-      console.error("ProductsPage: Erreur de récupération des produits:", error);
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les produits." });
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [toast]);
+    }, 500);
+  }, []);
 
 
   useEffect(() => {
@@ -121,4 +120,3 @@ export default function ProductsPage() {
     </div>
   );
 }
-    

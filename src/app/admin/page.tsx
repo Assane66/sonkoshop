@@ -8,20 +8,35 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy, limit, Timestamp } from 'firebase/firestore';
-import type { Product, Order } from '@/types'; // Import Product and Order as types
-import { OrderStatus } from '@/types';      // Import OrderStatus as a value
+// Firebase imports removed
+// import { db } from '@/lib/firebase';
+// import { collection, onSnapshot, query, orderBy, limit, Timestamp } from 'firebase/firestore';
+import type { Product, Order } from '@/types'; 
+import { OrderStatus, ProductCategoryEnum as CatEnum } from '@/types'; // OrderStatus as value for mock data
 
-// Mock data for Sales Report - can be replaced with real data later
+// Mock data for Sales Report
 const monthlyRevenueData = [
-  { month: "Jan", sales: 0 },
-  { month: "Fév", sales: 15000 },
-  { month: "Mar", sales: 20000 },
-  { month: "Avr", sales: 22000 },
-  { month: "Mai", sales: 38000 },
-  { month: "Juin", sales: 30000 },
-  { month: "Juil", sales: 25000 },
+  { month: "Jan", sales: 120000 },
+  { month: "Fév", sales: 150000 },
+  { month: "Mar", sales: 200000 },
+  { month: "Avr", sales: 220000 },
+  { month: "Mai", sales: 380000 },
+  { month: "Juin", sales: 300000 },
+  { month: "Juil", sales: 250000 },
+];
+
+// Mock data for products and orders for dashboard
+const mockDashboardProducts: Product[] = [
+  { id: '1', name: 'Maillot Sénégal', description: '...', price: 30000, category: CatEnum.Maillots, imageUrl: '', stock: 3, imageAiHint: 'senegal jersey' },
+  { id: '2', name: 'Chaussures Nike', description: '...', price: 50000, category: CatEnum.Chaussures, imageUrl: '', stock: 10, imageAiHint: 'nike shoes' },
+  { id: '3', name: 'Pantalon Training', description: '...', price: 15000, category: CatEnum.Pantalons, imageUrl: '', stock: 8, imageAiHint: 'training pants' },
+  { id: '4', name: 'Maillot Enfant', description: '...', price: 20000, category: CatEnum.Enfants, imageUrl: '', stock: 1, imageAiHint: 'kids jersey' },
+];
+
+const mockDashboardOrders: Order[] = [
+  { id: 'DORD001', customerInfo: { fullName: 'Fatimata Sow', address: 'Dakar', phone: '77xxxxxxx' }, items: [], totalAmount: 30000, status: OrderStatus.Delivered, orderDate: new Date().toISOString(), paymentMethod: 'cod', shippingAddress: 'Dakar' },
+  { id: 'DORD002', customerInfo: { fullName: 'Moussa Ndiaye', address: 'Thiès', phone: '78xxxxxxx' }, items: [], totalAmount: 50000, status: OrderStatus.Pending, orderDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), paymentMethod: 'wave', shippingAddress: 'Thiès' },
+  { id: 'DORD003', customerInfo: { fullName: 'Awa Gueye', address: 'Saint Louis', phone: '76xxxxxxx' }, items: [], totalAmount: 15000, status: OrderStatus.Cancelled, orderDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), paymentMethod: 'cod', shippingAddress: 'Saint Louis' },
 ];
 
 
@@ -41,47 +56,17 @@ export default function AdminDashboardPage() {
   const [totalProducts, setTotalProducts] = useState(0);
   const [stockAlerts, setStockAlerts] = useState(0);
   const [latestOrders, setLatestOrders] = useState<Order[]>([]);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
-  const [isLoadingOrders, setIsLoadingOrders] = useState(true);
+  const [isLoadingData, setIsLoadingData] = useState(true); // Single loading state
 
   useEffect(() => {
-    // Fetch products for count and stock alerts
-    setIsLoadingProducts(true);
-    const productsCollectionRef = collection(db, 'products');
-    const unsubscribeProducts = onSnapshot(productsCollectionRef, (querySnapshot) => {
-      const productsData: Product[] = querySnapshot.docs.map(doc => doc.data() as Product);
-      setTotalProducts(productsData.length);
-      setStockAlerts(productsData.filter(p => p.stock < 5 && p.stock > 0).length); // Example: alert if stock < 5
-      setIsLoadingProducts(false);
-    }, (error) => {
-      console.error("Erreur de récupération des produits pour le dashboard:", error);
-      setIsLoadingProducts(false);
-    });
-
-    // Fetch latest orders
-    setIsLoadingOrders(true);
-    const ordersCollectionRef = collection(db, 'orders');
-    const qOrders = query(ordersCollectionRef, orderBy("orderDate", "desc"), limit(5));
-    const unsubscribeOrders = onSnapshot(qOrders, (querySnapshot) => {
-      const fetchedOrders: Order[] = querySnapshot.docs.map(docSnapshot => {
-        const data = docSnapshot.data();
-        return {
-          id: docSnapshot.id,
-          ...data,
-          orderDate: (data.orderDate as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
-        } as Order;
-      });
-      setLatestOrders(fetchedOrders);
-      setIsLoadingOrders(false);
-    }, (error) => {
-      console.error("Erreur de récupération des dernières commandes:", error);
-      setIsLoadingOrders(false);
-    });
-
-    return () => {
-      unsubscribeProducts();
-      unsubscribeOrders();
-    };
+    setIsLoadingData(true);
+    // Simulate data fetching
+    setTimeout(() => {
+      setTotalProducts(mockDashboardProducts.length);
+      setStockAlerts(mockDashboardProducts.filter(p => p.stock < 5 && p.stock > 0).length);
+      setLatestOrders(mockDashboardOrders.slice(0, 5));
+      setIsLoadingData(false);
+    }, 1000); // Simulate 1 second loading
   }, []);
 
 
@@ -93,7 +78,7 @@ export default function AdminDashboardPage() {
         <Card className="bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-2xl font-bold">
-              {isLoadingProducts ? <Loader2 className="h-6 w-6 animate-spin" /> : totalProducts}
+              {isLoadingData ? <Loader2 className="h-6 w-6 animate-spin" /> : totalProducts}
             </CardTitle>
             {/* <Archive className="h-6 w-6 text-primary-foreground/80" /> */}
           </CardHeader>
@@ -104,11 +89,11 @@ export default function AdminDashboardPage() {
         <Card className="border-destructive border-2 shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-2xl font-bold text-destructive">
-              {isLoadingProducts ? <Loader2 className="h-6 w-6 animate-spin" /> : stockAlerts}
+              {isLoadingData ? <Loader2 className="h-6 w-6 animate-spin" /> : stockAlerts}
             </CardTitle>
             <div className="relative">
                <Badge variant="destructive" className="absolute -top-2 -right-2 text-xs h-5 w-5 flex items-center justify-center">
-                {isLoadingProducts ? '...' : stockAlerts}
+                {isLoadingData ? '...' : stockAlerts}
               </Badge>
             </div>
           </CardHeader>
@@ -116,14 +101,18 @@ export default function AdminDashboardPage() {
              <p className="text-sm font-medium text-destructive">Alertes de Stock (Stock &lt; 5)</p>
           </CardContent>
         </Card>
-         {/* Placeholder for Total Orders and Total Revenue cards if needed */}
       </div>
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Rapport des Ventes (Fictif)</CardTitle>
+          <CardTitle>Rapport des Ventes</CardTitle>
         </CardHeader>
         <CardContent className="pl-2 pr-6 pb-6">
+          {isLoadingData ? (
+             <div className="flex items-center justify-center h-[300px]">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={monthlyRevenueData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
@@ -140,7 +129,7 @@ export default function AdminDashboardPage() {
                 tickLine={false} 
                 axisLine={false} 
                 tickFormatter={(value) => `${(value / 1000)}k`}
-                domain={[0, 40000]}
+                domain={[0, 400000]}
               />
               <Tooltip
                 contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)'}}
@@ -151,6 +140,7 @@ export default function AdminDashboardPage() {
               <Line type="monotone" dataKey="sales" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4, fill: 'hsl(var(--primary))', strokeWidth:0 }} activeDot={{ r: 6 }} />
             </LineChart>
           </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
 
@@ -159,7 +149,7 @@ export default function AdminDashboardPage() {
           <CardTitle>Dernières Commandes</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {isLoadingOrders ? (
+          {isLoadingData ? (
             <div className="flex items-center justify-center h-40">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
@@ -177,7 +167,7 @@ export default function AdminDashboardPage() {
               <TableBody>
                 {latestOrders.map((order) => (
                   <TableRow key={order.id}>
-                    <TableCell className="font-medium">{order.id.substring(0,6)}...</TableCell>
+                    <TableCell className="font-medium">{order.id.substring(0,7)}...</TableCell>
                     <TableCell>{order.customerInfo.fullName}</TableCell>
                     <TableCell>{new Date(order.orderDate).toLocaleDateString('fr-FR')}</TableCell>
                     <TableCell>

@@ -2,10 +2,10 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Archive, LayoutGrid, ImageIcon, ShoppingCart, Settings, LogOut } from 'lucide-react';
+import { usePathname } from 'next/navigation'; // useRouter removed
+import { LayoutDashboard, Archive, LayoutGrid, ImageIcon, ShoppingCart, Settings } from 'lucide-react'; // LogOut removed
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/context/AuthContext';
+// import { useAuth } from '@/context/AuthContext'; // Firebase Auth removed
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
@@ -20,20 +20,21 @@ const sidebarNavItems = [
 
 export default function AdminSidebar() {
   const pathname = usePathname();
-  const { logout } = useAuth();
-  const router = useRouter();
-  const { toast } = useToast();
+  // const { logout } = useAuth(); // Firebase Auth removed
+  // const router = useRouter(); // Firebase Auth removed
+  // const { toast } = useToast(); // Toast for logout removed, can be kept for other uses
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      toast({ title: 'Déconnexion réussie', description: 'Vous avez été déconnecté.' });
-      router.push('/login');
-    } catch (error) {
-      console.error("Erreur de déconnexion:", error);
-      toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de se déconnecter.' });
-    }
-  };
+  // Logout handler removed
+  // const handleLogout = async () => {
+  //   try {
+  //     await logout();
+  //     toast({ title: 'Déconnexion réussie', description: 'Vous avez été déconnecté.' });
+  //     router.push('/login');
+  //   } catch (error) {
+  //     console.error("Erreur de déconnexion:", error);
+  //     toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de se déconnecter.' });
+  //   }
+  // };
 
   return (
     <aside className="fixed top-0 left-0 z-40 w-64 h-screen bg-[hsl(var(--admin-sidebar-background))] text-[hsl(var(--admin-sidebar-foreground))] shadow-lg flex flex-col">
@@ -60,7 +61,8 @@ export default function AdminSidebar() {
           );
         })}
       </nav>
-      <div className="p-3 mt-auto">
+      {/* Logout button removed */}
+      {/* <div className="p-3 mt-auto">
         <Button
           variant="ghost"
           className="w-full justify-start text-left hover:bg-[hsl(var(--admin-sidebar-hover-background))] text-[hsl(var(--admin-sidebar-foreground))]"
@@ -69,7 +71,7 @@ export default function AdminSidebar() {
           <LogOut className="mr-3 h-5 w-5" />
           Déconnexion
         </Button>
-      </div>
+      </div> */}
     </aside>
   );
 }

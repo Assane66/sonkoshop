@@ -7,50 +7,41 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
-import { categoryIcons, type SiteCategory } from '@/types';
-import { db } from '@/lib/firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast';
+import { categoryIcons, type SiteCategory, productCategoriesArray } from '@/types'; // productCategoriesArray for static categories
+// Firebase imports removed
+// import { db } from '@/lib/firebase';
+// import { collection, onSnapshot } from 'firebase/firestore';
+// import { useToast } from '@/hooks/use-toast';
 
 interface ProductFiltersProps {
-  onFilterChange: (filters: any) => void; // Define a proper filter type later
+  onFilterChange: (filters: any) => void;
 }
 
 const SIZES = ['S', 'M', 'L', 'XL', 'XXL', '38', '39', '40', '41', '42', '43', '44', '45'];
-const MAX_PRICE = 100000; // Example max price in FCFA
+const MAX_PRICE = 100000; 
+
+// Use static categories for filters
+const staticCategories: SiteCategory[] = productCategoriesArray.map((name, index) => ({
+  id: (index + 1).toString(),
+  name,
+  iconName: name as keyof typeof categoryIcons,
+}));
+
 
 export default function ProductFilters({ onFilterChange }: ProductFiltersProps) {
-  const [availableCategories, setAvailableCategories] = useState<SiteCategory[]>([]);
-  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [availableCategories, setAvailableCategories] = useState<SiteCategory[]>(staticCategories);
+  // const [isLoadingCategories, setIsLoadingCategories] = useState(false); // No loading from Firebase
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, MAX_PRICE]);
   
   const [minPriceDisplay, setMinPriceDisplay] = useState<string>(priceRange[0].toString());
   const [maxPriceDisplay, setMaxPriceDisplay] = useState<string>(priceRange[1].toString());
-  const { toast } = useToast();
+  // const { toast } = useToast(); // Toast not used without Firebase
+
+  // useEffect for Firebase categories removed
 
   useEffect(() => {
-    setIsLoadingCategories(true);
-    const categoriesCollectionRef = collection(db, 'categories');
-    const unsubscribe = onSnapshot(categoriesCollectionRef, (querySnapshot) => {
-      const fetchedCategories: SiteCategory[] = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data() as Omit<SiteCategory, 'id'>
-      }));
-      setAvailableCategories(fetchedCategories);
-      setIsLoadingCategories(false);
-    }, (error) => {
-      console.error("Erreur de récupération des catégories pour les filtres:", error);
-      toast({ variant: "destructive", title: "Erreur Filtres", description: "Impossible de charger les filtres de catégories." });
-      setIsLoadingCategories(false);
-    });
-
-    return () => unsubscribe(); // Cleanup listener on component unmount
-  }, [toast]);
-
-  useEffect(() => {
-    // Ensure this effect runs only on the client after initial hydration
     setMinPriceDisplay(priceRange[0].toLocaleString('fr-FR'));
     setMaxPriceDisplay(priceRange[1].toLocaleString('fr-FR'));
   }, [priceRange]);
@@ -90,9 +81,10 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
         <AccordionItem value="categories">
           <AccordionTrigger className="text-base font-medium">Catégories</AccordionTrigger>
           <AccordionContent className="space-y-2 pt-2">
-            {isLoadingCategories ? (
+            {/* {isLoadingCategories ? ( // No loading
               <p className="text-sm text-muted-foreground">Chargement des catégories...</p>
-            ) : availableCategories.length > 0 ? (
+            ) :  */}
+            {availableCategories.length > 0 ? (
               availableCategories.map(category => {
                 const IconComponent = category.iconName ? categoryIcons[category.iconName] : categoryIcons["Default"];
                 return (

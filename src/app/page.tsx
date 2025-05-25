@@ -5,64 +5,50 @@ import { useState, useEffect } from 'react';
 import BannerCarousel from '@/components/BannerCarousel';
 import ProductCard from '@/components/ProductCard';
 import type { Banner, Product } from '@/types';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, limit, onSnapshot, orderBy } from 'firebase/firestore';
+import { ProductCategoryEnum as CatEnum } from '@/types'; // For mock data
+// Firebase imports removed
+// import { db } from '@/lib/firebase';
+// import { collection, query, where, getDocs, limit, onSnapshot, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { PackageOpen, Image as ImageIconLucide, Loader2 } from 'lucide-react'; // Renamed Image to ImageIconLucide
+import { PackageOpen, Image as ImageIconLucide, Loader2 } from 'lucide-react';
+
+// Mock data
+const mockBanners: Banner[] = [
+  { id: '1', title: 'Collection Maillots 2024!', subtitle: 'Supportez votre équipe.', imageUrl: 'https://placehold.co/1200x500/E91E63/white?text=Nouveaux+Maillots', link: '/products', imageAiHint: 'football jersey stadium' },
+  { id: '2', title: 'Chaussures de Sport', subtitle: 'Performance et style.', imageUrl: 'https://placehold.co/1200x500/2196F3/white?text=Chaussures+Sport', link: '/products', imageAiHint: 'sports shoes running' },
+];
+
+const mockProducts: Product[] = [
+  { id: 'p1', name: 'Maillot Sénégal Domicile', description: 'Maillot officiel 2024.', price: 35000, category: CatEnum.Maillots, imageUrl: 'https://placehold.co/600x400/4CAF50/white?text=Maillot+Sénégal', stock: 20, featured: true, imageAiHint: 'senegal jersey' },
+  { id: 'p2', name: 'Baskets Pro Max', description: 'Confort et durabilité.', price: 45000, category: CatEnum.Chaussures, imageUrl: 'https://placehold.co/600x400/FFC107/black?text=Baskets+Pro', stock: 15, featured: true, imageAiHint: 'pro sneakers' },
+  { id: 'p3', name: 'Survêtement Club Élite', description: 'Pour l_entraînement.', price: 28000, category: CatEnum.Pantalons, imageUrl: 'https://placehold.co/600x400/9C27B0/white?text=Survêtement', stock: 10, imageAiHint: 'tracksuit' },
+  { id: 'p4', name: 'Ensemble Bébé Lionceau', description: 'Pour les futurs champions.', price: 18000, category: CatEnum.Enfants, imageUrl: 'https://placehold.co/600x400/00BCD4/black?text=Ensemble+Bébé', stock: 25, featured: true, imageAiHint: 'baby clothes' },
+];
+
 
 export default function HomePage() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
-  const [banners, setBanners] = useState<Banner[]>([]);
+  const [banners, setBanners] = useState<Banner[]>(mockBanners);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
-  const [isLoadingBanners, setIsLoadingBanners] = useState(true);
-  const { toast } = useToast();
+  const [isLoadingBanners, setIsLoadingBanners] = useState(true); // Keep for consistency, though mock data loads instantly
+  // const { toast } = useToast(); // Toast not used without Firebase
 
   useEffect(() => {
     setIsLoadingProducts(true);
-    console.log("HomePage: Fetching featured products...");
-    const productsCollectionRef = collection(db, 'products');
-    // Try to get featured first, if not, get latest 8 products
-    const qProducts = query(productsCollectionRef, orderBy("featured", "desc"), orderBy("name", "asc"), limit(8));
-
-    const unsubscribeProducts = onSnapshot(qProducts, (querySnapshot) => {
-      const fetchedProducts: Product[] = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data() as Omit<Product, 'id'>
-      }));
-      console.log("HomePage: Fetched featured products", fetchedProducts);
-      setFeaturedProducts(fetchedProducts);
+    // Simulate loading mock products
+    setTimeout(() => {
+      setFeaturedProducts(mockProducts.filter(p => p.featured).slice(0, 8));
       setIsLoadingProducts(false);
-    }, (error) => {
-      console.error("HomePage: Erreur de récupération des produits en vedette:", error);
-      toast({ variant: "destructive", title: "Erreur Produits", description: "Impossible de charger les produits en vedette." });
-      setIsLoadingProducts(false);
-    });
+    }, 500);
 
-    return () => unsubscribeProducts();
-  }, [toast]);
-
-  useEffect(() => {
     setIsLoadingBanners(true);
-    console.log("HomePage: Fetching banners...");
-    const bannersCollectionRef = collection(db, 'banners');
-    const qBanners = query(bannersCollectionRef, orderBy("title", "asc"));
-
-    const unsubscribeBanners = onSnapshot(qBanners, (querySnapshot) => {
-      const fetchedBanners: Banner[] = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data() as Omit<Banner, 'id'>
-      }));
-      console.log("HomePage: Fetched banners", fetchedBanners);
-      setBanners(fetchedBanners);
+    // Simulate loading mock banners
+     setTimeout(() => {
+      setBanners(mockBanners);
       setIsLoadingBanners(false);
-    }, (error) => {
-      console.error("HomePage: Erreur de récupération des bannières:", error);
-      toast({ variant: "destructive", title: "Erreur Bannières", description: "Impossible de charger les bannières." });
-      setIsLoadingBanners(false);
-    });
+    }, 300);
+  }, []);
 
-    return () => unsubscribeBanners();
-  }, [toast]);
 
   return (
     <div className="container mx-auto px-4 py-8">

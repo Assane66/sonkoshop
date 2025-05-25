@@ -6,8 +6,8 @@ export type Product = {
   id: string;
   name: string;
   description: string;
-  price: number; // in FCFA
-  category: string; // Now a string, should refer to a category ID/name from Firestore
+  price: number; 
+  category: string; 
   imageUrl: string;
   stock: number;
   sizes?: string[];
@@ -15,8 +15,6 @@ export type Product = {
   imageAiHint?: string;
 };
 
-// This enum can still be useful for initial default categories if you populate them
-// or for defining structure, but the actual list comes from Firestore.
 export enum ProductCategoryEnum {
   Maillots = "Maillots",
   Chaussures = "Chaussures",
@@ -25,7 +23,14 @@ export enum ProductCategoryEnum {
   Modes = "Modes",
   Gardiens = "Gardiens",
   EquipementsSportifs = "Équipements Sportifs",
+  Chemise = "Chemise",
+  Baskets = "Baskets",
+  Accessoires = "Accessoires",
 }
+
+// Static list of categories for forms and filters if not using dynamic categories
+export const productCategoriesArray: string[] = Object.values(ProductCategoryEnum);
+
 
 export type Banner = {
   id: string;
@@ -36,9 +41,8 @@ export type Banner = {
   imageAiHint?: string;
 };
 
-// SiteCategory now reflects what would be stored in Firestore
 export interface SiteCategory {
-  id: string; // Firestore document ID
+  id: string; 
   name: string;
   iconName?: keyof typeof categoryIcons;
 }
@@ -51,15 +55,14 @@ export const categoryIcons: Record<string, LucideIcon> = {
   [ProductCategoryEnum.Modes]: Sparkles,
   [ProductCategoryEnum.Gardiens]: Shield,
   [ProductCategoryEnum.EquipementsSportifs]: Dumbbell,
+  [ProductCategoryEnum.Chemise]: Shirt,
+  [ProductCategoryEnum.Baskets]: Footprints,
+  [ProductCategoryEnum.Accessoires]: LayoutGrid,
   "Default": LayoutGrid,
-  "Chemise": Shirt,
-  "Baskets": Footprints,
-  "Accessoires": LayoutGrid,
-  "Package": Package, // Added Package icon for potential use
+  "Package": Package,
 };
 
 
-// Types for Orders 
 export enum OrderStatus {
   Pending = "En attente",
   Processing = "En traitement",
@@ -87,12 +90,12 @@ export interface CustomerInfo {
 }
 
 export interface Order {
-  id: string; // Firestore document ID
+  id: string; 
   customerInfo: CustomerInfo;
   items: OrderItem[];
   totalAmount: number;
   status: OrderStatus;
-  orderDate: string; // ISO string date, or Firebase Timestamp
+  orderDate: string; 
   paymentMethod: 'cod' | 'wave' | string;
   shippingAddress: string; 
 }

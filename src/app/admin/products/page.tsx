@@ -2,13 +2,13 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card'; // CardTitle removed
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Edit3, Trash2, Search, Eye, Package } from 'lucide-react';
+import { PlusCircle, Edit3, Trash2, Search, Eye, Package, Loader2 } from 'lucide-react';
 import Image from 'next/image';
-import type { Product, SiteCategory } from '@/types'; 
-import { categoryIcons } from '@/types';
+import type { Product, SiteCategory, ProductCategoryEnum as CatEnum } from '@/types'; 
+import { categoryIcons, productCategoriesArray } from '@/types'; // Using static categories array
 import Link from 'next/link';
 import {
   Dialog,
@@ -23,37 +23,34 @@ import {
 import ProductForm from '@/components/admin/ProductForm';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
+// Firebase imports removed
+// import { db } from '@/lib/firebase';
+// import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
+
+// Initial mock products
+const initialMockProducts: Product[] = [
+  { id: '1', name: 'Maillot Domicile Sénégal 2024', description: 'Authentique maillot des Lions de la Téranga.', price: 35000, category: CatEnum.Maillots, imageUrl: 'https://placehold.co/300x300.png?text=Maillot+Senegal', stock: 50, sizes: ['S', 'M', 'L', 'XL'], featured: true, imageAiHint: 'senegal jersey' },
+  { id: '2', name: 'Chaussures de Foot Pro Model', description: 'Pour des performances optimales sur le terrain.', price: 65000, category: CatEnum.Chaussures, imageUrl: 'https://placehold.co/300x300.png?text=Foot+Shoes', stock: 30, sizes: ['40', '41', '42', '43', '44'], imageAiHint: 'soccer cleats' },
+  { id: '3', name: 'Pantalon de Survêtement Club', description: 'Confortable et stylé pour l_entraînement.', price: 22000, category: CatEnum.Pantalons, imageUrl: 'https://placehold.co/300x300.png?text=Training+Pants', stock: 0, sizes: ['M', 'L'], imageAiHint: 'track pants' },
+];
+
+// Mock categories for the ProductForm, assuming they are managed locally in AdminCategoriesPage
+const mockSiteCategories: SiteCategory[] = productCategoriesArray.map((catName, index) => ({
+  id: (index + 1).toString(),
+  name: catName,
+  iconName: catName as keyof typeof categoryIcons, // Assuming icon names match category names
+}));
+
 
 export default function AdminProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>(initialMockProducts);
+  // const [isLoading, setIsLoading] = useState(true); // No Firebase loading
   const [searchTerm, setSearchTerm] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const { toast } = useToast();
 
-  useEffect(() => {
-    setIsLoading(true);
-    const productsCollectionRef = collection(db, 'products');
-    const q = query(productsCollectionRef, orderBy("name", "asc")); 
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const fetchedProducts: Product[] = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data() as Omit<Product, 'id'>
-      }));
-      setProducts(fetchedProducts);
-      setIsLoading(false);
-    }, (error) => {
-      console.error("Erreur de récupération des produits (snapshot):", error);
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les produits en temps réel." });
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe(); 
-  }, [toast]);
+  // useEffect for Firebase snapshot removed
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -71,40 +68,26 @@ export default function AdminProductsPage() {
   };
 
   const handleDeleteProduct = async (productId: string, productName: string) => {
-    try {
-      await deleteDoc(doc(db, 'products', productId));
-      toast({ title: "Produit supprimé", description: `Le produit "${productName}" a été supprimé de Firestore.` });
-    } catch (error: any) {
-      console.error("Erreur de suppression du produit:", error);
-      toast({ variant: "destructive", title: "Erreur", description: `Impossible de supprimer le produit. ${error.message}` });
-    }
+    setProducts(prev => prev.filter(p => p.id !== productId));
+    toast({ title: "Produit supprimé (local)", description: `Le produit "${productName}" a été supprimé localement.` });
   };
 
   const handleFormSubmit = async (productData: Omit<Product, 'id'> | Product) => {
-    try {
-      if (editingProduct && editingProduct.id) {
-        const productDocRef = doc(db, 'products', editingProduct.id);
-        const dataToUpdate: Partial<Product> = { ...(productData as Product) };
-        if ('id' in dataToUpdate) delete (dataToUpdate as any).id;
-        
-        await updateDoc(productDocRef, dataToUpdate);
-        toast({ title: "Produit modifié", description: `${productData.name} a été mis à jour dans Firestore.` });
-      } else {
-        await addDoc(collection(db, 'products'), productData as Omit<Product, 'id'>);
-        toast({ title: "Produit ajouté", description: `${productData.name} a été ajouté à Firestore.` });
-      }
-      setIsFormOpen(false);
-      setEditingProduct(null);
-    } catch (error: any) {
-      console.error("Erreur détaillée de sauvegarde du produit:", error);
-      console.error("Détails de l'erreur Firestore:", error.code, error.message);
-      toast({ variant: "destructive", title: "Erreur de Sauvegarde", description: `Impossible de sauvegarder le produit. Erreur: ${error.message}` });
+    if (editingProduct && editingProduct.id && 'id' in productData) {
+      setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, ...productData } : p));
+      toast({ title: "Produit modifié (local)", description: `${productData.name} a été mis à jour localement.` });
+    } else {
+      const newProduct: Product = { id: Date.now().toString(), ...(productData as Omit<Product, 'id'>) };
+      setProducts(prev => [newProduct, ...prev]);
+      toast({ title: "Produit ajouté (local)", description: `${productData.name} a été ajouté localement.` });
     }
+    setIsFormOpen(false);
+    setEditingProduct(null);
   };
   
-  if (isLoading) {
-    return <div className="flex justify-center items-center h-64"><p>Chargement des produits...</p></div>;
-  }
+  // if (isLoading) { // No Firebase loading
+  //   return <div className="flex justify-center items-center h-64"><p>Chargement des produits...</p></div>;
+  // }
 
   return (
     <div className="space-y-6">
@@ -127,6 +110,7 @@ export default function AdminProductsPage() {
               product={editingProduct}
               onSubmit={handleFormSubmit}
               onCancel={() => { setIsFormOpen(false); setEditingProduct(null); }}
+              categories={mockSiteCategories} // Pass local categories
             />
           </DialogContent>
         </Dialog>
@@ -203,7 +187,7 @@ export default function AdminProductsPage() {
                               <DialogHeader>
                                   <DialogTitle>Confirmer la suppression</DialogTitle>
                                   <DialogDescription>
-                                      Êtes-vous sûr de vouloir supprimer le produit "{product.name}" ? Cette action est irréversible.
+                                      Êtes-vous sûr de vouloir supprimer le produit "{product.name}" ?
                                   </DialogDescription>
                               </DialogHeader>
                               <DialogFooter>
@@ -222,7 +206,7 @@ export default function AdminProductsPage() {
               }) : (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    Aucun produit trouvé dans Firestore. Commencez par en ajouter un !
+                    Aucun produit trouvé. Commencez par en ajouter un !
                   </TableCell>
                 </TableRow>
               )}

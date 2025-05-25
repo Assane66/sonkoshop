@@ -10,13 +10,22 @@ import { Separator } from '@/components/ui/separator';
 import { Input as ShadcnInput } from '@/components/ui/input';
 import { ShoppingCart, Zap, Star, CheckCircle, ShieldCheck, Tag, Minus, Plus, ArrowLeft } from 'lucide-react';
 import type { Product } from '@/types';
-import { categoryIcons } from '@/types';
+import { categoryIcons, ProductCategoryEnum as CatEnum } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/context/CartContext';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+// Firebase imports removed
+// import { doc, getDoc } from 'firebase/firestore';
+// import { db } from '@/lib/firebase';
 import Link from 'next/link';
+
+// Re-introduce mock products for detail page fallback
+const allMockProducts: Product[] = [
+  { id: 'p1', name: 'Maillot Sénégal Domicile', description: 'Maillot officiel 2024.', price: 35000, category: CatEnum.Maillots, imageUrl: 'https://placehold.co/600x400/4CAF50/white?text=Maillot+Sénégal', stock: 20, featured: true, sizes: ['S', 'M', 'L'], imageAiHint: 'senegal home jersey' },
+  { id: 'p2', name: 'Baskets Pro Max', description: 'Confort et durabilité.', price: 45000, category: CatEnum.Chaussures, imageUrl: 'https://placehold.co/600x400/FFC107/black?text=Baskets+Pro', stock: 15, sizes: ['40', '41', '42'], imageAiHint: 'pro sneakers' },
+  { id: 'p3', name: 'Survêtement Club Élite', description: 'Pour l_entraînement.', price: 28000, category: CatEnum.Pantalons, imageUrl: 'https://placehold.co/600x400/9C27B0/white?text=Survêtement', stock: 0, sizes: ['M', 'L'], imageAiHint: 'elite tracksuit' },
+  { id: 'p4', name: 'Ensemble Bébé Lionceau', description: 'Pour les futurs champions.', price: 18000, category: CatEnum.Enfants, imageUrl: 'https://placehold.co/600x400/00BCD4/black?text=Ensemble+Bébé', stock: 25, sizes: ['3M', '6M', '9M'], imageAiHint: 'baby lion kit' },
+];
 
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
   const [product, setProduct] = useState<Product | null>(null);
@@ -27,39 +36,21 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const cart = useCart();
 
   useEffect(() => {
-    const fetchProduct = async () => {
-      if (!params.id) {
-        setProduct(null);
-        setIsLoading(false);
-        return;
-      }
-      setIsLoading(true);
-      try {
-        const productDocRef = doc(db, 'products', params.id);
-        const productSnap = await getDoc(productDocRef);
-
-        if (productSnap.exists()) {
-          const fetchedProductData = productSnap.data() as Omit<Product, 'id'>;
-          const fetchedProduct: Product = { id: productSnap.id, ...fetchedProductData };
-          setProduct(fetchedProduct);
-          if (fetchedProduct.sizes && fetchedProduct.sizes.length > 0) {
-            setSelectedSize(fetchedProduct.sizes[0]); // Default to first size
-          }
-        } else {
-          console.log("Aucun produit trouvé avec cet ID dans Firestore:", params.id);
-          setProduct(null);
-          toast({ variant: "destructive", title: "Produit non trouvé", description: "Ce produit n'existe pas ou plus." });
+    setIsLoading(true);
+    // Simulate fetching product from mock data
+    setTimeout(() => {
+      const foundProduct = allMockProducts.find(p => p.id === params.id);
+      if (foundProduct) {
+        setProduct(foundProduct);
+        if (foundProduct.sizes && foundProduct.sizes.length > 0) {
+          setSelectedSize(foundProduct.sizes[0]); 
         }
-      } catch (error) {
-        console.error("Erreur de récupération du produit:", error);
-        toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les détails du produit." });
+      } else {
         setProduct(null);
-      } finally {
-        setIsLoading(false);
+        toast({ variant: "destructive", title: "Produit non trouvé", description: "Ce produit n'existe pas ou plus." });
       }
-    };
-
-    fetchProduct();
+      setIsLoading(false);
+    }, 500);
     setQuantity(1); 
   }, [params.id, toast]);
 
@@ -118,11 +109,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     );
   }
   
-  // Ensure imageUrl is a valid URL or a placeholder
   const displayImageUrl = product.imageUrl && product.imageUrl.trim() !== '' ? product.imageUrl : 'https://placehold.co/600x600.png';
-  // Adjust imageAiHint based on whether the original imageUrl was valid
   const displayImageAiHint = product.imageUrl && product.imageUrl.trim() !== '' ? (product.imageAiHint || 'product image detail') : 'placeholder image';
-
 
   const CategoryIcon = product.category ? categoryIcons[product.category as keyof typeof categoryIcons] || categoryIcons["Default"] : categoryIcons["Default"];
 
@@ -175,7 +163,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} className={`h-5 w-5 ${i < 4 ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
                 ))}
-                <span className="ml-2 text-sm text-muted-foreground">(12 avis)</span> 
+                <span className="ml-2 text-sm text-muted-foreground">(Avis fictifs)</span> 
               </div>
             </CardHeader>
             <CardContent>
@@ -274,4 +262,3 @@ const Label = ({ htmlFor, children, className }: { htmlFor?: string; children: R
     {children}
   </label>
 );
-    

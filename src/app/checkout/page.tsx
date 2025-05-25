@@ -2,12 +2,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useCart, type CartItem } from '@/context/CartContext';
+import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
-// Label est défini plus bas dans ce fichier, si besoin
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -15,11 +14,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Truck, CreditCard } from 'lucide-react';
+import { Truck } from 'lucide-react'; // CreditCard removed as Wave is main online payment for now
 import Image from 'next/image';
-import { db } from '@/lib/firebase'; // Importer db
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore'; // Importer addDoc et serverTimestamp
-import type { Order, OrderStatus as AppOrderStatus, CustomerInfo, OrderItem } from '@/types'; // Importer les types
+// Firebase imports removed
+// import { db } from '@/lib/firebase'; 
+// import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import type { Order, OrderStatus as AppOrderStatus, CustomerInfo, OrderItem } from '@/types'; 
 
 const checkoutFormSchema = z.object({
   fullName: z.string().min(3, "Le nom complet est requis (minimum 3 caractères)."),
@@ -32,7 +32,7 @@ const checkoutFormSchema = z.object({
 
 type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
 
-const WAVE_PAYMENT_BASE_URL = 'https://pay.wave.com/m/M_pIXmQ2smGxRM/c/sn/';
+const WAVE_PAYMENT_BASE_URL = 'https://pay.wave.com/m/M_pIXmQ2smGxRM/c/sn/'; // Keep for Wave redirect
 
 export default function CheckoutPage() {
   const { cartItems, getCartTotalPrice, clearCart } = useCart();
@@ -65,67 +65,39 @@ export default function CheckoutPage() {
   const onSubmit = async (data: CheckoutFormValues) => {
     setIsProcessing(true);
     
-    const orderItems: OrderItem[] = cartItems.map(item => {
-      const orderItem: OrderItem = {
-        productId: item.id,
-        productName: item.name,
-        quantity: item.quantity,
-        price: item.price,
-      };
-      if (item.selectedSize) {
-        orderItem.selectedSize = item.selectedSize;
-      }
-      if (item.imageUrl) {
-        orderItem.imageUrl = item.imageUrl;
-      }
-      return orderItem;
-    });
+    // const orderItems: OrderItem[] = cartItems.map(item => { // Still useful for local simulation
+    //   const orderItem: OrderItem = {
+    //     productId: item.id,
+    //     productName: item.name,
+    //     quantity: item.quantity,
+    //     price: item.price,
+    //   };
+    //   if (item.selectedSize) {
+    //     orderItem.selectedSize = item.selectedSize;
+    //   }
+    //   if (item.imageUrl) {
+    //     orderItem.imageUrl = item.imageUrl;
+    //   }
+    //   return orderItem;
+    // });
 
-    const customerInfo: CustomerInfo = {
-      fullName: data.fullName,
-      address: data.address, 
-      phone: data.phone,
-    };
+    // const customerInfo: CustomerInfo = {
+    //   fullName: data.fullName,
+    //   address: data.address, 
+    //   phone: data.phone,
+    // };
 
     if (data.paymentMethod === 'cod') {
-      try {
-        const orderData: Omit<Order, 'id' | 'orderDate'> = { 
-          customerInfo,
-          items: orderItems,
-          totalAmount: totalPrice,
-          status: "En attente" as AppOrderStatus, 
-          paymentMethod: 'cod',
-          shippingAddress: data.address, 
-        };
-        
-        console.log('Tentative d\'enregistrement de la commande COD:', orderData);
+      // Simulate order placement as Firebase is removed
+      console.log('Simulation de commande (Paiement à la livraison):', data, cartItems);
+      toast({
+        title: "Commande confirmée (Simulation)!",
+        description: "Votre commande avec paiement à la livraison a été simulée. Nous vous contacterons bientôt.",
+      });
+      clearCart();
+      router.push('/checkout/success?method=cod');
+      setIsProcessing(false); // Reset after simulation
 
-        await addDoc(collection(db, 'orders'), {
-          ...orderData,
-          orderDate: serverTimestamp() 
-        });
-
-        console.log('Commande (Paiement à la livraison) enregistrée avec succès dans Firestore.');
-        toast({
-          title: "Commande confirmée!",
-          description: "Votre commande avec paiement à la livraison a été enregistrée. Nous vous contacterons bientôt.",
-        });
-        clearCart();
-        router.push('/checkout/success?method=cod');
-
-      } catch (error: any) {
-        console.error("Erreur détaillée lors de l'enregistrement de la commande COD dans Firestore:", error);
-        let description = "Impossible d'enregistrer votre commande. Veuillez réessayer.";
-        if (error.message) {
-          description += ` Détail: ${error.message}`;
-        }
-        toast({
-          variant: "destructive",
-          title: "Erreur de commande",
-          description: description,
-        });
-        setIsProcessing(false);
-      }
     } else if (data.paymentMethod === 'wave') {
       if (totalPrice <= 0) {
         toast({
@@ -137,19 +109,17 @@ export default function CheckoutPage() {
         return;
       }
       
-      console.log('Redirection vers Wave pour paiement. Commande non sauvegardée localement à ce stade pour Wave.', data, cartItems);
+      console.log('Redirection vers Wave pour paiement.', data, cartItems);
       toast({
         title: "Redirection vers Wave...",
         description: "Vous allez être redirigé pour compléter votre paiement.",
       });
       
       const wavePaymentUrl = `${WAVE_PAYMENT_BASE_URL}?amount=${totalPrice}`;
-      
-      // Il serait préférable de ne vider le panier qu'après confirmation de paiement via webhook.
-      // Pour l'instant, on vide le panier de manière optimiste.
       clearCart(); 
       setTimeout(() => {
         if (typeof window !== "undefined") window.location.href = wavePaymentUrl;
+        // setIsProcessing(false); // User is redirected, so this might not be necessary
       }, 1500);
     }
   };

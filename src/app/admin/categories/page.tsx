@@ -2,7 +2,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card'; // CardHeader, CardTitle removed for simplicity
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusCircle, Edit3, Trash2, LayoutGrid } from 'lucide-react';
 import {
@@ -21,11 +21,12 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { categoryIcons, SiteCategory } from '@/types';
+import { categoryIcons, SiteCategory, ProductCategoryEnum } from '@/types'; // ProductCategoryEnum for mock data
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, onSnapshot } from 'firebase/firestore';
+// Firebase imports removed
+// import { db } from '@/lib/firebase';
+// import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, onSnapshot } from 'firebase/firestore';
 
 const categoryFormSchema = z.object({
   name: z.string().min(2, { message: "Le nom doit contenir au moins 2 caractères." }),
@@ -39,11 +40,18 @@ const iconOptions = Object.keys(categoryIcons).map(name => ({
   Icon: categoryIcons[name as keyof typeof categoryIcons]
 }));
 
+// Mock data for categories
+const initialMockCategories: SiteCategory[] = [
+  { id: '1', name: ProductCategoryEnum.Maillots, iconName: ProductCategoryEnum.Maillots },
+  { id: '2', name: ProductCategoryEnum.Chaussures, iconName: ProductCategoryEnum.Chaussures },
+  { id: '3', name: ProductCategoryEnum.Pantalons, iconName: ProductCategoryEnum.Pantalons },
+];
+
 export default function AdminCategoriesPage() {
-  const [categories, setCategories] = useState<SiteCategory[]>([]);
+  const [categories, setCategories] = useState<SiteCategory[]>(initialMockCategories);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<SiteCategory | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // const [isLoading, setIsLoading] = useState(false); // No loading from Firebase
   const { toast } = useToast();
 
   const form = useForm<CategoryFormValues>({
@@ -51,41 +59,7 @@ export default function AdminCategoriesPage() {
     defaultValues: { name: '', iconName: 'Default' },
   });
 
-  useEffect(() => {
-    setIsLoading(true);
-    const categoriesCollectionRef = collection(db, 'categories');
-    // const fetchCategories = async () => {
-    //   try {
-    //     const querySnapshot = await getDocs(categoriesCollectionRef);
-    //     const fetchedCategories: SiteCategory[] = querySnapshot.docs.map(doc => ({
-    //       id: doc.id,
-    //       ...doc.data() as Omit<SiteCategory, 'id'>
-    //     }));
-    //     setCategories(fetchedCategories);
-    //   } catch (error) {
-    //     console.error("Erreur de récupération des catégories:", error);
-    //     toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les catégories." });
-    //   } finally {
-    //     setIsLoading(false);
-    //   }
-    // };
-    // fetchCategories();
-
-    const unsubscribe = onSnapshot(categoriesCollectionRef, (querySnapshot) => {
-      const fetchedCategories: SiteCategory[] = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data() as Omit<SiteCategory, 'id'>
-      }));
-      setCategories(fetchedCategories);
-      setIsLoading(false);
-    }, (error) => {
-      console.error("Erreur de récupération des catégories (snapshot):", error);
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les catégories en temps réel." });
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe(); // Cleanup listener on component unmount
-  }, [toast]);
+  // useEffect for Firebase removed
 
   useEffect(() => {
     if (editingCategory) {
@@ -106,38 +80,26 @@ export default function AdminCategoriesPage() {
   };
 
   const handleDeleteCategory = async (categoryId: string, categoryName: string) => {
-    try {
-      await deleteDoc(doc(db, 'categories', categoryId));
-      toast({ title: "Catégorie supprimée", description: `La catégorie "${categoryName}" a été supprimée.` });
-      // Real-time updates from onSnapshot will refresh the list
-    } catch (error) {
-      console.error("Erreur de suppression de catégorie:", error);
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de supprimer la catégorie." });
-    }
+    setCategories(prev => prev.filter(cat => cat.id !== categoryId));
+    toast({ title: "Catégorie supprimée (local)", description: `La catégorie "${categoryName}" a été supprimée localement.` });
   };
 
   const onSubmit: SubmitHandler<CategoryFormValues> = async (data) => {
-    try {
-      if (editingCategory) {
-        const categoryDocRef = doc(db, 'categories', editingCategory.id);
-        await updateDoc(categoryDocRef, data);
-        toast({ title: "Catégorie modifiée", description: `${data.name} a été mise à jour.` });
-      } else {
-        await addDoc(collection(db, 'categories'), data);
-        toast({ title: "Catégorie ajoutée", description: `${data.name} a été ajoutée.` });
-      }
-      setIsFormOpen(false);
-      setEditingCategory(null);
-      // Real-time updates from onSnapshot will refresh the list
-    } catch (error) {
-      console.error("Erreur de sauvegarde de catégorie:", error);
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de sauvegarder la catégorie." });
+    if (editingCategory) {
+      setCategories(prev => prev.map(cat => cat.id === editingCategory.id ? { ...cat, ...data } : cat));
+      toast({ title: "Catégorie modifiée (local)", description: `${data.name} a été mise à jour localement.` });
+    } else {
+      const newCategory: SiteCategory = { id: Date.now().toString(), ...data };
+      setCategories(prev => [...prev, newCategory]);
+      toast({ title: "Catégorie ajoutée (local)", description: `${data.name} a été ajoutée localement.` });
     }
+    setIsFormOpen(false);
+    setEditingCategory(null);
   };
 
-  if (isLoading) {
-    return <div className="flex justify-center items-center h-64"><p>Chargement des catégories...</p></div>;
-  }
+  // if (isLoading) { // No loading from Firebase
+  //   return <div className="flex justify-center items-center h-64"><p>Chargement des catégories...</p></div>;
+  // }
 
   return (
     <div className="space-y-6">

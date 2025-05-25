@@ -6,7 +6,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Toaster } from "@/components/ui/toaster";
 import { CartProvider } from '@/context/CartContext';
-import { AuthProvider } from '@/context/AuthContext'; // Import AuthProvider
+// import { AuthProvider } from '@/context/AuthContext'; // Firebase Auth removed
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -31,7 +31,7 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
-        <AuthProvider> {/* Wrap with AuthProvider */}
+        {/* <AuthProvider> */} {/* Firebase Auth removed */}
           <CartProvider>
             <Header />
             <main className="flex-grow">
@@ -40,7 +40,7 @@ export default function RootLayout({
             <Footer />
             <Toaster />
           </CartProvider>
-        </AuthProvider>
+        {/* </AuthProvider> */} {/* Firebase Auth removed */}
       </body>
     </html>
   );
