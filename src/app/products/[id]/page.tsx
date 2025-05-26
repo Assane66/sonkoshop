@@ -7,16 +7,24 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Input as ShadcnInput } from '@/components/ui/input'; // Renamed to avoid conflict with HTML input
+import { Input as ShadcnInput } from '@/components/ui/input';
 import { ShoppingCart, Zap, Star, CheckCircle, ShieldCheck, Tag, Minus, Plus, ArrowLeft, Loader2 } from 'lucide-react';
 import type { Product } from '@/types';
 import { categoryIcons } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/context/CartContext';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore'; // Added onSnapshot for potential real-time updates if needed, though getDoc is usually fine here
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
+
+// Custom Label to avoid conflict if ShadCN Label is not globally available as 'Label'
+const Label = ({ htmlFor, children, className }: { htmlFor?: string; children: React.ReactNode; className?: string }) => (
+  <label htmlFor={htmlFor} className={`block text-sm font-medium text-gray-700 dark:text-gray-300 ${className || ''}`}>
+    {children}
+  </label>
+);
+
 
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
   const [product, setProduct] = useState<Product | null>(null);
@@ -27,45 +35,73 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const cart = useCart();
 
   useEffect(() => {
-    const fetchProduct = async () => {
-      setIsLoading(true);
-      setQuantity(1); // Reset quantity on new product load
-      console.log(`ProductDetailPage: Fetching product with ID: ${params.id}`);
-      try {
-        const productDocRef = doc(db, 'products', params.id);
-        const productSnap = await getDoc(productDocRef);
-
-        if (productSnap.exists()) {
-          const productData = { id: productSnap.id, ...productSnap.data() } as Product;
-          setProduct(productData);
-          console.log("ProductDetailPage: Product fetched:", productData);
-          if (productData.sizes && productData.sizes.length > 0) {
-            setSelectedSize(productData.sizes[0]); // Default to first size
-          } else {
-            setSelectedSize(undefined); // No sizes available
-          }
-        } else {
-          console.warn(`ProductDetailPage: No product found with ID: ${params.id}`);
-          setProduct(null);
-          toast({ variant: "destructive", title: "Produit non trouvé", description: "Ce produit n'existe pas ou plus." });
-        }
-      } catch (error) {
-        console.error("ProductDetailPage: Error fetching product:", error);
-        toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les détails du produit." });
-        setProduct(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (params.id) {
-      fetchProduct();
-    } else {
+    if (!params.id) {
+      console.error("ProductDetailPage: No product ID provided.");
+      toast({ variant: "destructive", title: "Erreur", description: "ID de produit manquant." });
       setIsLoading(false);
       setProduct(null);
-      toast({ variant: "destructive", title: "ID de produit manquant."});
+      return;
     }
-  }, [params.id, toast]);
+
+    setIsLoading(true);
+    setQuantity(1); // Reset quantity on new product load
+    console.log(`ProductDetailPage: Setting up Firestore listener for product ID: ${params.id}`);
+    const productDocRef = doc(db, 'products', params.id);
+
+    // Using onSnapshot for real-time updates, though getDoc might be sufficient for a detail page.
+    const unsubscribe = onSnapshot(productDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const productData = docSnap.data();
+        console.log("ProductDetailPage: Product data fetched:", productData);
+        const mappedProduct = {
+          id: docSnap.id,
+          name: productData.name || 'Nom manquant',
+          description: productData.description || 'Description manquante',
+          price: productData.price || 0,
+          category: productData.category || 'Catégorie manquante',
+          imageUrl: productData.imageUrl || '',
+          stock: productData.stock || 0,
+          sizes: productData.sizes || [],
+          featured: productData.featured || false,
+          imageAiHint: productData.imageAiHint || '',
+        } as Product;
+        setProduct(mappedProduct);
+
+        if (mappedProduct.sizes && mappedProduct.sizes.length > 0 && !selectedSize) { // Set default size only if not already set
+          setSelectedSize(mappedProduct.sizes[0]);
+        } else if (!(mappedProduct.sizes && mappedProduct.sizes.length > 0)) {
+          setSelectedSize(undefined);
+        }
+        console.log("ProductDetailPage: Product state updated:", mappedProduct);
+      } else {
+        console.warn(`ProductDetailPage: No product found with ID: ${params.id}`);
+        setProduct(null);
+        toast({ variant: "destructive", title: "Produit non trouvé", description: "Ce produit n'existe pas ou plus." });
+      }
+      setIsLoading(false);
+    }, (error) => {
+      console.error(`ProductDetailPage: Error fetching product ID ${params.id}:`, error);
+      toast({ variant: "destructive", title: "Erreur", description: `Impossible de charger les détails du produit: ${error.message}` });
+      setProduct(null);
+      setIsLoading(false);
+    });
+
+    return () => {
+      console.log(`ProductDetailPage: Unsubscribing from Firestore listener for product ID: ${params.id}`);
+      unsubscribe();
+    }
+  }, [params.id, toast]); // Removed selectedSize from dependencies to avoid re-triggering on size change.
+
+  useEffect(() => { // Separate effect to handle default size selection when product loads or changes
+    if (product && product.sizes && product.sizes.length > 0) {
+      if (!selectedSize || !product.sizes.includes(selectedSize)) { // If no size selected or current selection is invalid
+        setSelectedSize(product.sizes[0]);
+      }
+    } else if (product && (!product.sizes || product.sizes.length === 0)) {
+        setSelectedSize(undefined); // No sizes available
+    }
+  }, [product, selectedSize]);
+
 
   const handleAddToCart = () => {
     if (!product) return;
@@ -135,7 +171,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         </Link>
       </Button>
       <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-start">
-        <Card className="shadow-xl overflow-hidden rounded-lg group"> {/* Added group for hover effect */}
+        <Card className="shadow-xl overflow-hidden rounded-lg group">
           <div className="relative w-full aspect-square">
             <Image
               src={displayImageUrl}
@@ -145,7 +181,10 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
               sizes="(max-width: 768px) 100vw, 50vw"
               className="object-cover transition-transform duration-300 group-hover:scale-105"
               data-ai-hint={displayImageAiHint}
-              onError={(e) => e.currentTarget.src = 'https://placehold.co/600x600.png'}
+              onError={(e) => {
+                console.warn("ProductDetailPage: Error loading image:", displayImageUrl);
+                e.currentTarget.src = 'https://placehold.co/600x600.png';
+              }}
             />
              {product.stock === 0 && (
               <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
@@ -176,7 +215,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} className={`h-5 w-5 ${i < 4 ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
                 ))}
-                <span className="ml-2 text-sm text-muted-foreground">(4.0 / 12 Avis)</span> {/* Example avis */}
+                <span className="ml-2 text-sm text-muted-foreground">(4.0 / 12 Avis)</span>
               </div>
             </CardHeader>
             <CardContent>
@@ -269,10 +308,3 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     </div>
   );
 }
-
-// Custom Label to avoid conflict if ShadCN Label is not globally available as 'Label'
-const Label = ({ htmlFor, children, className }: { htmlFor?: string; children: React.ReactNode; className?: string }) => (
-  <label htmlFor={htmlFor} className={`block text-sm font-medium text-gray-700 dark:text-gray-300 ${className || ''}`}>
-    {children}
-  </label>
-);

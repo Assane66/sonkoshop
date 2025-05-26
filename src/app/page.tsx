@@ -19,47 +19,62 @@ export default function HomePage() {
 
   useEffect(() => {
     setIsLoadingProducts(true);
-    console.log("HomePage: Fetching featured products...");
+    console.log("HomePage: Setting up Firestore listener for featured products...");
     const productsCollection = collection(db, 'products');
-    // Query for featured products, ordered by name, limit to 8
-    // Add orderBy('createdAt', 'desc') if you have timestamps and want newest featured
     const qProducts = query(productsCollection, where('featured', '==', true), orderBy('name', 'asc'), limit(8));
 
     const unsubscribeProducts = onSnapshot(qProducts, (snapshot) => {
-      const fetchedProducts: Product[] = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Product));
+      console.log("HomePage: Featured products snapshot received, docs count:", snapshot.docs.length);
+      if (snapshot.empty) {
+        console.log("HomePage: No featured products found in snapshot.");
+      }
+      const fetchedProducts: Product[] = snapshot.docs.map(doc => {
+        const data = doc.data();
+        console.log("HomePage: Mapping product data:", data);
+        return {
+          id: doc.id,
+          name: data.name || 'Nom manquant',
+          description: data.description || 'Description manquante',
+          price: data.price || 0,
+          category: data.category || 'Catégorie manquante',
+          imageUrl: data.imageUrl || '',
+          stock: data.stock || 0,
+          sizes: data.sizes || [],
+          featured: data.featured || false,
+          imageAiHint: data.imageAiHint || '',
+        } as Product;
+      });
       setFeaturedProducts(fetchedProducts);
       setIsLoadingProducts(false);
-      console.log("HomePage: Featured products fetched:", fetchedProducts.length);
+      console.log("HomePage: Featured products state updated:", fetchedProducts);
     }, (error) => {
       console.error("HomePage: Error fetching featured products:", error);
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les produits en vedette." });
+      toast({ variant: "destructive", title: "Erreur Produits", description: `Impossible de charger les produits en vedette: ${error.message}` });
       setIsLoadingProducts(false);
     });
 
     setIsLoadingBanners(true);
-    console.log("HomePage: Fetching banners...");
+    console.log("HomePage: Setting up Firestore listener for banners...");
     const bannersCollection = collection(db, 'banners');
-    // Add orderBy('createdAt', 'desc') if you want to order banners
-    const qBanners = query(bannersCollection, limit(5)); // Limit to 5 banners for example
+    const qBanners = query(bannersCollection, orderBy('title', 'asc'), limit(5)); // Example: order by title
 
     const unsubscribeBanners = onSnapshot(qBanners, (snapshot) => {
+      console.log("HomePage: Banners snapshot received, docs count:", snapshot.docs.length);
       const fetchedBanners: Banner[] = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       } as Banner));
       setBanners(fetchedBanners);
       setIsLoadingBanners(false);
-      console.log("HomePage: Banners fetched:", fetchedBanners.length);
+      console.log("HomePage: Banners state updated:", fetchedBanners);
     }, (error) => {
       console.error("HomePage: Error fetching banners:", error);
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les bannières." });
+      toast({ variant: "destructive", title: "Erreur Bannières", description: `Impossible de charger les bannières: ${error.message}` });
       setIsLoadingBanners(false);
     });
 
     return () => {
+      console.log("HomePage: Unsubscribing from Firestore listeners.");
       unsubscribeProducts();
       unsubscribeBanners();
     };
@@ -81,8 +96,8 @@ export default function HomePage() {
         ) : (
            <div className="text-center py-10 h-[300px] md:h-[400px] lg:h-[500px] bg-muted rounded-lg flex flex-col items-center justify-center">
               <ImageIconLucide className="h-24 w-24 text-primary mb-4" />
-              <p className="text-xl text-muted-foreground">Aucune bannière disponible pour le moment.</p>
-              <p className="text-sm text-muted-foreground mt-2">Revenez bientôt ou configurez des bannières dans le panneau d'administration.</p>
+              <p className="text-xl text-muted-foreground">Aucune bannière à afficher.</p>
+              <p className="text-sm text-muted-foreground mt-2">Ajoutez des bannières via le panneau d'administration.</p>
           </div>
         )}
       </section>
@@ -106,7 +121,9 @@ export default function HomePage() {
           <div className="text-center py-10">
             <PackageOpen className="mx-auto h-20 w-20 text-muted-foreground mb-4" />
             <p className="text-xl text-muted-foreground">Aucun produit en vedette pour le moment.</p>
-            <p className="text-sm text-muted-foreground mt-2">Revenez bientôt ou explorez tous nos <a href="/products" className="text-primary hover:underline">produits</a>.</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Assurez-vous d'avoir des produits marqués comme "en vedette" dans l'administration, ou explorez tous nos <a href="/products" className="text-primary hover:underline">produits</a>.
+            </p>
           </div>
         )}
       </section>

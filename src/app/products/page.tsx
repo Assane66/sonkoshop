@@ -8,7 +8,7 @@ import type { Product } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Search, PackageOpen, Loader2 } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, where, QueryConstraint } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 export default function ProductsPage() {
@@ -21,31 +21,51 @@ export default function ProductsPage() {
 
   useEffect(() => {
     setIsLoading(true);
-    console.log("ProductsPage: Fetching all products...");
+    console.log("ProductsPage: Setting up Firestore listener for all products...");
     const productsCollection = collection(db, 'products');
-    // Add orderBy('createdAt', 'desc') if you have timestamps
     const q = query(productsCollection, orderBy('name', 'asc')); 
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedProducts: Product[] = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Product));
+      console.log("ProductsPage: All products snapshot received, docs count:", snapshot.docs.length);
+      if (snapshot.empty) {
+        console.log("ProductsPage: No products found in snapshot.");
+      }
+      const fetchedProducts: Product[] = snapshot.docs.map(doc => {
+        const data = doc.data();
+        console.log("ProductsPage: Mapping product data:", data);
+        return {
+          id: doc.id,
+          name: data.name || 'Nom manquant',
+          description: data.description || 'Description manquante',
+          price: data.price || 0,
+          category: data.category || 'Catégorie manquante',
+          imageUrl: data.imageUrl || '',
+          stock: data.stock || 0,
+          sizes: data.sizes || [],
+          featured: data.featured || false,
+          imageAiHint: data.imageAiHint || '',
+        } as Product;
+      });
       setAllProducts(fetchedProducts);
-      setFilteredProducts(fetchedProducts); // Initially show all products
+      // Apply initial filtering (which will also set filteredProducts)
+      // This is deferred to the next useEffect to ensure allProducts is set first
+      console.log("ProductsPage: All products state updated:", fetchedProducts);
       setIsLoading(false);
-      console.log("ProductsPage: All products fetched:", fetchedProducts.length);
     }, (error) => {
       console.error("ProductsPage: Error fetching products:", error);
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les produits." });
+      toast({ variant: "destructive", title: "Erreur Produits", description: `Impossible de charger les produits: ${error.message}` });
       setIsLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      console.log("ProductsPage: Unsubscribing from Firestore listener.");
+      unsubscribe();
+    }
   }, [toast]);
 
 
   useEffect(() => {
+    console.log("ProductsPage: Applying filters. SearchTerm:", searchTerm, "ActiveFilters:", activeFilters, "AllProducts count:", allProducts.length);
     let productsToFilter = [...allProducts];
 
     if (searchTerm) {
@@ -66,13 +86,15 @@ export default function ProductsPage() {
     }
 
     setFilteredProducts(productsToFilter);
+    console.log("ProductsPage: Filtered products count:", productsToFilter.length);
   }, [searchTerm, activeFilters, allProducts]);
 
   const handleFilterChange = (filters: any) => {
+    console.log("ProductsPage: Filters changed:", filters);
     setActiveFilters(filters);
   };
   
-  if (isLoading) {
+  if (isLoading && allProducts.length === 0) { // Show loader only if truly loading initial data
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <div className="flex flex-col items-center">
@@ -103,18 +125,22 @@ export default function ProductsPage() {
           <ProductFilters onFilterChange={handleFilterChange} />
         </aside>
         <main className="w-full md:w-3/4 lg:w-4/5">
-          {filteredProducts.length > 0 ? (
+          {(!isLoading && allProducts.length === 0) ? ( // No products at all
+             <div className="text-center py-10">
+              <PackageOpen className="mx-auto h-20 w-20 text-muted-foreground mb-4" />
+              <p className="text-xl text-muted-foreground">Aucun produit disponible dans la boutique pour le moment.</p>
+            </div>
+          ) : filteredProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
-          ) : (
+          ) : ( // Products exist, but filters yield no results
             <div className="text-center py-10">
               <PackageOpen className="mx-auto h-20 w-20 text-muted-foreground mb-4" />
               <p className="text-xl text-muted-foreground">Aucun produit ne correspond à vos critères.</p>
-              {allProducts.length > 0 && (searchTerm || Object.keys(activeFilters).length > 0) && <p className="text-sm text-muted-foreground mt-2">Essayez d'élargir votre recherche ou de modifier vos filtres.</p>}
-              {allProducts.length === 0 && !isLoading && <p className="text-sm text-muted-foreground mt-2">Aucun produit n'est actuellement disponible dans la boutique.</p>}
+              {(searchTerm || Object.keys(activeFilters).length > 0) && <p className="text-sm text-muted-foreground mt-2">Essayez d'élargir votre recherche ou de modifier vos filtres.</p>}
             </div>
           )}
         </main>
