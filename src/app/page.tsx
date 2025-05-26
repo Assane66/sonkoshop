@@ -21,7 +21,9 @@ export default function HomePage() {
     setIsLoadingProducts(true);
     console.log("HomePage: Setting up Firestore listener for featured products...");
     const productsCollection = collection(db, 'products');
-    const qProducts = query(productsCollection, where('featured', '==', true), orderBy('name', 'asc'), limit(8));
+    // Temporarily removed orderBy('name', 'asc') to avoid needing a composite index immediately.
+    // User should create the index: featured (asc), name (asc)
+    const qProducts = query(productsCollection, where('featured', '==', true), limit(8));
 
     const unsubscribeProducts = onSnapshot(qProducts, (snapshot) => {
       console.log("HomePage: Featured products snapshot received, docs count:", snapshot.docs.length);
@@ -56,7 +58,7 @@ export default function HomePage() {
     setIsLoadingBanners(true);
     console.log("HomePage: Setting up Firestore listener for banners...");
     const bannersCollection = collection(db, 'banners');
-    const qBanners = query(bannersCollection, orderBy('title', 'asc'), limit(5)); // Example: order by title
+    const qBanners = query(bannersCollection, orderBy('title', 'asc'), limit(5)); 
 
     const unsubscribeBanners = onSnapshot(qBanners, (snapshot) => {
       console.log("HomePage: Banners snapshot received, docs count:", snapshot.docs.length);
@@ -122,7 +124,7 @@ export default function HomePage() {
             <PackageOpen className="mx-auto h-20 w-20 text-muted-foreground mb-4" />
             <p className="text-xl text-muted-foreground">Aucun produit en vedette pour le moment.</p>
             <p className="text-sm text-muted-foreground mt-2">
-              Assurez-vous d'avoir des produits marqués comme "en vedette" dans l'administration, ou explorez tous nos <a href="/products" className="text-primary hover:underline">produits</a>.
+              Assurez-vous d'avoir des produits marqués comme "en vedette" dans l'administration, ou explorez tous nos <Link href="/products" className="text-primary hover:underline">produits</Link>.
             </p>
           </div>
         )}
