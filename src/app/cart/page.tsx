@@ -39,6 +39,8 @@ export default function CartPage() {
   };
   
   const totalPrice = getCartTotalPrice();
+  console.log("CartPage: cartItems.length =", cartItems.length, "totalPrice =", totalPrice);
+
 
   if (cartItems.length === 0) {
     return (
@@ -71,7 +73,7 @@ export default function CartPage() {
             <Card key={`${item.id}-${item.selectedSize || 'default'}`} className="flex flex-col sm:flex-row items-center p-4 shadow-md gap-4">
               <div className="relative w-24 h-24 sm:w-20 sm:h-20 flex-shrink-0">
                 <Image
-                  src={item.imageUrl}
+                  src={item.imageUrl || 'https://placehold.co/100x100.png'}
                   alt={item.name}
                   fill
                   sizes="100px"
@@ -130,7 +132,7 @@ export default function CartPage() {
             </CardContent>
             <CardFooter className="flex flex-col space-y-3">
               <Button size="lg" className="w-full bg-primary hover:bg-primary/90" asChild>
-                <Link href="/checkout">
+                <Link href="/checkout" onClick={() => console.log("CartPage: 'Passer à la caisse' link clicked.")}>
                     <CreditCard className="mr-2 h-5 w-5" />
                     Passer à la caisse
                 </Link>

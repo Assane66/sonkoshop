@@ -31,7 +31,6 @@ const checkoutFormSchema = z.object({
 
 type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
 
-// Récupérer depuis les paramètres admin plus tard si nécessaire
 const WAVE_PAYMENT_BASE_URL = 'https://pay.wave.com/m/M_pIXmQ2smGxRM/c/sn/'; 
 
 export default function CheckoutPage() {
@@ -54,10 +53,20 @@ export default function CheckoutPage() {
   const totalPrice = getCartTotalPrice();
 
   useEffect(() => {
+    let currentPath = '';
+    if (typeof window !== 'undefined') {
+      currentPath = window.location.pathname;
+    }
+    console.log("CheckoutPage: useEffect triggered. cartItems.length =", cartItems.length, "isProcessing =", isProcessing, "pathname =", currentPath);
     if (cartItems.length === 0 && !isProcessing) {
-      if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined' && !currentPath.includes('/checkout/success')) {
+        console.log("CheckoutPage: Cart is empty and not processing, redirecting to /cart");
         router.push('/cart');
+      } else {
+         console.log("CheckoutPage: Cart is empty but either processing or on success page, no redirect.");
       }
+    } else {
+        console.log("CheckoutPage: Cart is not empty or is processing, no redirect.");
     }
   }, [cartItems, isProcessing, router]);
 
@@ -75,7 +84,6 @@ export default function CheckoutPage() {
       if (item.selectedSize) {
         orderItem.selectedSize = item.selectedSize;
       }
-      // Ensure imageUrl is either a valid string or not present
       if (item.imageUrl && item.imageUrl.trim() !== '') {
         orderItem.imageUrl = item.imageUrl;
       }
@@ -92,8 +100,8 @@ export default function CheckoutPage() {
         customerInfo,
         items: orderItems,
         totalAmount: totalPrice,
-        status: OrderStatus.Pending, // Default status
-        orderDate: serverTimestamp(), // Firestore server timestamp
+        status: OrderStatus.Pending,
+        orderDate: serverTimestamp(), 
         paymentMethod: data.paymentMethod,
         shippingAddress: data.address,
     };
@@ -109,13 +117,15 @@ export default function CheckoutPage() {
         });
         clearCart();
         router.push(`/checkout/success?method=cod&orderId=${docRef.id}`);
-      } catch (error) {
+      } catch (error: any) {
         console.error("CheckoutPage: Error saving COD order to Firestore:", error);
         let errorMessage = "Impossible d'enregistrer votre commande. Veuillez réessayer.";
-        if (error instanceof Error && error.message.includes("permission-denied")) {
-            errorMessage = "Erreur de permission. Veuillez contacter le support.";
-        } else if (error instanceof Error) {
+        if (error.message) {
             errorMessage = `Erreur: ${error.message}. Veuillez contacter le support.`;
+        }
+        if (error.code && error.code.includes("permission-denied")) {
+            errorMessage = "Erreur de permission Firestore. Impossible de sauvegarder la commande.";
+             console.error("CheckoutPage: Firestore permission denied. Check security rules for 'orders' collection.");
         }
         toast({
           variant: "destructive",
@@ -137,12 +147,9 @@ export default function CheckoutPage() {
         return;
       }
       
-      // For Wave, we might still want to save the order as 'Pending' before redirecting
-      // Or handle confirmation via a webhook after payment success
-      // For now, let's save it as pending then redirect
       try {
         console.log("CheckoutPage: Attempting to save Wave order (pending) to Firestore:", orderData);
-        const docRef = await addDoc(collection(db, "orders"), {...orderData, status: OrderStatus.Pending}); // Explicitly pending
+        const docRef = await addDoc(collection(db, "orders"), {...orderData, status: OrderStatus.Pending});
         console.log("CheckoutPage: Wave Order (pending) saved with ID:", docRef.id);
         
         toast({
@@ -151,29 +158,24 @@ export default function CheckoutPage() {
         });
         
         const wavePaymentUrl = `${WAVE_PAYMENT_BASE_URL}?amount=${totalPrice}`;
-        // It's often better to clear cart after successful payment confirmation via webhook
-        // But for simplicity now, we clear it optimistically or after redirect.
         clearCart(); 
         setTimeout(() => {
           if (typeof window !== "undefined") window.location.href = wavePaymentUrl;
         }, 1500);
-        // setIsProcessing(false) might not be hit if redirect happens quickly
 
-      } catch (error) {
+      } catch (error: any) {
         console.error("CheckoutPage: Error saving Wave order to Firestore before redirect:", error);
         toast({
           variant: "destructive",
           title: "Échec de la préparation de la commande Wave",
-          description: "Impossible de préparer votre commande pour le paiement Wave. Veuillez réessayer.",
+          description: `Impossible de préparer votre commande pour le paiement Wave. ${error.message || 'Veuillez réessayer.'}`,
         });
         setIsProcessing(false);
       }
     }
   };
 
-  if (cartItems.length === 0 && !isProcessing) {
-     // This check helps prevent users from landing on checkout with an empty cart
-    // It will redirect if the cart becomes empty (e.g., after a successful order if not redirected yet)
+  if (cartItems.length === 0 && !isProcessing && (typeof window !== 'undefined' && !window.location.pathname.includes('/checkout/success'))) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -329,3 +331,4 @@ export default function CheckoutPage() {
     </div>
   );
 }
+
