@@ -58,21 +58,28 @@ export default function CheckoutPage() {
       currentPath = window.location.pathname;
     }
     console.log("CheckoutPage: useEffect triggered. cartItems.length =", cartItems.length, "isProcessing =", isProcessing, "pathname =", currentPath);
-    if (cartItems.length === 0 && !isProcessing) {
-      if (typeof window !== 'undefined' && !currentPath.includes('/checkout/success')) {
-        console.log("CheckoutPage: Cart is empty and not processing, redirecting to /cart");
-        router.push('/cart');
-      } else {
-         console.log("CheckoutPage: Cart is empty but either processing or on success page, no redirect.");
+    
+    if (cartItems.length === 0) {
+      if (!isProcessing) { // If not processing, and cart empty, redirect to cart
+        if (typeof window !== 'undefined' && !currentPath.includes('/checkout/success')) {
+          console.log("CheckoutPage: Cart is empty AND NOT processing, redirecting to /cart");
+          router.push('/cart');
+        } else {
+          console.log("CheckoutPage: Cart is empty AND NOT processing, but on success page or window undefined, no redirect to /cart.");
+        }
+      } else { // Cart is empty BUT isProcessing is TRUE
+        console.log("CheckoutPage: Cart is empty BUT IS PROCESSING. Waiting for processing to finish. Order likely submitted (e.g., for Wave redirect or COD success).");
       }
     } else {
-        console.log("CheckoutPage: Cart is not empty or is processing, no redirect.");
+      // Cart is not empty
+      console.log("CheckoutPage: Cart is NOT empty. No redirect to /cart. isProcessing =", isProcessing);
     }
   }, [cartItems, isProcessing, router]);
 
 
   const onSubmit = async (data: CheckoutFormValues) => {
     setIsProcessing(true);
+    console.log("CheckoutPage: onSubmit called with data:", data, "Cart total:", totalPrice);
     
     const orderItems: OrderItem[] = cartItems.map(item => {
       const orderItem: OrderItem = {
@@ -100,7 +107,7 @@ export default function CheckoutPage() {
         customerInfo,
         items: orderItems,
         totalAmount: totalPrice,
-        status: OrderStatus.Pending,
+        status: OrderStatus.Pending, // Default status, might be updated for Wave later if a webhook is implemented
         orderDate: serverTimestamp(), 
         paymentMethod: data.paymentMethod,
         shippingAddress: data.address,
@@ -126,6 +133,8 @@ export default function CheckoutPage() {
         if (error.code && error.code.includes("permission-denied")) {
             errorMessage = "Erreur de permission Firestore. Impossible de sauvegarder la commande.";
              console.error("CheckoutPage: Firestore permission denied. Check security rules for 'orders' collection.");
+        } else {
+            console.error("Erreur détaillée lors de l'enregistrement de la commande COD dans Firestore:", error);
         }
         toast({
           variant: "destructive",
@@ -149,6 +158,7 @@ export default function CheckoutPage() {
       
       try {
         console.log("CheckoutPage: Attempting to save Wave order (pending) to Firestore:", orderData);
+        // For Wave, we save the order as pending. Confirmation would typically come via a webhook.
         const docRef = await addDoc(collection(db, "orders"), {...orderData, status: OrderStatus.Pending});
         console.log("CheckoutPage: Wave Order (pending) saved with ID:", docRef.id);
         
@@ -157,11 +167,29 @@ export default function CheckoutPage() {
           description: "Vous allez être redirigé pour compléter votre paiement.",
         });
         
-        const wavePaymentUrl = `${WAVE_PAYMENT_BASE_URL}?amount=${totalPrice}`;
         clearCart(); 
+        
+        // Set isProcessing to false *before* scheduling the redirect.
+        // This prevents the button from staying "Traitement..." if the redirect is slow or fails.
+        // The user will see the button revert briefly before the page changes.
+        setIsProcessing(false);
+
+        const wavePaymentUrl = `${WAVE_PAYMENT_BASE_URL}?amount=${totalPrice}`;
         setTimeout(() => {
-          if (typeof window !== "undefined") window.location.href = wavePaymentUrl;
-        }, 1500);
+          if (typeof window !== "undefined") {
+            console.log("CheckoutPage: Attempting Wave redirection to:", wavePaymentUrl);
+            window.location.href = wavePaymentUrl;
+          } else {
+            console.error("CheckoutPage: window is undefined, cannot redirect to Wave. Order was saved as pending with ID:", docRef.id);
+            // Consider re-enabling the button or showing a specific message if window is critical and undefined
+            // For now, isProcessing is false, so the button state should be normal if redirect doesn't happen.
+            toast({
+                variant: "destructive",
+                title: "Erreur de redirection",
+                description: "Impossible de vous rediriger automatiquement vers Wave. Veuillez réessayer ou contacter le support.",
+            });
+          }
+        }, 1500); // Delay to allow toast to be seen
 
       } catch (error: any) {
         console.error("CheckoutPage: Error saving Wave order to Firestore before redirect:", error);
@@ -172,10 +200,19 @@ export default function CheckoutPage() {
         });
         setIsProcessing(false);
       }
+    } else {
+      // Should not happen due to form validation, but as a fallback:
+      console.error("CheckoutPage: Unknown payment method selected:", data.paymentMethod);
+      toast({ variant: "destructive", title: "Erreur", description: "Méthode de paiement inconnue." });
+      setIsProcessing(false);
     }
   };
 
   if (cartItems.length === 0 && !isProcessing && (typeof window !== 'undefined' && !window.location.pathname.includes('/checkout/success'))) {
+    // This specific check for pathname is to prevent redirect loop if already on success page and cart gets cleared.
+    // However, the useEffect already handles redirection logic more broadly.
+    // This could be simplified or rely solely on the useEffect.
+    // For now, keeping it as an additional guard.
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -286,7 +323,7 @@ export default function CheckoutPage() {
                 type="submit" 
                 size="lg" 
                 className="w-full bg-primary hover:bg-primary/90" 
-                disabled={isProcessing || !paymentMethod || cartItems.length === 0 || (paymentMethod === 'cod' && !form.formState.isValid) }
+                disabled={isProcessing || !paymentMethod || cartItems.length === 0 || (paymentMethod === 'cod' && !form.formState.isValid && !isProcessing) }
               >
                 {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : ''}
                 {isProcessing ? 'Traitement...' : (paymentMethod === 'wave' ? 'Procéder au paiement Wave' : 'Confirmer la Commande (Paiement à la livraison)')}
@@ -331,4 +368,3 @@ export default function CheckoutPage() {
     </div>
   );
 }
-
