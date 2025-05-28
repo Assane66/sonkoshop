@@ -6,7 +6,7 @@ export type Product = {
   id: string; // Firestore document ID
   name: string;
   description: string;
-  price: number; 
+  price: number;
   category: string; // Category name or ID, to be linked with SiteCategory
   imageUrl: string;
   stock: number;
@@ -14,11 +14,10 @@ export type Product = {
   featured?: boolean;
   imageAiHint?: string;
   // Timestamps for Firestore if needed
-  // createdAt?: any; 
+  // createdAt?: any;
   // updatedAt?: any;
 };
 
-// Kept for reference or if a fixed list is ever needed, but categories are dynamic from Firestore
 export enum ProductCategoryEnum {
   Maillots = "Maillots",
   Chaussures = "Chaussures",
@@ -59,11 +58,11 @@ export const categoryIcons: Record<string, LucideIcon> = {
   [ProductCategoryEnum.Modes]: Sparkles,
   [ProductCategoryEnum.Gardiens]: Shield,
   [ProductCategoryEnum.EquipementsSportifs]: Dumbbell,
-  [ProductCategoryEnum.Chemise]: Shirt, // Example, ensure keys match category names from Firestore
+  [ProductCategoryEnum.Chemise]: Shirt, 
   [ProductCategoryEnum.Baskets]: Footprints,
   [ProductCategoryEnum.Accessoires]: LayoutGrid,
-  "Default": LayoutGrid, // Default icon if no match
-  "Package": Package, // For product category badge if no specific icon
+  "Default": LayoutGrid, 
+  "Package": Package, 
 };
 
 
@@ -81,16 +80,16 @@ export interface OrderItem {
   productId: string;
   productName: string;
   quantity: number;
-  price: number; 
+  price: number;
   selectedSize?: string;
-  imageUrl?: string; 
+  imageUrl?: string;
 }
 
 export interface CustomerInfo {
   fullName: string;
   address: string;
   phone: string;
-  email?: string; 
+  email?: string;
 }
 
 export interface Order {
@@ -100,7 +99,9 @@ export interface Order {
   totalAmount: number;
   status: OrderStatus;
   orderDate: any; // Will be a Firestore Timestamp or string after conversion
-  paymentMethod: 'cod' | 'wave' | string;
+  paymentMethod: 'cod' | string; // Removed 'wave' as an explicit option
   shippingAddress: string;
   // userId?: string; // Optional: if you want to link orders to users
 }
+
+    

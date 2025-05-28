@@ -12,22 +12,21 @@ import { Globe, CreditCard, Truck, Info } from 'lucide-react';
 
 export default function AdminSettingsPage() {
   const { toast } = useToast();
-  
+
   // Mocked initial settings state
   const [siteName, setSiteName] = useState('Sonko Shop');
   const [siteDescription, setSiteDescription] = useState('Boutique en ligne de Sonko Shop: maillots, chaussures, etc.');
   const [contactEmail, setContactEmail] = useState('sonkoshop1@gmail.com');
   const [contactPhone, setContactPhone] = useState('784513633');
-  
+
   const [codEnabled, setCodEnabled] = useState(true);
-  const [waveEnabled, setWaveEnabled] = useState(true);
-  const [wavePaymentLink, setWavePaymentLink] = useState('https://pay.wave.com/m/M_pIXmQ2smGxRM/c/sn/');
-  
+  // Removed Wave related state
+
   const handleSaveChanges = () => {
     // In a real app, you'd save these settings to a database or configuration file
     console.log("Saving settings:", {
       siteName, siteDescription, contactEmail, contactPhone,
-      codEnabled, waveEnabled, wavePaymentLink
+      codEnabled, // Removed Wave settings
     });
     toast({
       title: "Paramètres sauvegardés!",
@@ -81,35 +80,11 @@ export default function AdminSettingsPage() {
               </div>
               <Switch id="codEnabled" checked={codEnabled} onCheckedChange={setCodEnabled} />
             </div>
-
-            <div className="flex items-center justify-between p-3 border rounded-md">
-               <div className="flex items-center">
-                 <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Wave_Logo.svg/1200px-Wave_Logo.svg.png" alt="Wave Logo" className="h-6 w-6 mr-3" data-ai-hint="wave logo"/>
-                <div>
-                  <Label htmlFor="waveEnabled" className="font-medium">Paiement par Wave</Label>
-                   <p className="text-xs text-muted-foreground">Activer le paiement mobile via Wave.</p>
-                </div>
-              </div>
-              <Switch id="waveEnabled" checked={waveEnabled} onCheckedChange={setWaveEnabled} />
-            </div>
-             {waveEnabled && (
-              <div className="pl-6 space-y-2">
-                <Label htmlFor="wavePaymentLink">Lien de Paiement Wave de Base</Label>
-                <Input 
-                  id="wavePaymentLink" 
-                  value={wavePaymentLink} 
-                  onChange={(e) => setWavePaymentLink(e.target.value)} 
-                  placeholder="https://pay.wave.com/m/VOTRE_ID/c/sn/"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Le montant total sera ajouté automatiquement (ex: ?amount=XXXX).
-                </p>
-              </div>
-            )}
+            {/* Wave payment options removed */}
           </CardContent>
         </Card>
       </div>
-      
+
       <div className="flex justify-end">
         <Button onClick={handleSaveChanges} className="bg-primary hover:bg-primary/90">
           Enregistrer les Modifications
@@ -118,3 +93,5 @@ export default function AdminSettingsPage() {
     </div>
   );
 }
+
+    

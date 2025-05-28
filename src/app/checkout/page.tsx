@@ -14,24 +14,22 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Truck, Loader2 } from 'lucide-react'; 
+import { Truck, Loader2 } from 'lucide-react';
 import Image from 'next/image';
-import { db } from '@/lib/firebase'; 
+import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import type { Order, OrderStatus, CustomerInfo, OrderItem } from '@/types'; 
+import type { Order, OrderStatus, CustomerInfo, OrderItem } from '@/types';
 
 const checkoutFormSchema = z.object({
   fullName: z.string().min(3, "Le nom complet est requis (minimum 3 caractères)."),
   address: z.string().min(1, "L'adresse de livraison est requise."),
   phone: z.string().regex(/^(70|75|76|77|78)\d{7}$/, "Le numéro de téléphone doit être un numéro sénégalais valide (ex: 771234567)."),
-  paymentMethod: z.enum(['cod', 'wave'], {
+  paymentMethod: z.enum(['cod'], { // Removed 'wave'
     required_error: "Vous devez sélectionner une méthode de paiement."
-  }),
+  }).default('cod'), // Default to COD as it's the only option
 });
 
 type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
-
-const WAVE_PAYMENT_BASE_URL = 'https://pay.wave.com/m/M_pIXmQ2smGxRM/c/sn/'; 
 
 export default function CheckoutPage() {
   const { cartItems, getCartTotalPrice, clearCart } = useCart();
@@ -45,7 +43,7 @@ export default function CheckoutPage() {
       fullName: '',
       address: '',
       phone: '',
-      paymentMethod: undefined,
+      paymentMethod: 'cod', // Default to COD
     },
   });
 
@@ -58,20 +56,19 @@ export default function CheckoutPage() {
       currentPath = window.location.pathname;
     }
     console.log("CheckoutPage: useEffect triggered. cartItems.length =", cartItems.length, "isProcessing =", isProcessing, "pathname =", currentPath);
-    
+
     if (cartItems.length === 0) {
-      if (!isProcessing) { // If not processing, and cart empty, redirect to cart
+      if (!isProcessing) {
         if (typeof window !== 'undefined' && !currentPath.includes('/checkout/success')) {
           console.log("CheckoutPage: Cart is empty AND NOT processing, redirecting to /cart");
           router.push('/cart');
         } else {
           console.log("CheckoutPage: Cart is empty AND NOT processing, but on success page or window undefined, no redirect to /cart.");
         }
-      } else { // Cart is empty BUT isProcessing is TRUE
-        console.log("CheckoutPage: Cart is empty BUT IS PROCESSING. Waiting for processing to finish. Order likely submitted (e.g., for Wave redirect or COD success).");
+      } else {
+        console.log("CheckoutPage: Cart is empty BUT IS PROCESSING. Waiting for processing to finish.");
       }
     } else {
-      // Cart is not empty
       console.log("CheckoutPage: Cart is NOT empty. No redirect to /cart. isProcessing =", isProcessing);
     }
   }, [cartItems, isProcessing, router]);
@@ -80,7 +77,7 @@ export default function CheckoutPage() {
   const onSubmit = async (data: CheckoutFormValues) => {
     setIsProcessing(true);
     console.log("CheckoutPage: onSubmit called with data:", data, "Cart total:", totalPrice);
-    
+
     const orderItems: OrderItem[] = cartItems.map(item => {
       const orderItem: OrderItem = {
         productId: item.id,
@@ -99,7 +96,7 @@ export default function CheckoutPage() {
 
     const customerInfo: CustomerInfo = {
       fullName: data.fullName,
-      address: data.address, 
+      address: data.address,
       phone: data.phone,
     };
 
@@ -107,8 +104,8 @@ export default function CheckoutPage() {
         customerInfo,
         items: orderItems,
         totalAmount: totalPrice,
-        status: OrderStatus.Pending, // Default status, might be updated for Wave later if a webhook is implemented
-        orderDate: serverTimestamp(), 
+        status: OrderStatus.Pending,
+        orderDate: serverTimestamp(),
         paymentMethod: data.paymentMethod,
         shippingAddress: data.address,
     };
@@ -144,75 +141,14 @@ export default function CheckoutPage() {
       } finally {
         setIsProcessing(false);
       }
-
-    } else if (data.paymentMethod === 'wave') {
-      if (totalPrice <= 0) {
-        toast({
-          variant: "destructive",
-          title: "Erreur de montant",
-          description: "Le total de la commande doit être supérieur à zéro pour payer avec Wave.",
-        });
-        setIsProcessing(false);
-        return;
-      }
-      
-      try {
-        console.log("CheckoutPage: Attempting to save Wave order (pending) to Firestore:", orderData);
-        // For Wave, we save the order as pending. Confirmation would typically come via a webhook.
-        const docRef = await addDoc(collection(db, "orders"), {...orderData, status: OrderStatus.Pending});
-        console.log("CheckoutPage: Wave Order (pending) saved with ID:", docRef.id);
-        
-        toast({
-          title: "Redirection vers Wave...",
-          description: "Vous allez être redirigé pour compléter votre paiement.",
-        });
-        
-        clearCart(); 
-        
-        // Set isProcessing to false *before* scheduling the redirect.
-        // This prevents the button from staying "Traitement..." if the redirect is slow or fails.
-        // The user will see the button revert briefly before the page changes.
-        setIsProcessing(false);
-
-        const wavePaymentUrl = `${WAVE_PAYMENT_BASE_URL}?amount=${totalPrice}`;
-        setTimeout(() => {
-          if (typeof window !== "undefined") {
-            console.log("CheckoutPage: Attempting Wave redirection to:", wavePaymentUrl);
-            window.location.href = wavePaymentUrl;
-          } else {
-            console.error("CheckoutPage: window is undefined, cannot redirect to Wave. Order was saved as pending with ID:", docRef.id);
-            // Consider re-enabling the button or showing a specific message if window is critical and undefined
-            // For now, isProcessing is false, so the button state should be normal if redirect doesn't happen.
-            toast({
-                variant: "destructive",
-                title: "Erreur de redirection",
-                description: "Impossible de vous rediriger automatiquement vers Wave. Veuillez réessayer ou contacter le support.",
-            });
-          }
-        }, 1500); // Delay to allow toast to be seen
-
-      } catch (error: any) {
-        console.error("CheckoutPage: Error saving Wave order to Firestore before redirect:", error);
-        toast({
-          variant: "destructive",
-          title: "Échec de la préparation de la commande Wave",
-          description: `Impossible de préparer votre commande pour le paiement Wave. ${error.message || 'Veuillez réessayer.'}`,
-        });
-        setIsProcessing(false);
-      }
     } else {
-      // Should not happen due to form validation, but as a fallback:
-      console.error("CheckoutPage: Unknown payment method selected:", data.paymentMethod);
-      toast({ variant: "destructive", title: "Erreur", description: "Méthode de paiement inconnue." });
+      console.error("CheckoutPage: Unknown or unsupported payment method selected:", data.paymentMethod);
+      toast({ variant: "destructive", title: "Erreur", description: "Méthode de paiement non supportée." });
       setIsProcessing(false);
     }
   };
 
   if (cartItems.length === 0 && !isProcessing && (typeof window !== 'undefined' && !window.location.pathname.includes('/checkout/success'))) {
-    // This specific check for pathname is to prevent redirect loop if already on success page and cart gets cleared.
-    // However, the useEffect already handles redirection logic more broadly.
-    // This could be simplified or rely solely on the useEffect.
-    // For now, keeping it as an additional guard.
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -301,15 +237,7 @@ export default function CheckoutPage() {
                                 Payer à la livraison
                               </FormLabel>
                             </FormItem>
-                            <FormItem className="flex items-center space-x-3 space-y-0 p-4 border rounded-md has-[:checked]:border-primary">
-                              <FormControl>
-                                <RadioGroupItem value="wave" disabled={isProcessing} />
-                              </FormControl>
-                              <FormLabel className="font-normal flex items-center text-base cursor-pointer">
-                                 <Image src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Wave_Logo.svg/1200px-Wave_Logo.svg.png" alt="Wave Logo" width={24} height={24} className="mr-3" data-ai-hint="wave logo" />
-                                Payer avec Wave
-                              </FormLabel>
-                            </FormItem>
+                            {/* Wave payment option removed */}
                           </RadioGroup>
                         </FormControl>
                         <FormMessage />
@@ -318,15 +246,15 @@ export default function CheckoutPage() {
                   />
                 </CardContent>
               </Card>
-              
-              <Button 
-                type="submit" 
-                size="lg" 
-                className="w-full bg-primary hover:bg-primary/90" 
-                disabled={isProcessing || !paymentMethod || cartItems.length === 0 || (paymentMethod === 'cod' && !form.formState.isValid && !isProcessing) }
+
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full bg-primary hover:bg-primary/90"
+                disabled={isProcessing || cartItems.length === 0 || !form.formState.isValid }
               >
                 {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : ''}
-                {isProcessing ? 'Traitement...' : (paymentMethod === 'wave' ? 'Procéder au paiement Wave' : 'Confirmer la Commande (Paiement à la livraison)')}
+                {isProcessing ? 'Traitement...' : 'Confirmer la Commande (Paiement à la livraison)'}
               </Button>
             </form>
           </Form>
@@ -368,3 +296,5 @@ export default function CheckoutPage() {
     </div>
   );
 }
+
+    
