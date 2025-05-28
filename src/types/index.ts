@@ -8,7 +8,7 @@ export type Product = {
   name: string;
   description: string;
   price: number;
-  category: string;
+  category: string; // This will be the name of the category
   imageUrl: string;
   stock: number;
   sizes?: string[];
@@ -18,6 +18,7 @@ export type Product = {
   promotionEndDate?: Timestamp | null; // Firestore Timestamp
 };
 
+// This enum is now primarily for defining standard category names if needed for default setup or validation
 export enum ProductCategoryEnum {
   Maillots = "Maillots",
   Chaussures = "Chaussures",
@@ -30,8 +31,8 @@ export enum ProductCategoryEnum {
   Baskets = "Baskets",
   Accessoires = "Accessoires",
 }
-export const productCategoriesArray: string[] = Object.values(ProductCategoryEnum);
-
+// productCategoriesArray is populated dynamically from Firestore in admin/categories, or components that need it.
+// For components like ProductFilters, it will fetch categories from Firestore.
 
 export type Banner = {
   id: string; // Firestore document ID
@@ -45,7 +46,7 @@ export type Banner = {
 export interface SiteCategory {
   id: string; // Firestore document ID
   name: string;
-  iconName?: keyof typeof categoryIcons;
+  iconName?: keyof typeof categoryIcons; // Icon name string
 }
 
 export const categoryIcons: Record<string, LucideIcon> = {
@@ -59,8 +60,8 @@ export const categoryIcons: Record<string, LucideIcon> = {
   [ProductCategoryEnum.Chemise]: Shirt,
   [ProductCategoryEnum.Baskets]: Footprints,
   [ProductCategoryEnum.Accessoires]: LayoutGrid,
-  "Default": LayoutGrid,
-  "Package": Package,
+  "Default": LayoutGrid, // Fallback icon
+  "Package": Package, // Specific for product display if no category icon matches
 };
 
 
@@ -70,6 +71,7 @@ export enum OrderStatus {
   Shipped = "Expédiée",
   Delivered = "Livrée",
   Cancelled = "Annulé",
+  WavePending = "En attente de paiement Wave", // Status for orders before Wave confirmation
 }
 
 export const orderStatusList = Object.values(OrderStatus);
@@ -87,7 +89,7 @@ export interface CustomerInfo {
   fullName: string;
   address: string;
   phone: string;
-  email?: string;
+  email?: string; // Optional
 }
 
 export interface Order {
@@ -96,7 +98,7 @@ export interface Order {
   items: OrderItem[];
   totalAmount: number;
   status: OrderStatus;
-  orderDate: any; // Will be a Firestore Timestamp or string after conversion
-  paymentMethod: 'cod' | string;
+  orderDate: Timestamp | any; // Firestore Timestamp or serverTimestamp() on creation
+  paymentMethod: 'cod' | 'wave' | string; // Support 'cod' and 'wave'
   shippingAddress: string;
 }
