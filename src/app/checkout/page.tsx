@@ -24,9 +24,9 @@ const checkoutFormSchema = z.object({
   fullName: z.string().min(3, "Le nom complet est requis (minimum 3 caractères)."),
   address: z.string().min(1, "L'adresse de livraison est requise."),
   phone: z.string().regex(/^(70|75|76|77|78)\d{7}$/, "Le numéro de téléphone doit être un numéro sénégalais valide (ex: 771234567)."),
-  paymentMethod: z.enum(['cod'], { // Removed 'wave'
+  paymentMethod: z.enum(['cod'], {
     required_error: "Vous devez sélectionner une méthode de paiement."
-  }).default('cod'), // Default to COD as it's the only option
+  }).default('cod'),
 });
 
 type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
@@ -43,11 +43,10 @@ export default function CheckoutPage() {
       fullName: '',
       address: '',
       phone: '',
-      paymentMethod: 'cod', // Default to COD
+      paymentMethod: 'cod',
     },
   });
 
-  const paymentMethod = form.watch('paymentMethod');
   const totalPrice = getCartTotalPrice();
 
   useEffect(() => {
@@ -76,7 +75,7 @@ export default function CheckoutPage() {
 
   const onSubmit = async (data: CheckoutFormValues) => {
     setIsProcessing(true);
-    console.log("CheckoutPage: onSubmit called with data:", data, "Cart total:", totalPrice);
+    console.log("CheckoutPage: onSubmit - START. isProcessing: true. Data:", data);
 
     const orderItems: OrderItem[] = cartItems.map(item => {
       const orderItem: OrderItem = {
@@ -104,25 +103,34 @@ export default function CheckoutPage() {
         customerInfo,
         items: orderItems,
         totalAmount: totalPrice,
-        status: OrderStatus.Pending,
+        status: "En attente" as OrderStatus, // Explicitly cast for safety
         orderDate: serverTimestamp(),
         paymentMethod: data.paymentMethod,
         shippingAddress: data.address,
     };
 
     if (data.paymentMethod === 'cod') {
+      console.log("CheckoutPage: Processing COD order.");
       try {
-        console.log("CheckoutPage: Attempting to save COD order to Firestore:", orderData);
+        console.log("CheckoutPage: Attempting: await addDoc(...) with orderData:", orderData);
         const docRef = await addDoc(collection(db, "orders"), orderData);
-        console.log("CheckoutPage: COD Order saved with ID:", docRef.id);
+        console.log("CheckoutPage: Success: addDoc. Order ID:", docRef.id);
+        
         toast({
           title: "Commande confirmée!",
           description: "Votre commande a été enregistrée. Nous vous contacterons bientôt.",
         });
+        
         clearCart();
-        router.push(`/checkout/success?method=cod&orderId=${docRef.id}`);
+        console.log("CheckoutPage: Cart cleared.");
+
+        console.log("CheckoutPage: Attempting: router.push to success page.");
+        // router.push an await is not strictly necessary for next/navigation but won't hurt
+        await router.push(`/checkout/success?method=cod&orderId=${docRef.id}`);
+        console.log("CheckoutPage: Successfully navigated to success page.");
+        // Component might unmount here. State reset is primarily handled by `finally`.
       } catch (error: any) {
-        console.error("CheckoutPage: Error saving COD order to Firestore:", error);
+        console.error("CheckoutPage: CATCH block. Error saving COD order:", error);
         let errorMessage = "Impossible d'enregistrer votre commande. Veuillez réessayer.";
         if (error.message) {
             errorMessage = `Erreur: ${error.message}. Veuillez contacter le support.`;
@@ -138,14 +146,21 @@ export default function CheckoutPage() {
           title: "Échec de la commande",
           description: errorMessage,
         });
+        // Explicitly set isProcessing to false in catch, though finally should also do it.
+        console.log("CheckoutPage: CATCH block. Setting isProcessing to false.");
+        setIsProcessing(false);
       } finally {
+        // This block will execute regardless of success or failure in the try block.
+        console.log("CheckoutPage: FINALLY block. Setting isProcessing to false.");
         setIsProcessing(false);
       }
     } else {
-      console.error("CheckoutPage: Unknown or unsupported payment method selected:", data.paymentMethod);
-      toast({ variant: "destructive", title: "Erreur", description: "Méthode de paiement non supportée." });
-      setIsProcessing(false);
+        // This case should ideally not be reached if 'cod' is the only option
+        console.warn("CheckoutPage: onSubmit - Reached unexpected 'else' for paymentMethod:", data.paymentMethod, ". Setting isProcessing to false as a safeguard.");
+        setIsProcessing(false);
     }
+    // No code should be here that might prevent isProcessing from being set to false.
+    console.log("CheckoutPage: onSubmit - END.");
   };
 
   if (cartItems.length === 0 && !isProcessing && (typeof window !== 'undefined' && !window.location.pathname.includes('/checkout/success'))) {
@@ -237,7 +252,6 @@ export default function CheckoutPage() {
                                 Payer à la livraison
                               </FormLabel>
                             </FormItem>
-                            {/* Wave payment option removed */}
                           </RadioGroup>
                         </FormControl>
                         <FormMessage />
@@ -254,7 +268,7 @@ export default function CheckoutPage() {
                 disabled={isProcessing || cartItems.length === 0 || !form.formState.isValid }
               >
                 {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : ''}
-                {isProcessing ? 'Traitement...' : 'Confirmer la Commande (Paiement à la livraison)'}
+                {isProcessing ? 'Traitement...' : 'Confirmer la Commande'}
               </Button>
             </form>
           </Form>
@@ -296,5 +310,3 @@ export default function CheckoutPage() {
     </div>
   );
 }
-
-    
