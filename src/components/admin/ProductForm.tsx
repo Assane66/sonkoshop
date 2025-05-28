@@ -16,11 +16,11 @@ import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, Timestamp, serverTimestamp, deleteField } from 'firebase/firestore';
 
-// Cloudinary configuration (replace with your actual details)
+// Cloudinary configuration
 const CLOUDINARY_CLOUD_NAME = 'dm6yuokre';
-const CLOUDINARY_UPLOAD_PRESET = 'sonko_shop'; // Ensure this preset allows unsigned uploads
+const CLOUDINARY_UPLOAD_PRESET = 'sonko_shop';
 
 const productFormSchema = z.object({
   name: z.string().min(3, "Le nom doit contenir au moins 3 caractères."),
@@ -28,21 +28,29 @@ const productFormSchema = z.object({
   price: z.coerce.number().min(0, "Le prix doit être positif."),
   category: z.string().min(1, "Une catégorie est requise."),
   stock: z.coerce.number().min(0, "Le stock doit être positif ou nul."),
-  imageUrl: z.string().optional().or(z.literal('')), // Can be empty if new image is uploaded
+  imageUrl: z.string().optional().or(z.literal('')),
   imageAiHint: z.string().optional().default(''),
   sizes: z.array(z.string()).optional(),
   featured: z.boolean().optional(),
+  promotionPercentage: z.coerce.number().min(0).max(100).optional().nullable().default(null),
+  isPromotion24h: z.boolean().optional().default(false),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
 
 interface ProductFormProps {
   product?: Product | null;
-  onSubmit: (data: Omit<Product, 'id'> | Product) => Promise<void>;
+  onSubmit: (data: Omit<Product, 'id' | 'promotionEndDate'> & { promotionEndDate?: Date | null | typeof deleteField }) => Promise<void>;
   onCancel: () => void;
 }
 
 const availableSizes = ['S', 'M', 'L', 'XL', 'XXL', '38', '39', '40', '41', '42', '43', '44', '45', 'Taille unique'];
+const promotionOptions = [
+  { label: "Aucune", value: 0 },
+  { label: "10%", value: 10 },
+  { label: "20%", value: 20 },
+  { label: "30%", value: 30 },
+];
 
 export default function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
   const [categories, setCategories] = useState<SiteCategory[]>([]);
@@ -64,8 +72,12 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
       imageAiHint: '',
       sizes: [],
       featured: false,
+      promotionPercentage: null,
+      isPromotion24h: false,
     },
   });
+
+  const promotionPercentageValue = watch('promotionPercentage');
 
   useEffect(() => {
     const categoriesCollection = collection(db, 'categories');
@@ -78,7 +90,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
       setCategories(fetchedCategories);
       setIsLoadingCategories(false);
       if (!product && fetchedCategories.length > 0 && !watch('category')) {
-        setValue('category', fetchedCategories[0].name); // Set default category if creating new
+        setValue('category', fetchedCategories[0].name);
       }
     }, (error) => {
       console.error("Error fetching categories for product form:", error);
@@ -99,13 +111,16 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
         category: product.category || (categories.length > 0 ? categories[0].name : ''),
         imageUrl: product.imageUrl || '',
         imageAiHint: product.imageAiHint || '',
+        promotionPercentage: product.promotionPercentage || null,
+        isPromotion24h: !!(product.promotionPercentage && product.promotionEndDate), // Approx. Needs better logic if editing non-24h promo
       });
       setImagePreview(product.imageUrl || null);
     } else {
        reset({
         name: '', description: '', price: 0,
-        category: categories.length > 0 ? categories[0].name : '', // Ensure default category is set
+        category: categories.length > 0 ? categories[0].name : '',
         stock: 0, imageUrl: '', imageAiHint: '', sizes: [], featured: false,
+        promotionPercentage: null, isPromotion24h: false,
       });
       setImagePreview(null);
     }
@@ -122,10 +137,10 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
-      setValue('imageUrl', '', { shouldValidate: true }); // Clear existing imageUrl if new file is chosen
+      setValue('imageUrl', '', { shouldValidate: true });
     } else {
       setImageFile(null);
-      setImagePreview(product?.imageUrl || null); // Revert to original if selection is cleared
+      setImagePreview(product?.imageUrl || null);
     }
   };
 
@@ -142,6 +157,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
 
   const processSubmit: SubmitHandler<ProductFormValues> = async (data) => {
     setIsUploading(true);
+    console.log("ProductForm: Submitting data:", data);
     let finalImageUrl = data.imageUrl;
 
     if (imageFile) {
@@ -160,6 +176,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
           finalImageUrl = cloudinaryData.secure_url;
           console.log("ProductForm: Cloudinary upload successful, URL:", finalImageUrl);
         } else {
+          console.error("ProductForm: Cloudinary upload failed, response:", cloudinaryData);
           throw new Error(cloudinaryData.error?.message || 'Cloudinary upload failed');
         }
       } catch (error: any) {
@@ -168,23 +185,44 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
         setIsUploading(false);
         return;
       }
-    } else if (!finalImageUrl && !product?.imageUrl) { // No new file and no existing image URL
-        // You might want to set a default placeholder URL here or make imageUrl strictly required
-        // For now, we allow it to be empty, but validation on 'imageUrl' is optional().or(z.literal(''))
+    } else if (!finalImageUrl && product?.imageUrl) {
+        finalImageUrl = product.imageUrl; // Keep existing image if no new one is uploaded
+    }
+
+    let promotionEndDateValue: Date | null | typeof deleteField = deleteField();
+
+    if (data.promotionPercentage && data.promotionPercentage > 0) {
+      if (data.isPromotion24h) {
+        promotionEndDateValue = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      } else {
+        // If not 24h promo, and a percentage is set, no end date (or handle manually if a date picker was added)
+        promotionEndDateValue = null; // Explicitly null for Firestore, or deleteField() if you want to remove it
+      }
+    } else {
+      // No promotion or percentage is 0, ensure both fields are cleared/deleted
+      data.promotionPercentage = null; 
+      // promotionEndDateValue is already deleteField()
     }
 
 
     const finalProductData = {
       ...data,
-      imageUrl: finalImageUrl || product?.imageUrl || '', // Prioritize new upload, then existing, then fallback empty string
+      imageUrl: finalImageUrl || '',
+      promotionPercentage: data.promotionPercentage || null,
+      promotionEndDate: promotionEndDateValue,
     };
     
+    // Remove isPromotion24h as it's not part of the Product type
+    delete (finalProductData as any).isPromotion24h;
+
     if (product?.id) {
       (finalProductData as Product).id = product.id;
     }
+    
+    console.log("ProductForm: Final product data to submit:", finalProductData);
 
     try {
-      await onSubmit(finalProductData);
+      await onSubmit(finalProductData as any); // Cast as any for submission, parent handles full Product type
     } catch (error: any) {
         console.error("Erreur lors de la soumission du produit (depuis ProductForm):", error);
         toast({ variant: 'destructive', title: 'Erreur de Sauvegarde', description: `Impossible de sauvegarder le produit. Erreur: ${error.message}` });
@@ -252,6 +290,54 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
         />
         {errors.category && <p className="text-sm text-destructive mt-1">{errors.category.message}</p>}
       </div>
+      
+      <div className="border p-4 rounded-md space-y-4">
+        <h4 className="text-md font-medium">Promotion</h4>
+        <div>
+          <Label htmlFor="promotionPercentage">Pourcentage de Réduction</Label>
+          <Controller
+            name="promotionPercentage"
+            control={control}
+            render={({ field }) => (
+              <Select
+                onValueChange={(value) => field.onChange(parseInt(value, 10) === 0 ? null : parseInt(value, 10))}
+                value={field.value === null || field.value === undefined ? "0" : String(field.value)}
+                disabled={isUploading || isLoadingCategories}
+              >
+                <SelectTrigger id="promotionPercentage" className="mt-1">
+                  <SelectValue placeholder="Aucune promotion" />
+                </SelectTrigger>
+                <SelectContent>
+                  {promotionOptions.map(option => (
+                    <SelectItem key={option.value} value={String(option.value)}>{option.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {errors.promotionPercentage && <p className="text-sm text-destructive mt-1">{errors.promotionPercentage.message}</p>}
+        </div>
+        {(promotionPercentageValue && promotionPercentageValue > 0) && (
+           <div className="flex items-center space-x-2">
+            <Controller
+              name="isPromotion24h"
+              control={control}
+              render={({ field }) => (
+                <Checkbox
+                  id="isPromotion24h"
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  disabled={isUploading || isLoadingCategories}
+                />
+              )}
+            />
+            <Label htmlFor="isPromotion24h" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              Promotion pour 24 heures
+            </Label>
+          </div>
+        )}
+      </div>
+
 
       <div>
         <Label htmlFor="imageFile">Image du Produit</Label>
@@ -268,8 +354,8 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
             <Image src={displayPreview} alt="Aperçu" fill sizes="128px" className="object-cover" data-ai-hint={watch('imageAiHint') || "product preview"} onError={(e) => (e.currentTarget.style.display = 'none')} />
           </div>
         )}
-        <p className="text-xs text-muted-foreground mt-1">Si aucune nouvelle image n'est sélectionnée, l'image actuelle (si elle existe) sera conservée.</p>
-        {errors.imageUrl && !imageFile && <p className="text-sm text-destructive mt-1">{errors.imageUrl.message}</p>} {/* Show error for URL only if no file is selected */}
+        <p className="text-xs text-muted-foreground mt-1">Si aucune nouvelle image n'est sélectionnée et qu'une image existe, l'image actuelle sera conservée.</p>
+        {errors.imageUrl && !imageFile && <p className="text-sm text-destructive mt-1">{errors.imageUrl.message}</p>}
       </div>
 
       <div>

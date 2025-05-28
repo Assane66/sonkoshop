@@ -1,21 +1,21 @@
 
 import type { LucideIcon } from 'lucide-react';
 import { Shirt, Footprints, Layers, Baby, Sparkles, Shield, Dumbbell, LayoutGrid, Package } from 'lucide-react';
+import type { Timestamp } from 'firebase/firestore';
 
 export type Product = {
   id: string; // Firestore document ID
   name: string;
   description: string;
   price: number;
-  category: string; // Category name or ID, to be linked with SiteCategory
+  category: string;
   imageUrl: string;
   stock: number;
   sizes?: string[];
   featured?: boolean;
   imageAiHint?: string;
-  // Timestamps for Firestore if needed
-  // createdAt?: any;
-  // updatedAt?: any;
+  promotionPercentage?: number | null; // ex: 10, 20, 30
+  promotionEndDate?: Timestamp | null; // Firestore Timestamp
 };
 
 export enum ProductCategoryEnum {
@@ -40,14 +40,12 @@ export type Banner = {
   subtitle?: string;
   link: string;
   imageAiHint?: string;
-  // createdAt?: any;
 };
 
 export interface SiteCategory {
   id: string; // Firestore document ID
   name: string;
-  iconName?: keyof typeof categoryIcons; // Should match keys in categoryIcons
-  // createdAt?: any;
+  iconName?: keyof typeof categoryIcons;
 }
 
 export const categoryIcons: Record<string, LucideIcon> = {
@@ -58,11 +56,11 @@ export const categoryIcons: Record<string, LucideIcon> = {
   [ProductCategoryEnum.Modes]: Sparkles,
   [ProductCategoryEnum.Gardiens]: Shield,
   [ProductCategoryEnum.EquipementsSportifs]: Dumbbell,
-  [ProductCategoryEnum.Chemise]: Shirt, 
+  [ProductCategoryEnum.Chemise]: Shirt,
   [ProductCategoryEnum.Baskets]: Footprints,
   [ProductCategoryEnum.Accessoires]: LayoutGrid,
-  "Default": LayoutGrid, 
-  "Package": Package, 
+  "Default": LayoutGrid,
+  "Package": Package,
 };
 
 
@@ -80,7 +78,7 @@ export interface OrderItem {
   productId: string;
   productName: string;
   quantity: number;
-  price: number;
+  price: number; // Prix au moment de l'achat (peut être promotionnel)
   selectedSize?: string;
   imageUrl?: string;
 }
@@ -99,9 +97,6 @@ export interface Order {
   totalAmount: number;
   status: OrderStatus;
   orderDate: any; // Will be a Firestore Timestamp or string after conversion
-  paymentMethod: 'cod' | string; // Removed 'wave' as an explicit option
+  paymentMethod: 'cod' | string;
   shippingAddress: string;
-  // userId?: string; // Optional: if you want to link orders to users
 }
-
-    

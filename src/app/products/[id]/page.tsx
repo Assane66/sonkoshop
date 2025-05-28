@@ -14,11 +14,10 @@ import { categoryIcons } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/context/CartContext';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore'; // Added onSnapshot for potential real-time updates if needed, though getDoc is usually fine here
+import { doc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
 
-// Custom Label to avoid conflict if ShadCN Label is not globally available as 'Label'
 const Label = ({ htmlFor, children, className }: { htmlFor?: string; children: React.ReactNode; className?: string }) => (
   <label htmlFor={htmlFor} className={`block text-sm font-medium text-gray-700 dark:text-gray-300 ${className || ''}`}>
     {children}
@@ -44,11 +43,10 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     }
 
     setIsLoading(true);
-    setQuantity(1); // Reset quantity on new product load
+    setQuantity(1);
     console.log(`ProductDetailPage: Setting up Firestore listener for product ID: ${params.id}`);
     const productDocRef = doc(db, 'products', params.id);
 
-    // Using onSnapshot for real-time updates, though getDoc might be sufficient for a detail page.
     const unsubscribe = onSnapshot(productDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const productData = docSnap.data();
@@ -64,14 +62,10 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           sizes: productData.sizes || [],
           featured: productData.featured || false,
           imageAiHint: productData.imageAiHint || '',
+          promotionPercentage: productData.promotionPercentage || null,
+          promotionEndDate: productData.promotionEndDate instanceof Timestamp ? productData.promotionEndDate : null,
         } as Product;
         setProduct(mappedProduct);
-
-        if (mappedProduct.sizes && mappedProduct.sizes.length > 0 && !selectedSize) { // Set default size only if not already set
-          setSelectedSize(mappedProduct.sizes[0]);
-        } else if (!(mappedProduct.sizes && mappedProduct.sizes.length > 0)) {
-          setSelectedSize(undefined);
-        }
         console.log("ProductDetailPage: Product state updated:", mappedProduct);
       } else {
         console.warn(`ProductDetailPage: No product found with ID: ${params.id}`);
@@ -90,17 +84,43 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       console.log(`ProductDetailPage: Unsubscribing from Firestore listener for product ID: ${params.id}`);
       unsubscribe();
     }
-  }, [params.id, toast]); // Removed selectedSize from dependencies to avoid re-triggering on size change.
+  }, [params.id, toast]);
 
-  useEffect(() => { // Separate effect to handle default size selection when product loads or changes
+  useEffect(() => {
     if (product && product.sizes && product.sizes.length > 0) {
-      if (!selectedSize || !product.sizes.includes(selectedSize)) { // If no size selected or current selection is invalid
+      if (!selectedSize || !product.sizes.includes(selectedSize)) {
         setSelectedSize(product.sizes[0]);
       }
     } else if (product && (!product.sizes || product.sizes.length === 0)) {
-        setSelectedSize(undefined); // No sizes available
+        setSelectedSize(undefined);
     }
   }, [product, selectedSize]);
+
+  const getDisplayPrice = () => {
+    if (!product) return { currentPrice: 0, originalPrice: null, promotionActive: false, promotionPercentage: null };
+    
+    let currentPrice = product.price;
+    let originalPrice = null;
+    let promotionActive = false;
+
+    if (product.promotionPercentage && product.promotionPercentage > 0) {
+      if (product.promotionEndDate) {
+        const endDate = product.promotionEndDate instanceof Timestamp ? product.promotionEndDate.toDate().getTime() : new Date(product.promotionEndDate as any).getTime();
+        if (new Date().getTime() < endDate) {
+          originalPrice = product.price;
+          currentPrice = product.price * (1 - product.promotionPercentage / 100);
+          promotionActive = true;
+        }
+      } else {
+        originalPrice = product.price;
+        currentPrice = product.price * (1 - product.promotionPercentage / 100);
+        promotionActive = true;
+      }
+    }
+    return { currentPrice, originalPrice, promotionActive, promotionPercentage: product.promotionPercentage };
+  };
+
+  const { currentPrice, originalPrice, promotionActive, promotionPercentage } = getDisplayPrice();
 
 
   const handleAddToCart = () => {
@@ -186,6 +206,11 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 e.currentTarget.src = 'https://placehold.co/600x600.png';
               }}
             />
+             {promotionActive && promotionPercentage && (
+                <Badge className="absolute top-2 left-2 bg-red-600 text-white text-base px-3 py-1" variant="destructive">
+                  -{promotionPercentage}%
+                </Badge>
+            )}
              {product.stock === 0 && (
               <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                 <Badge variant="destructive" className="text-lg px-4 py-2">ÉPUISÉ</Badge>
@@ -207,7 +232,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                   )}
                   <CardTitle className="text-3xl lg:text-4xl font-bold text-primary">{product.name}</CardTitle>
                 </div>
-                <Badge variant={product.stock > 0 ? "default" : "destructive"} className={`text-sm py-1 px-3 ${product.stock > 0 && product.stock <=5 ? 'bg-yellow-500 text-black' : ''}`}>
+                <Badge variant={product.stock > 0 ? "default" : "destructive"} className={`text-sm py-1 px-3 ${product.stock > 0 && product.stock <=10 && product.stock > 0 ? 'bg-yellow-500 text-black' : ''}`}>
                   {product.stock > 0 ? `En Stock (${product.stock})` : "Épuisé"}
                 </Badge>
               </div>
@@ -219,9 +244,19 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl lg:text-3xl font-semibold text-accent mb-4">
-                {product.price.toLocaleString('fr-FR')} FCFA
-              </p>
+              <div className="mb-4">
+                {originalPrice && (
+                  <p className="text-xl lg:text-2xl text-muted-foreground line-through">
+                    {originalPrice.toLocaleString('fr-FR')} FCFA
+                  </p>
+                )}
+                <p className={`text-2xl lg:text-3xl font-semibold ${promotionActive ? 'text-red-600' : 'text-accent'}`}>
+                  {currentPrice.toLocaleString('fr-FR')} FCFA
+                  {promotionActive && promotionPercentage && (
+                     <Badge variant="destructive" className="ml-2 text-sm">-{promotionPercentage}%</Badge>
+                  )}
+                </p>
+              </div>
               <CardDescription className="text-base text-foreground/80 leading-relaxed">
                 {product.description}
               </CardDescription>
@@ -260,7 +295,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                         if (isNaN(val)) {
                           setQuantity(1);
                         } else {
-                          setQuantity(Math.max(1, Math.min(product.stock === 0 ? 1 : product.stock, val)));
+                           const maxStock = product.stock === 0 ? 1 : product.stock;
+                           setQuantity(Math.max(1, Math.min(maxStock, val)));
                         }
                       }}
                       className="w-16 text-center text-base h-9"

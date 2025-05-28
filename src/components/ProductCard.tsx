@@ -1,5 +1,5 @@
 
-'use client'; 
+'use client';
 
 import type { Product } from '@/types';
 import { categoryIcons } from '@/types';
@@ -8,9 +8,10 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, CheckCircle } from 'lucide-react';
-import { useCart } from '@/context/CartContext'; 
-import { useToast } from '@/hooks/use-toast'; 
+import { ShoppingCart, CheckCircle, Tag } from 'lucide-react';
+import { useCart } from '@/context/CartContext';
+import { useToast } from '@/hooks/use-toast';
+import { Timestamp } from 'firebase/firestore';
 
 interface ProductCardProps {
   product: Product;
@@ -21,9 +22,34 @@ export default function ProductCard({ product }: ProductCardProps) {
   const { toast } = useToast();
   const CategoryIcon = product.category ? categoryIcons[product.category as keyof typeof categoryIcons] || categoryIcons["Default"] : categoryIcons["Default"];
 
+  const getDisplayPrice = () => {
+    let currentPrice = product.price;
+    let originalPrice = null;
+    let promotionActive = false;
+
+    if (product.promotionPercentage && product.promotionPercentage > 0) {
+      if (product.promotionEndDate) {
+        // Ensure promotionEndDate is a Firestore Timestamp before calling toDate()
+        const endDate = product.promotionEndDate instanceof Timestamp ? product.promotionEndDate.toDate().getTime() : new Date(product.promotionEndDate as any).getTime();
+        if (new Date().getTime() < endDate) {
+          originalPrice = product.price;
+          currentPrice = product.price * (1 - product.promotionPercentage / 100);
+          promotionActive = true;
+        }
+      } else { // Promotion illimitée si pas de date de fin
+        originalPrice = product.price;
+        currentPrice = product.price * (1 - product.promotionPercentage / 100);
+        promotionActive = true;
+      }
+    }
+    return { currentPrice, originalPrice, promotionActive, promotionPercentage: product.promotionPercentage };
+  };
+
+  const { currentPrice, originalPrice, promotionActive, promotionPercentage } = getDisplayPrice();
+
   const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault(); 
-    e.stopPropagation(); 
+    e.preventDefault();
+    e.stopPropagation();
 
     if (product.stock === 0) {
       toast({
@@ -33,14 +59,8 @@ export default function ProductCard({ product }: ProductCardProps) {
       });
       return;
     }
-    
-    let sizeToAdd = undefined;
-    if (product.sizes && product.sizes.length > 0) {
-        // For simplicity, allow adding with undefined size if no size is pre-selected on card.
-        // Product detail page handles mandatory size selection.
-    }
 
-    addToCart(product, 1, sizeToAdd);
+    addToCart(product, 1, undefined); // Pass undefined for size, detail page handles mandatory selection
     toast({
       title: "Produit ajouté!",
       description: `${product.name} a été ajouté à votre panier.`,
@@ -48,9 +68,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     });
   };
 
-  // Ensure imageUrl is a valid URL or a placeholder
   const displayImageUrl = product.imageUrl && product.imageUrl.trim() !== '' ? product.imageUrl : 'https://placehold.co/600x400.png';
-  // Adjust imageAiHint based on whether the original imageUrl was valid
   const displayImageAiHint = product.imageUrl && product.imageUrl.trim() !== '' ? (product.imageAiHint || 'product image') : 'placeholder image';
 
 
@@ -66,8 +84,14 @@ export default function ProductCard({ product }: ProductCardProps) {
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               className="object-cover transition-transform duration-300 group-hover:scale-105"
               data-ai-hint={displayImageAiHint}
+              onError={(e) => e.currentTarget.src = 'https://placehold.co/600x400.png'}
             />
-             {product.stock === 0 && (
+             {promotionActive && promotionPercentage && (
+                <Badge className="absolute top-2 right-2 bg-red-600 text-white text-xs" variant="destructive">
+                  -{promotionPercentage}%
+                </Badge>
+            )}
+            {product.stock === 0 && (
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                 <Badge variant="destructive" className="text-sm">ÉPUISÉ</Badge>
               </div>
@@ -90,10 +114,17 @@ export default function ProductCard({ product }: ProductCardProps) {
         )}
       </CardContent>
       <CardFooter className="p-4 flex justify-between items-center">
-        <p className="text-xl font-bold text-primary">{product.price.toLocaleString('fr-FR')} FCFA</p>
-        <Button 
-          size="sm" 
-          variant="default" 
+        <div>
+          {originalPrice && (
+            <p className="text-sm text-muted-foreground line-through">{originalPrice.toLocaleString('fr-FR')} FCFA</p>
+          )}
+          <p className={`text-xl font-bold ${promotionActive ? 'text-red-600' : 'text-primary'}`}>
+            {currentPrice.toLocaleString('fr-FR')} FCFA
+          </p>
+        </div>
+        <Button
+          size="sm"
+          variant="default"
           onClick={handleAddToCart}
           disabled={product.stock === 0}
           className="bg-primary hover:bg-primary/90"

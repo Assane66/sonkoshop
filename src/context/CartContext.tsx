@@ -4,11 +4,13 @@
 import type { Product } from '@/types';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { Timestamp } from 'firebase/firestore';
 
 
 export interface CartItem extends Product {
   quantity: number;
-  selectedSize?: string; 
+  selectedSize?: string;
+  priceInCart: number; // Prix au moment de l'ajout, incluant la promotion
 }
 
 interface CartContextType {
@@ -23,9 +25,27 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+const calculateDiscountedPrice = (product: Product): number => {
+  let finalPrice = product.price;
+  if (product.promotionPercentage && product.promotionPercentage > 0) {
+    let promotionIsValid = true;
+    if (product.promotionEndDate) {
+      const endDate = product.promotionEndDate instanceof Timestamp ? product.promotionEndDate.toDate().getTime() : new Date(product.promotionEndDate as any).getTime();
+      if (new Date().getTime() >= endDate) {
+        promotionIsValid = false;
+      }
+    }
+    if (promotionIsValid) {
+      finalPrice = product.price * (1 - product.promotionPercentage / 100);
+    }
+  }
+  return finalPrice;
+};
+
+
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const { toast } = useToast(); // Initialize toast
+  const { toast } = useToast();
 
   useEffect(() => {
     try {
@@ -35,22 +55,22 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
         console.error("Failed to parse cart from localStorage", error);
-        setCartItems([]); // Fallback to empty cart on error
+        setCartItems([]);
     }
   }, []);
 
   useEffect(() => {
-    // Only write to localStorage if cartItems has been initialized and potentially changed
-    // This avoids overwriting on initial load if localStorage is empty or becomes empty
     const currentStoredCart = localStorage.getItem('sonkoShopCart');
     const newCartJson = JSON.stringify(cartItems);
 
-    if (newCartJson !== currentStoredCart) { // Only update if there's a change
+    if (newCartJson !== currentStoredCart) {
         localStorage.setItem('sonkoShopCart', newCartJson);
     }
   }, [cartItems]);
 
   const addToCart = (product: Product, quantity: number, size?: string) => {
+    const priceInCart = calculateDiscountedPrice(product);
+
     setCartItems(prevItems => {
       const existingItemIndex = prevItems.findIndex(
         item => item.id === product.id && item.selectedSize === size
@@ -61,7 +81,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       if (existingItemIndex > -1) {
         const updatedItems = [...prevItems];
         newQuantity = updatedItems[existingItemIndex].quantity + quantity;
-        
+
         if (newQuantity > product.stock) {
             newQuantity = product.stock;
             toast({
@@ -71,6 +91,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
             });
         }
         updatedItems[existingItemIndex].quantity = newQuantity;
+        // Mettre à jour priceInCart si le prix a changé (peu probable pour un item existant mais pour la robustesse)
+        updatedItems[existingItemIndex].priceInCart = priceInCart;
         return updatedItems;
       } else {
         if (newQuantity > product.stock) {
@@ -81,7 +103,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                 description: `Seulement ${product.stock} unités disponibles. Ajout de ${newQuantity} au panier.`,
             });
         }
-        return [...prevItems, { ...product, quantity: newQuantity, selectedSize: size }];
+        return [...prevItems, { ...product, quantity: newQuantity, selectedSize: size, priceInCart }];
       }
     });
   };
@@ -99,8 +121,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           const productStock = item.stock;
           let newQuantity = quantity;
 
-          if (newQuantity < 1) { // Should ideally be handled by removing the item
-            newQuantity = 1; 
+          if (newQuantity < 1) {
+            // On ne met pas à jour à 0, la suppression gère ça via le bouton du panier.
+            // Ou si la quantité devient 0 via input, on peut la filtrer après.
+            // Pour l'instant, on la force à 1 si elle est < 1.
+            newQuantity = 1;
           }
           if (newQuantity > productStock) {
             newQuantity = productStock;
@@ -113,13 +138,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           return { ...item, quantity: newQuantity };
         }
         return item;
-      }).filter(item => item.quantity > 0) // Remove item if quantity becomes 0 or less
+      }).filter(item => item.quantity > 0) // S'assure qu'aucun item avec quantité 0 n'est gardé
     );
   };
 
   const clearCart = () => {
     setCartItems([]);
-    // localStorage.removeItem('sonkoShopCart'); // This will be handled by the useEffect
   };
 
   const getCartTotalItems = () => {
@@ -127,7 +151,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const getCartTotalPrice = () => {
-    return cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
+    return cartItems.reduce((total, item) => total + item.priceInCart * item.quantity, 0);
   };
 
 
