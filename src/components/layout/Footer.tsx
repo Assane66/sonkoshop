@@ -1,4 +1,6 @@
+
 import { Mail, Phone, MessageSquare } from 'lucide-react';
+import Link from 'next/link';
 
 export default function Footer() {
   return (
@@ -30,9 +32,9 @@ export default function Footer() {
           <div>
             <h3 className="text-lg font-semibold text-primary mb-4">Liens Rapides</h3>
             <ul className="space-y-2 text-sm">
-              <li><a href="/products" className="text-foreground/80 hover:text-foreground">Tous les produits</a></li>
-              <li><a href="#" className="text-foreground/80 hover:text-foreground">Politique de retour</a></li>
-              <li><a href="#" className="text-foreground/80 hover:text-foreground">Termes et Conditions</a></li>
+              <li><Link href="/products" className="text-foreground/80 hover:text-foreground">Tous les produits</Link></li>
+              <li><Link href="/politique-de-retour" className="text-foreground/80 hover:text-foreground">Politique de retour</Link></li>
+              <li><Link href="/termes-et-conditions" className="text-foreground/80 hover:text-foreground">Termes et Conditions</Link></li>
             </ul>
           </div>
         </div>
