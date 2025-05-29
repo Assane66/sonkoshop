@@ -18,7 +18,6 @@ export type Product = {
   promotionEndDate?: Timestamp | null; // Firestore Timestamp
 };
 
-// This enum is now primarily for defining standard category names if needed for default setup or validation
 export enum ProductCategoryEnum {
   Maillots = "Maillots",
   Chaussures = "Chaussures",
@@ -31,8 +30,9 @@ export enum ProductCategoryEnum {
   Baskets = "Baskets",
   Accessoires = "Accessoires",
 }
-// productCategoriesArray is populated dynamically from Firestore in admin/categories, or components that need it.
-// For components like ProductFilters, it will fetch categories from Firestore.
+
+export const productCategoriesArray: string[] = Object.values(ProductCategoryEnum);
+
 
 export type Banner = {
   id: string; // Firestore document ID
@@ -71,7 +71,7 @@ export enum OrderStatus {
   Shipped = "Expédiée",
   Delivered = "Livrée",
   Cancelled = "Annulé",
-  WavePending = "En attente de paiement Wave", // Status for orders before Wave confirmation
+  WavePending = "En attente de paiement Wave",
 }
 
 export const orderStatusList = Object.values(OrderStatus);
@@ -80,7 +80,7 @@ export interface OrderItem {
   productId: string;
   productName: string;
   quantity: number;
-  price: number; // Prix au moment de l'achat (peut être promotionnel)
+  price: number; 
   selectedSize?: string;
   imageUrl?: string;
 }
@@ -89,16 +89,19 @@ export interface CustomerInfo {
   fullName: string;
   address: string;
   phone: string;
-  email?: string; // Optional
+  email?: string; 
 }
 
 export interface Order {
   id: string; // Firestore document ID
   customerInfo: CustomerInfo;
   items: OrderItem[];
-  totalAmount: number;
+  totalAmount: number; // Grand total (subtotal + shipping)
   status: OrderStatus;
-  orderDate: Timestamp | any; // Firestore Timestamp or serverTimestamp() on creation
-  paymentMethod: 'cod' | 'wave' | string; // Support 'cod' and 'wave'
+  orderDate: Timestamp | any; 
+  paymentMethod: 'cod' | string; 
   shippingAddress: string;
+  shippingCost?: number; // Frais de livraison
+  subtotal?: number; // Sous-total avant livraison
 }
+

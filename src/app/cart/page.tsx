@@ -9,10 +9,18 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { Input } from '@/components/ui/input'; // For quantity input in cart
+import { Input } from '@/components/ui/input'; 
 
 export default function CartPage() {
-  const { cartItems, removeFromCart, updateQuantity, getCartTotalPrice, clearCart } = useCart();
+  const { 
+    cartItems, 
+    removeFromCart, 
+    updateQuantity, 
+    getCartSubtotal, 
+    clearCart,
+    getShippingCost,
+    getCartGrandTotal 
+  } = useCart();
   const { toast } = useToast();
 
   const handleRemoveItem = (productId: string, size?: string) => {
@@ -38,8 +46,11 @@ export default function CartPage() {
     }
   };
   
-  const totalPrice = getCartTotalPrice();
-  console.log("CartPage: cartItems.length =", cartItems.length, "totalPrice =", totalPrice);
+  const subtotal = getCartSubtotal();
+  const shippingCost = getShippingCost(subtotal);
+  const grandTotal = getCartGrandTotal();
+
+  console.log("CartPage: cartItems.length =", cartItems.length, "subtotal =", subtotal, "shippingCost =", shippingCost, "grandTotal =", grandTotal);
 
 
   if (cartItems.length === 0) {
@@ -84,8 +95,8 @@ export default function CartPage() {
               <div className="flex-grow text-center sm:text-left">
                 <h2 className="text-lg font-semibold">{item.name}</h2>
                 {item.selectedSize && <p className="text-sm text-muted-foreground">Taille: {item.selectedSize}</p>}
-                <p className="text-sm text-primary font-medium">{item.price.toLocaleString('fr-FR')} FCFA l'unité</p>
-                 <p className="text-md font-semibold mt-1">Total: {(item.price * item.quantity).toLocaleString('fr-FR')} FCFA</p>
+                <p className="text-sm text-primary font-medium">{item.priceInCart.toLocaleString('fr-FR')} FCFA l'unité</p>
+                 <p className="text-md font-semibold mt-1">Total Article: {(item.priceInCart * item.quantity).toLocaleString('fr-FR')} FCFA</p>
               </div>
               <div className="flex items-center space-x-2 my-2 sm:my-0">
                 <Button variant="outline" size="icon" onClick={() => handleUpdateQuantity(item, item.quantity - 1)} disabled={item.quantity <= 1 && item.stock === 0}>
@@ -118,16 +129,18 @@ export default function CartPage() {
             <CardContent className="space-y-4">
               <div className="flex justify-between">
                 <span>Sous-total ({cartItems.reduce((acc, item) => acc + item.quantity, 0)} articles)</span>
-                <span>{totalPrice.toLocaleString('fr-FR')} FCFA</span>
+                <span>{subtotal.toLocaleString('fr-FR')} FCFA</span>
               </div>
               <div className="flex justify-between">
                 <span>Livraison</span>
-                <span className="text-primary">Gratuite</span> {/* Ou à calculer */}
+                <span className={shippingCost === 0 ? "text-primary" : ""}>
+                  {shippingCost > 0 ? `${shippingCost.toLocaleString('fr-FR')} FCFA` : 'Gratuite'}
+                </span>
               </div>
               <Separator />
               <div className="flex justify-between font-bold text-lg">
                 <span>Total Général</span>
-                <span>{totalPrice.toLocaleString('fr-FR')} FCFA</span>
+                <span>{grandTotal.toLocaleString('fr-FR')} FCFA</span>
               </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-3">

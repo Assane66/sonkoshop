@@ -30,6 +30,7 @@ const getStatusBadgeClass = (status: OrderStatus): string => {
     case OrderStatus.Processing: return 'bg-purple-100 text-purple-700 border border-purple-200';
     case OrderStatus.Pending: return 'bg-yellow-100 text-yellow-700 border border-yellow-200';
     case OrderStatus.Cancelled: return 'bg-red-100 text-red-700 border border-red-200';
+    case OrderStatus.WavePending: return 'bg-orange-100 text-orange-700 border border-orange-200';
     default: return 'bg-gray-100 text-gray-700 border border-gray-200';
   }
 };
@@ -53,7 +54,6 @@ export default function AdminOrdersPage() {
         return {
           id: doc.id,
           ...data,
-          // Convert Firestore Timestamp to ISO string for easier handling, or keep as Timestamp
           orderDate: data.orderDate instanceof Timestamp ? data.orderDate.toDate().toISOString() : data.orderDate,
         } as Order;
       });
@@ -103,11 +103,6 @@ export default function AdminOrdersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-foreground">Gestion des Commandes</h1>
-        <div className="flex items-center space-x-2">
-          {/* Filter and Export buttons can be implemented later */}
-          {/* <Button variant="outline" disabled><Filter className="mr-2 h-4 w-4" /> Filtrer (Bientôt)</Button>
-          <Button variant="outline" disabled><Download className="mr-2 h-4 w-4" /> Exporter (Bientôt)</Button> */}
-        </div>
       </div>
 
        <Card className="shadow-sm">
@@ -144,7 +139,7 @@ export default function AdminOrdersPage() {
                         value={order.status} 
                         onValueChange={(value) => handleStatusChange(order.id, value as OrderStatus)}
                       >
-                        <SelectTrigger className={cn("h-8 text-xs w-36 border-0 focus:ring-0 focus:ring-offset-0 shadow-none p-0 data-[state=open]:ring-0 data-[state=open]:ring-offset-0", getStatusBadgeClass(order.status))}>
+                        <SelectTrigger className={cn("h-8 text-xs w-auto min-w-[120px] border-0 focus:ring-0 focus:ring-offset-0 shadow-none p-0 data-[state=open]:ring-0 data-[state=open]:ring-offset-0", getStatusBadgeClass(order.status))}>
                            <SelectValue placeholder="Statut" asChild>
                              <span className="px-2 py-0.5 rounded-full font-semibold">{order.status}</span>
                            </SelectValue>
@@ -180,7 +175,7 @@ export default function AdminOrdersPage() {
         <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
           <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Détails de la Commande : {selectedOrder.id}</DialogTitle>
+              <DialogTitle>Détails de la Commande : {selectedOrder.id.substring(0,8)}...</DialogTitle>
               <DialogDescription>
                 Date : {new Date(selectedOrder.orderDate).toLocaleString('fr-FR', {dateStyle: 'full', timeStyle: 'short'})}
               </DialogDescription>
@@ -205,9 +200,11 @@ export default function AdminOrdersPage() {
               </div>
                <hr/>
               <div>
-                <p><strong>Adresse de livraison:</strong> {selectedOrder.shippingAddress}</p>
-                <p><strong>Méthode de paiement:</strong> {selectedOrder.paymentMethod === 'cod' ? 'Paiement à la livraison' : selectedOrder.paymentMethod}</p>
+                <p><strong>Sous-total:</strong> {selectedOrder.subtotal ? selectedOrder.subtotal.toLocaleString('fr-FR') : 'N/A'} FCFA</p>
+                <p><strong>Frais de livraison:</strong> {selectedOrder.shippingCost !== undefined ? (selectedOrder.shippingCost > 0 ? `${selectedOrder.shippingCost.toLocaleString('fr-FR')} FCFA` : 'Gratuite') : 'N/A'}</p>
                 <p className="text-lg font-bold mt-2">Total Commande: {selectedOrder.totalAmount.toLocaleString('fr-FR')} FCFA</p>
+                 <p><strong>Adresse de livraison:</strong> {selectedOrder.shippingAddress}</p>
+                <p><strong>Méthode de paiement:</strong> {selectedOrder.paymentMethod === 'cod' ? 'Paiement à la livraison' : selectedOrder.paymentMethod}</p>
                 <p><strong>Statut Actuel:</strong> <Badge className={cn("text-sm", getStatusBadgeClass(selectedOrder.status))}>{selectedOrder.status}</Badge></p>
               </div>
             </div>

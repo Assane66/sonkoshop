@@ -20,7 +20,9 @@ interface CartContextType {
   updateQuantity: (productId: string, quantity: number, size?: string) => void;
   clearCart: () => void;
   getCartTotalItems: () => number;
-  getCartTotalPrice: () => number;
+  getCartSubtotal: () => number; // Renamed from getCartTotalPrice
+  getShippingCost: (subtotal: number) => number;
+  getCartGrandTotal: () => number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -42,6 +44,8 @@ const calculateDiscountedPrice = (product: Product): number => {
   return finalPrice;
 };
 
+const SHIPPING_COST_THRESHOLD = 25000;
+const DEFAULT_SHIPPING_COST = 1000;
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -91,7 +95,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
             });
         }
         updatedItems[existingItemIndex].quantity = newQuantity;
-        // Mettre à jour priceInCart si le prix a changé (peu probable pour un item existant mais pour la robustesse)
         updatedItems[existingItemIndex].priceInCart = priceInCart;
         return updatedItems;
       } else {
@@ -122,9 +125,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           let newQuantity = quantity;
 
           if (newQuantity < 1) {
-            // On ne met pas à jour à 0, la suppression gère ça via le bouton du panier.
-            // Ou si la quantité devient 0 via input, on peut la filtrer après.
-            // Pour l'instant, on la force à 1 si elle est < 1.
             newQuantity = 1;
           }
           if (newQuantity > productStock) {
@@ -138,7 +138,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           return { ...item, quantity: newQuantity };
         }
         return item;
-      }).filter(item => item.quantity > 0) // S'assure qu'aucun item avec quantité 0 n'est gardé
+      }).filter(item => item.quantity > 0) 
     );
   };
 
@@ -150,8 +150,19 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     return cartItems.reduce((total, item) => total + item.quantity, 0);
   };
 
-  const getCartTotalPrice = () => {
+  const getCartSubtotal = () => {
     return cartItems.reduce((total, item) => total + item.priceInCart * item.quantity, 0);
+  };
+
+  const getShippingCost = (subtotal: number): number => {
+    if (cartItems.length === 0) return 0; // Pas de frais si le panier est vide
+    return subtotal < SHIPPING_COST_THRESHOLD ? DEFAULT_SHIPPING_COST : 0;
+  };
+
+  const getCartGrandTotal = () => {
+    const subtotal = getCartSubtotal();
+    const shipping = getShippingCost(subtotal);
+    return subtotal + shipping;
   };
 
 
@@ -164,7 +175,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         updateQuantity,
         clearCart,
         getCartTotalItems,
-        getCartTotalPrice,
+        getCartSubtotal,
+        getShippingCost,
+        getCartGrandTotal,
       }}
     >
       {children}
@@ -179,3 +192,4 @@ export const useCart = () => {
   }
   return context;
 };
+
