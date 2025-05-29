@@ -23,10 +23,6 @@ export default function Footer() {
                 <Mail className="h-4 w-4 mr-2 text-primary" />
                 <a href="mailto:sonkoshop1@gmail.com" className="text-foreground/80 hover:text-foreground">sonkoshop1@gmail.com</a>
               </li>
-              <li className="flex items-center">
-                <MessageSquare className="h-4 w-4 mr-2 text-primary" />
-                <a href="https://wa.me/221784513633" target="_blank" rel="noopener noreferrer" className="text-foreground/80 hover:text-foreground">WhatsApp</a>
-              </li>
             </ul>
           </div>
           <div>
