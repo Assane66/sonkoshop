@@ -169,7 +169,7 @@ export default function AdminBannersPage() {
             )}
             <div>
               <Label htmlFor="link">Lien de Destination</Label>
-              <Input id="link" {...form.register('link')} className="mt-1" placeholder="/products/category-name" />
+              <Input id="link" {...form.register('link')} className="mt-1" placeholder="/products?category=NomDeLaCategorie" />
               {form.formState.errors.link && <p className="text-sm text-destructive mt-1">{form.formState.errors.link.message}</p>}
             </div>
             <div>
