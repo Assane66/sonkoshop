@@ -15,7 +15,7 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Truck, Loader2 } from 'lucide-react';
-import Image from 'next/image'; // Keep this if you still use Wave logo locally or another image
+import Image from 'next/image';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import type { Order, OrderStatus, CustomerInfo, OrderItem } from '@/types';
@@ -24,7 +24,7 @@ const checkoutFormSchema = z.object({
   fullName: z.string().min(3, "Le nom complet est requis (minimum 3 caractères)."),
   address: z.string().min(1, "L'adresse de livraison est requise."),
   phone: z.string().regex(/^(70|75|76|77|78)\d{7}$/, "Le numéro de téléphone doit être un numéro sénégalais valide (ex: 771234567)."),
-  paymentMethod: z.enum(['cod'], {
+  paymentMethod: z.enum(['cod', 'wave'], {
     required_error: "Vous devez sélectionner une méthode de paiement."
   }),
 });
@@ -59,7 +59,7 @@ export default function CheckoutPage() {
     }
     console.log("CheckoutPage: useEffect triggered. cartItems.length =", cartItems.length, "isProcessing =", isProcessing, "pathname =", currentPath, "grandTotal =", grandTotal);
 
-    if (cartItems.length === 0 && grandTotal === 0) { // Check grandTotal too, as shipping could exist
+    if (cartItems.length === 0 && grandTotal === 0) {
       if (!isProcessing) { 
         if (typeof window !== 'undefined' && !currentPath.includes('/checkout/success')) {
           console.log("CheckoutPage: Cart is empty AND NOT processing, redirecting to /cart");
@@ -80,7 +80,7 @@ export default function CheckoutPage() {
     console.log("CheckoutPage: onSubmit - START. Data:", data, "Subtotal:", subtotal, "Shipping:", shippingCost, "Grand Total:", grandTotal);
     
     setIsProcessing(true);
-    console.log("CheckoutPage: onSubmit - isProcessing set to true.");
+    console.log("CheckoutPage: onSubmit - isProcessing set to true at START.");
 
     const orderItems: OrderItem[] = cartItems.map(item => {
       const orderItem: OrderItem = {
@@ -110,7 +110,7 @@ export default function CheckoutPage() {
         subtotal: subtotal,
         shippingCost: shippingCost,
         totalAmount: grandTotal,
-        status: "En attente" as OrderStatus,
+        status: data.paymentMethod === 'wave' ? OrderStatus.WavePending : OrderStatus.Pending,
         orderDate: serverTimestamp(),
         paymentMethod: data.paymentMethod,
         shippingAddress: data.address,
@@ -133,9 +133,11 @@ export default function CheckoutPage() {
         console.log("CheckoutPage: COD - Attempting: router.push to success page.");
         await router.push(`/checkout/success?method=cod&orderId=${docRef.id}`);
         console.log("CheckoutPage: COD - Successfully navigated to success page.");
+        // If router.push succeeds, component unmounts, isProcessing state is gone.
+        // If router.push fails, it should throw an error, caught by the catch block.
       } catch (error: any) {
-        console.error("CheckoutPage: COD - CATCH block. Error saving order:", error);
-        let errorMessage = "Impossible d'enregistrer votre commande. Veuillez réessayer.";
+        console.error("CheckoutPage: COD - CATCH block. Error saving order or navigating:", error);
+        let errorMessage = "Impossible d'enregistrer votre commande ou de finaliser. Veuillez réessayer.";
         if (error.message) {
             errorMessage = `Erreur: ${error.message}. Veuillez contacter le support.`;
         }
@@ -152,14 +154,46 @@ export default function CheckoutPage() {
         });
         setIsProcessing(false);
         console.log("CheckoutPage: onSubmit - COD CATCH - isProcessing set to false.");
-      } finally {
-        // Ensure isProcessing is false even if navigation above might unmount
-        if (isProcessing) { // Check current state before setting
-             setIsProcessing(false);
-             console.log("CheckoutPage: onSubmit - COD FINALLY - isProcessing set to false.");
-        } else {
-             console.log("CheckoutPage: onSubmit - COD FINALLY - isProcessing was already false or navigation occurred.");
+      }
+    } else if (data.paymentMethod === 'wave') {
+      console.log("CheckoutPage: Processing Wave payment.");
+      // TODO: Fetch Wave base URL from settings/config dynamically if needed
+      const waveBaseUrl = 'https://pay.wave.com/m/M_pIXmQ2smGxRM/c/sn/'; 
+      const wavePaymentUrl = `${waveBaseUrl}?amount=${grandTotal}`;
+
+      try {
+        console.log("CheckoutPage: Wave - Attempting: await addDoc(...) with orderData:", orderData);
+        const docRef = await addDoc(collection(db, "orders"), orderData);
+        console.log("CheckoutPage: Wave - Success: addDoc. Order ID:", docRef.id);
+        
+        clearCart();
+        console.log("CheckoutPage: Wave - Cart cleared.");
+
+        toast({
+          title: "Redirection vers Wave...",
+          description: "Vous allez être redirigé pour finaliser votre paiement.",
+        });
+        
+        setIsProcessing(false); // Reset button state BEFORE attempting redirect
+        console.log("CheckoutPage: Wave - Order saved, isProcessing set to false before redirect timeout.");
+
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            console.log("CheckoutPage: Wave - Attempting redirect to:", wavePaymentUrl);
+            window.location.href = wavePaymentUrl;
+            // If redirection is blocked by browser, user is still on the page, button is active.
+          }
+        }, 1500); // Delay to allow toast to be seen
+
+      } catch (error: any) {
+        console.error("CheckoutPage: Wave - CATCH block. Error during Wave order processing (e.g., addDoc failed):", error);
+        let waveErrorMessage = "Impossible d'initier le paiement Wave. Veuillez réessayer.";
+        if (error.message) {
+            waveErrorMessage = `Erreur Wave: ${error.message}. Veuillez contacter le support.`;
         }
+        toast({ variant: "destructive", title: "Échec Paiement Wave", description: waveErrorMessage });
+        setIsProcessing(false); 
+        console.log("CheckoutPage: onSubmit - Wave CATCH - isProcessing set to false.");
       }
     } else {
         console.warn("CheckoutPage: onSubmit - Reached unexpected 'else' for paymentMethod:", data.paymentMethod);
@@ -167,9 +201,10 @@ export default function CheckoutPage() {
         setIsProcessing(false);
         console.log("CheckoutPage: onSubmit - UNKNOWN PAYMENT METHOD - isProcessing set to false.");
     }
-    // This might not be reached if navigation occurs successfully.
-    // if (isProcessing) setIsProcessing(false);
-    console.log("CheckoutPage: onSubmit - END. isProcessing should be false if not navigated successfully:", isProcessing);
+    // Note: No general finally block for setIsProcessing(false) for the entire onSubmit.
+    // Each path (COD, Wave, unknown) is responsible for its own `isProcessing` state management,
+    // especially when asynchronous operations like navigation or external redirects are involved.
+    console.log("CheckoutPage: onSubmit - END. Current isProcessing state:", isProcessing);
   };
 
   if (cartItems.length === 0 && grandTotal === 0 && !isProcessing && (typeof window !== 'undefined' && !window.location.pathname.includes('/checkout/success'))) {
@@ -261,6 +296,15 @@ export default function CheckoutPage() {
                                 Payer à la livraison
                               </FormLabel>
                             </FormItem>
+                            <FormItem className="flex items-center space-x-3 space-y-0 p-4 border rounded-md has-[:checked]:border-primary">
+                                <FormControl>
+                                    <RadioGroupItem value="wave" disabled={isProcessing} />
+                                </FormControl>
+                                <FormLabel className="font-normal flex items-center text-base cursor-pointer">
+                                   <svg viewBox="0 0 110 110" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-3 h-6 w-6"><path d="M13.577 109.354C8.02 109.354 3.5 104.835 3.5 99.277V10.444C3.5 4.886 8.02 0.368 13.577 0.368H95.828C101.386 0.368 105.904 4.886 105.904 10.444V99.277C105.904 104.835 101.386 109.354 95.828 109.354H13.577Z" fill="#00A9E7"></path><path d="M91.794 43.65C88.48 40.336 79.32 37.021 70.424 37.021C59.638 37.021 51.27 40.336 46.822 43.65L45.674 44.534C45.145 44.807 44.617 44.807 44.088 44.534L39.375 42.396C36.326 40.864 32.467 40.055 28.872 40.055C25.012 40.055 21.417 41.128 18.368 42.924V21.02C22.711 19.224 27.863 18.15 33.28 18.15C43.538 18.15 51.905 21.465 56.089 24.514L57.237 25.397C57.766 25.671 58.294 25.671 58.823 25.397L63.271 23.26C66.585 21.727 70.18 21.199 73.505 21.199C76.83 21.199 80.155 21.727 83.204 22.799V43.65H91.794Z" fill="#042A3A"></path><path d="M91.793 65.971C88.479 69.285 79.319 72.6 70.423 72.6C59.637 72.6 51.269 69.285 46.821 65.971L45.673 65.088C45.144 64.815 44.616 64.815 44.087 65.088L39.374 67.226C36.325 68.758 32.466 69.567 28.871 69.567C25.011 69.567 21.416 68.494 18.367 66.698V88.601C22.71 90.397 27.862 91.47 33.279 91.47C43.537 91.47 51.904 88.155 56.088 85.106L57.236 84.223C57.765 83.95 58.293 83.95 58.822 84.223L63.27 86.36C66.584 87.892 70.179 88.42 73.504 88.42C76.829 88.42 80.154 87.892 83.203 86.82V65.971H91.793Z" fill="white"></path></svg>
+                                    Payer avec Wave
+                                </FormLabel>
+                            </FormItem>
                           </RadioGroup>
                         </FormControl>
                         <FormMessage />
@@ -321,3 +365,4 @@ export default function CheckoutPage() {
     </div>
   );
 }
+
