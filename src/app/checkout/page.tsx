@@ -14,11 +14,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Truck, Loader2 } from 'lucide-react';
+import { Loader2, Truck } from 'lucide-react';
 import Image from 'next/image';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp, deleteField } from 'firebase/firestore';
-import type { Order, OrderStatus, CustomerInfo, OrderItem } from '@/types';
+import { OrderStatus, type Order, type CustomerInfo, type OrderItem } from '@/types';
 
 const checkoutFormSchema = z.object({
   fullName: z.string().min(3, "Le nom complet est requis (minimum 3 caractères)."),
@@ -38,6 +38,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
   const [isRedirectingToWave, setIsRedirectingToWave] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
 
   const form = useForm<CheckoutFormValues>({
@@ -55,27 +56,33 @@ export default function CheckoutPage() {
   const grandTotal = getCartGrandTotal();
 
   useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return; // Don't run this effect until client is hydrated
+
     let currentPath = '';
     if (typeof window !== 'undefined') {
       currentPath = window.location.pathname;
     }
-    console.log("CheckoutPage: useEffect triggered. cartItems.length =", cartItems.length, "isProcessing =", isProcessing, "isRedirectingToWave =", isRedirectingToWave, "pathname =", currentPath, "grandTotal =", grandTotal);
+    // console.log("CheckoutPage: useEffect triggered. cartItems.length =", cartItems.length, "isProcessing =", isProcessing, "isRedirectingToWave =", isRedirectingToWave, "pathname =", currentPath, "grandTotal =", grandTotal);
 
     if (cartItems.length === 0 && grandTotal === 0) {
-      if (!isProcessing && !isRedirectingToWave) { 
+      if (!isProcessing && !isRedirectingToWave) {
         if (typeof window !== 'undefined' && !currentPath.includes('/checkout/success')) {
-          console.log("CheckoutPage: Cart is empty, NOT processing, NOT redirecting to Wave. Redirecting to /cart");
+          // console.log("CheckoutPage: Cart is empty, NOT processing, NOT redirecting to Wave. Redirecting to /cart");
           router.push('/cart');
         } else {
-          console.log("CheckoutPage: Cart is empty, NOT processing, NOT redirecting to Wave, but on success page or window undefined. No redirect to /cart.");
+          // console.log("CheckoutPage: Cart is empty, NOT processing, NOT redirecting to Wave, but on success page or window undefined. No redirect to /cart.");
         }
       } else {
-        console.log("CheckoutPage: Cart is empty BUT IS PROCESSING or IS REDIRECTING TO WAVE. Waiting.");
+        // console.log("CheckoutPage: Cart is empty BUT IS PROCESSING or IS REDIRECTING TO WAVE. Waiting.");
       }
     } else {
-      console.log("CheckoutPage: Cart is NOT empty. No redirect to /cart. isProcessing =", isProcessing, "isRedirectingToWave =", isRedirectingToWave);
+      // console.log("CheckoutPage: Cart is NOT empty. No redirect to /cart. isProcessing =", isProcessing, "isRedirectingToWave =", isRedirectingToWave);
     }
-  }, [cartItems, isProcessing, router, grandTotal, isRedirectingToWave]);
+  }, [cartItems, grandTotal, isProcessing, isRedirectingToWave, router, hydrated]);
 
 
   const onSubmit = async (data: CheckoutFormValues) => {
@@ -89,7 +96,7 @@ export default function CheckoutPage() {
         productId: item.id,
         productName: item.name,
         quantity: item.quantity,
-        price: item.priceInCart, 
+        price: item.priceInCart,
       };
       if (item.selectedSize) {
         orderItem.selectedSize = item.selectedSize;
@@ -138,10 +145,10 @@ export default function CheckoutPage() {
           description: "Votre commande a été enregistrée. Nous vous contacterons bientôt.",
         });
         console.log("CheckoutPage: COD - Attempting: router.push to success page.");
-        await router.push(`/checkout/success?method=cod&orderId=${docRef.id}`);
-        console.log("CheckoutPage: COD - Successfully navigated to success page.");
-        // setIsProcessing(false) is not strictly needed here if navigation succeeds,
-        // as component unmounts. But catch block will handle it if navigation fails.
+        // No need to await router.push if it's the last thing.
+        router.push(`/checkout/success?method=cod&orderId=${docRef.id}`);
+        console.log("CheckoutPage: COD - Navigation to success page initiated.");
+        // setIsProcessing will be handled in finally or if component unmounts
       } catch (error: any) {
         console.error("CheckoutPage: COD - CATCH block. Error during COD order processing:", error);
         let errorMessage = "Impossible d'enregistrer votre commande. Veuillez réessayer.";
@@ -152,8 +159,9 @@ export default function CheckoutPage() {
              errorMessage = `Erreur: ${error.message}. Veuillez contacter le support.`;
         }
         toast({ variant: "destructive", title: "Échec de la commande", description: errorMessage });
+      } finally {
         setIsProcessing(false);
-        console.log("CheckoutPage: onSubmit - COD CATCH - isProcessing set to false.");
+        console.log("CheckoutPage: onSubmit - COD FINALLY - isProcessing set to false.");
       }
     } else if (data.paymentMethod === 'wave') {
       console.log("CheckoutPage: Processing Wave payment.");
@@ -167,11 +175,9 @@ export default function CheckoutPage() {
         
         clearCart();
         console.log("CheckoutPage: Wave - Cart cleared.");
-
-        // Set states before async redirect to allow UI to update and useEffect to behave
-        setIsRedirectingToWave(true);
-        setIsProcessing(false); 
-        console.log("CheckoutPage: Wave - Order saved, isProcessing set to false, isRedirectingToWave set to true before redirect timeout.");
+        
+        setIsRedirectingToWave(true); 
+        console.log("CheckoutPage: Wave - Order saved, isRedirectingToWave set to true before redirect timeout.");
 
         toast({
           title: "Redirection vers Wave...",
@@ -182,10 +188,8 @@ export default function CheckoutPage() {
           if (typeof window !== 'undefined') {
             console.log("CheckoutPage: Wave - Attempting redirect to:", wavePaymentUrl);
             window.location.href = wavePaymentUrl;
-            // After this, if redirect fails, user might be stuck on a page with isRedirectingToWave=true.
-            // Consider a timeout to reset isRedirectingToWave if needed for robustness.
           }
-        }, 1500); 
+        }, 1500);
 
       } catch (error: any) {
         console.error("CheckoutPage: Wave - CATCH block. Error during Wave order processing:", error);
@@ -197,9 +201,20 @@ export default function CheckoutPage() {
             waveErrorMessage = `Erreur Wave: ${error.message}. Veuillez contacter le support.`;
         }
         toast({ variant: "destructive", title: "Échec Paiement Wave", description: waveErrorMessage });
-        setIsProcessing(false); 
-        setIsRedirectingToWave(false); // Reset this if addDoc fails
-        console.log("CheckoutPage: onSubmit - Wave CATCH - isProcessing and isRedirectingToWave set to false.");
+        setIsRedirectingToWave(false); 
+      } finally {
+        // Only set isProcessing to false if not redirecting to wave successfully,
+        // because the page will change anyway. If wave init fails, then set to false.
+        if(!isRedirectingToWave){ // Check if redirect was actually initiated.
+             setIsProcessing(false);
+             console.log("CheckoutPage: onSubmit - Wave FINALLY (no successful redirect initiated) - isProcessing set to false.");
+        } else {
+            // If redirecting to wave, isProcessing can remain true or be set to false, 
+            // but the page will navigate away. If redirect fails client-side after timeout, user is stuck.
+            // It's safer to set it false once redirection is handed off.
+             setIsProcessing(false);
+             console.log("CheckoutPage: onSubmit - Wave FINALLY (redirect to Wave initiated) - isProcessing set to false.");
+        }
       }
     } else {
         console.warn("CheckoutPage: onSubmit - Reached unexpected 'else' for paymentMethod:", data.paymentMethod);
@@ -207,18 +222,36 @@ export default function CheckoutPage() {
         setIsProcessing(false);
         console.log("CheckoutPage: onSubmit - UNKNOWN PAYMENT METHOD - isProcessing set to false.");
     }
-    // No global finally block for setIsProcessing(false) as each path should handle it.
     console.log("CheckoutPage: onSubmit - END. Current isProcessing state:", isProcessing, "isRedirectingToWave:", isRedirectingToWave);
   };
 
-  if (cartItems.length === 0 && grandTotal === 0 && !isProcessing && !isRedirectingToWave && (typeof window !== 'undefined' && !window.location.pathname.includes('/checkout/success'))) {
+  if (!hydrated) {
     return (
-      <div className="container mx-auto px-4 py-12 text-center">
-        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Votre panier est vide ou la page est en cours de redirection...</p>
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
       </div>
     );
   }
+  
+  if (cartItems.length === 0 && grandTotal === 0 && !isProcessing && !isRedirectingToWave) {
+    // This condition is now less likely to cause hydration issues due to the `hydrated` check in useEffect for redirection.
+    // If still reached, it means redirection hasn't happened.
+    let currentPath = '';
+    if (typeof window !== 'undefined') currentPath = window.location.pathname;
+    if (!currentPath.includes('/checkout/success')) {
+        return (
+          <div className="container mx-auto px-4 py-8"> {/* Consistent className */}
+            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
+              <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+              <p className="text-muted-foreground">Votre panier est vide. Redirection...</p>
+            </div>
+          </div>
+        );
+    }
+  }
+
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -322,7 +355,7 @@ export default function CheckoutPage() {
                 type="submit"
                 size="lg"
                 className="w-full bg-primary hover:bg-primary/90"
-                disabled={isProcessing || cartItems.length === 0 || !form.formState.isValid }
+                disabled={isProcessing || cartItems.length === 0 || !form.formState.isValid || !hydrated}
               >
                 {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : ''}
                 {isProcessing ? 'Traitement...' : 'Confirmer la Commande'}
@@ -369,4 +402,3 @@ export default function CheckoutPage() {
     </div>
   );
 }
-
