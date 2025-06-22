@@ -1,39 +1,92 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Globe, CreditCard, Truck, Info, Image as ImageIconLucide } from 'lucide-react'; // Using ImageIconLucide to avoid conflict
+import { Globe, CreditCard, Truck, Info, Image as ImageIconLucide, Loader2 } from 'lucide-react';
+import type { SiteSettings } from '@/types';
+import { db } from '@/lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+
+const initialSettings: SiteSettings = {
+  siteName: 'Sonko Shop',
+  siteDescription: 'Boutique en ligne de Sonko Shop: maillots, chaussures, etc.',
+  contactEmail: 'sonkoshop1@gmail.com',
+  contactPhone: '784513633',
+  codEnabled: true,
+  waveEnabled: true,
+  wavePaymentUrl: 'https://pay.wave.com/m/M_pIXmQ2smGxRM/c/sn/',
+};
 
 export default function AdminSettingsPage() {
   const { toast } = useToast();
+  const [settings, setSettings] = useState<SiteSettings>(initialSettings);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Mocked initial settings state
-  const [siteName, setSiteName] = useState('Sonko Shop');
-  const [siteDescription, setSiteDescription] = useState('Boutique en ligne de Sonko Shop: maillots, chaussures, etc.');
-  const [contactEmail, setContactEmail] = useState('sonkoshop1@gmail.com');
-  const [contactPhone, setContactPhone] = useState('784513633');
+  const fetchSettings = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const settingsDocRef = doc(db, 'site_settings', 'config');
+      const docSnap = await getDoc(settingsDocRef);
+      if (docSnap.exists()) {
+        setSettings({ ...initialSettings, ...docSnap.data() });
+      } else {
+        // If no settings doc exists, use initialSettings
+        setSettings(initialSettings);
+        console.log("No settings document found, using initial default settings.");
+      }
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de charger les paramètres.' });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
 
-  const [codEnabled, setCodEnabled] = useState(true);
-  const [waveEnabled, setWaveEnabled] = useState(true);
-  const [wavePaymentUrl, setWavePaymentUrl] = useState('https://pay.wave.com/m/M_pIXmQ2smGxRM/c/sn/');
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
-  const handleSaveChanges = () => {
-    // In a real app, you'd save these settings to a database or configuration file (e.g., a 'settings' document in Firestore)
-    console.log("Saving settings:", {
-      siteName, siteDescription, contactEmail, contactPhone,
-      codEnabled, waveEnabled, wavePaymentUrl,
-    });
-    toast({
-      title: "Paramètres sauvegardés!",
-      description: "Vos modifications ont été enregistrées (simulation).",
-    });
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setSettings(prev => ({ ...prev, [id]: value }));
   };
+
+  const handleSwitchChange = (id: keyof SiteSettings, checked: boolean) => {
+    setSettings(prev => ({ ...prev, [id]: checked }));
+  };
+  
+  const handleSaveChanges = async () => {
+    setIsSaving(true);
+    try {
+      const settingsDocRef = doc(db, 'site_settings', 'config');
+      await setDoc(settingsDocRef, settings, { merge: true });
+      toast({
+        title: "Paramètres sauvegardés!",
+        description: "Vos modifications ont été enregistrées avec succès.",
+      });
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de sauvegarder les paramètres.' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+        <div className="flex flex-col items-center justify-center h-64 space-y-3">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-muted-foreground">Chargement des paramètres...</p>
+        </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -48,19 +101,19 @@ export default function AdminSettingsPage() {
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="siteName">Nom du Site</Label>
-              <Input id="siteName" value={siteName} onChange={(e) => setSiteName(e.target.value)} />
+              <Input id="siteName" value={settings.siteName} onChange={handleInputChange} disabled={isSaving} />
             </div>
             <div>
               <Label htmlFor="siteDescription">Description du Site (pour SEO)</Label>
-              <Input id="siteDescription" value={siteDescription} onChange={(e) => setSiteDescription(e.target.value)} />
+              <Input id="siteDescription" value={settings.siteDescription} onChange={handleInputChange} disabled={isSaving} />
             </div>
             <div>
               <Label htmlFor="contactEmail">Email de Contact Principal</Label>
-              <Input id="contactEmail" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} />
+              <Input id="contactEmail" type="email" value={settings.contactEmail} onChange={handleInputChange} disabled={isSaving} />
             </div>
             <div>
               <Label htmlFor="contactPhone">Téléphone de Contact Principal</Label>
-              <Input id="contactPhone" type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} />
+              <Input id="contactPhone" type="tel" value={settings.contactPhone} onChange={handleInputChange} disabled={isSaving} />
             </div>
           </CardContent>
         </Card>
@@ -79,7 +132,7 @@ export default function AdminSettingsPage() {
                   <p className="text-xs text-muted-foreground">Permettre aux clients de payer en espèces à la livraison.</p>
                 </div>
               </div>
-              <Switch id="codEnabled" checked={codEnabled} onCheckedChange={setCodEnabled} />
+              <Switch id="codEnabled" checked={settings.codEnabled} onCheckedChange={(checked) => handleSwitchChange('codEnabled', checked)} disabled={isSaving} />
             </div>
 
             <div className="p-3 border rounded-md space-y-3">
@@ -93,12 +146,12 @@ export default function AdminSettingsPage() {
                         <p className="text-xs text-muted-foreground">Permettre aux clients de payer via Wave.</p>
                         </div>
                     </div>
-                    <Switch id="waveEnabled" checked={waveEnabled} onCheckedChange={setWaveEnabled} />
+                    <Switch id="waveEnabled" checked={settings.waveEnabled} onCheckedChange={(checked) => handleSwitchChange('waveEnabled', checked)} disabled={isSaving} />
                 </div>
-                {waveEnabled && (
+                {settings.waveEnabled && (
                      <div>
                         <Label htmlFor="wavePaymentUrl">URL de paiement Wave (base)</Label>
-                        <Input id="wavePaymentUrl" value={wavePaymentUrl} onChange={(e) => setWavePaymentUrl(e.target.value)} placeholder="https://pay.wave.com/m/VOTRE_ID/c/sn/" />
+                        <Input id="wavePaymentUrl" value={settings.wavePaymentUrl} onChange={handleInputChange} placeholder="https://pay.wave.com/m/VOTRE_ID/c/sn/" disabled={isSaving} />
                         <p className="text-xs text-muted-foreground mt-1">L'application ajoutera `?amount=TOTAL` à cette URL.</p>
                     </div>
                 )}
@@ -108,8 +161,9 @@ export default function AdminSettingsPage() {
       </div>
 
       <div className="flex justify-end">
-        <Button onClick={handleSaveChanges} className="bg-primary hover:bg-primary/90">
-          Enregistrer les Modifications
+        <Button onClick={handleSaveChanges} className="bg-primary hover:bg-primary/90" disabled={isSaving || isLoading}>
+          {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          {isSaving ? 'Enregistrement...' : 'Enregistrer les Modifications'}
         </Button>
       </div>
     </div>

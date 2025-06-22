@@ -99,9 +99,18 @@ export interface Order {
   totalAmount: number; // Grand total (subtotal + shipping)
   status: OrderStatus;
   orderDate: Timestamp | any; 
-  paymentMethod: 'cod' | string; 
+  paymentMethod: 'cod' | 'wave' | string; 
   shippingAddress: string;
   shippingCost?: number; // Frais de livraison
   subtotal?: number; // Sous-total avant livraison
 }
 
+export interface SiteSettings {
+  siteName: string;
+  siteDescription: string;
+  contactEmail: string;
+  contactPhone: string;
+  codEnabled: boolean;
+  waveEnabled: boolean;
+  wavePaymentUrl: string;
+}
