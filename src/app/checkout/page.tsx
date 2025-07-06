@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -17,6 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2, Truck, Store } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { OrderStatus, type Order, type CustomerInfo, type OrderItem, type SiteSettings } from '@/types';
@@ -96,7 +96,7 @@ export default function CheckoutPage() {
              title: "Configuration manquante",
              description: "Les paramètres du site sont introuvables. Paiement Wave désactivé.",
            });
-          setSettings({ waveEnabled: false, pickupEnabled: false, wavePaymentUrl: '', codEnabled: true, siteName: 'Sonko Shop', siteDescription:'', contactEmail:'', contactPhone:'' });
+          setSettings({ waveEnabled: false, pickupEnabled: true, wavePaymentUrl: '', codEnabled: true, siteName: 'Sonko Shop', siteDescription:'', contactEmail:'', contactPhone:'' });
         }
       } catch (error) {
         console.error("Error fetching site settings:", error);
@@ -105,7 +105,7 @@ export default function CheckoutPage() {
             title: "Erreur de configuration",
             description: "Impossible de charger les options de paiement. Seuls les paiements par défaut sont disponibles.",
         });
-        setSettings({ waveEnabled: false, pickupEnabled: false, wavePaymentUrl: '', codEnabled: true, siteName: 'Sonko Shop', siteDescription:'', contactEmail:'', contactPhone:'' });
+        setSettings({ waveEnabled: false, pickupEnabled: true, wavePaymentUrl: '', codEnabled: true, siteName: 'Sonko Shop', siteDescription:'', contactEmail:'', contactPhone:'' });
       } finally {
         setIsSettingsLoading(false);
       }
