@@ -42,7 +42,9 @@ export default function UserOrdersPage() {
 
     setIsLoading(true);
     const ordersCollection = collection(db, 'orders');
-    const q = query(ordersCollection, where('userId', '==', user.uid), orderBy('orderDate', 'desc'));
+    // Removed orderBy from the query to prevent crashes due to missing composite indexes.
+    // Sorting will be handled client-side after fetching.
+    const q = query(ordersCollection, where('userId', '==', user.uid));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetchedOrders: Order[] = snapshot.docs.map(doc => {
@@ -53,6 +55,8 @@ export default function UserOrdersPage() {
           orderDate: data.orderDate instanceof Timestamp ? data.orderDate.toDate().toISOString() : data.orderDate,
         } as Order;
       });
+      // Sort orders by date on the client side
+      fetchedOrders.sort((a, b) => new Date(b.orderDate as string).getTime() - new Date(a.orderDate as string).getTime());
       setOrders(fetchedOrders);
       setIsLoading(false);
     }, (error) => {
@@ -93,7 +97,7 @@ export default function UserOrdersPage() {
             {orders.length > 0 ? orders.map((order) => (
               <TableRow key={order.id}>
                 <TableCell className="font-medium text-primary">#{order.id.substring(0, 8)}</TableCell>
-                <TableCell>{new Date(order.orderDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</TableCell>
+                <TableCell>{new Date(order.orderDate as string).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</TableCell>
                 <TableCell>{order.totalAmount.toLocaleString('fr-FR')} FCFA</TableCell>
                 <TableCell>
                   <Badge className={cn("text-xs", getStatusBadgeClass(order.status))}>{order.status}</Badge>
