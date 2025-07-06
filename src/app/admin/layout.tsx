@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation'; 
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminLayout({
   children,
@@ -14,6 +15,7 @@ export default function AdminLayout({
 }) {
   const { user, userData, loading } = useAuth(); 
   const router = useRouter(); 
+  const { toast } = useToast();
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
@@ -23,12 +25,20 @@ export default function AdminLayout({
 
   useEffect(() => {
     if (!loading) {
-      if (!user || userData?.role !== 'admin') {
-        toast({ variant: "destructive", title: "Accès non autorisé", description: "Vous devez être administrateur." });
+      if (!user) {
+        // User is not logged in, redirect silently
+        router.push('/login');
+      } else if (userData?.role !== 'admin') {
+        // User is logged in but not an admin
+        toast({ 
+          variant: "destructive", 
+          title: "Accès non autorisé", 
+          description: "Vous devez être administrateur pour accéder à cette page." 
+        });
         router.push('/login');
       }
     }
-  }, [user, userData, loading, router]);
+  }, [user, userData, loading, router, toast]);
 
   if (loading || !userData) { 
     return (
