@@ -1,21 +1,18 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { CheckCircle, Package, Download, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import type { Order, OrderItem } from '@/types';
 import Image from 'next/image';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
 
-function CheckoutSuccessContent() {
-  const searchParams = useSearchParams();
-  const paymentMethod = searchParams.get('method');
+export default function CheckoutSuccessPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoadingOrder, setIsLoadingOrder] = useState(true);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -34,7 +31,6 @@ function CheckoutSuccessContent() {
           // It will be overwritten by the next successful order.
         } else {
           console.warn("CheckoutSuccessPage: No order data found in sessionStorage. This can happen on page refresh or direct access.");
-          // No toast here, the UI will show the "Commande non trouvée" message
         }
       }
     } catch (error) {
@@ -43,7 +39,7 @@ function CheckoutSuccessContent() {
     } finally {
       setIsLoadingOrder(false);
     }
-  }, []);
+  }, [toast]);
 
   const handleDownloadPdf = async () => {
     if (!invoiceRef.current || !order) {
@@ -85,9 +81,11 @@ function CheckoutSuccessContent() {
 
   if (isLoadingOrder) {
     return (
-        <div className="flex justify-center items-center py-4 min-h-[300px]">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          <p className="ml-2">Chargement des détails de la commande...</p>
+        <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
+            <div className="flex justify-center items-center py-4">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="ml-2 text-xl">Chargement de la confirmation...</p>
+            </div>
         </div>
     );
   }
@@ -98,7 +96,7 @@ function CheckoutSuccessContent() {
             <Card className="w-full max-w-lg text-center shadow-xl">
                 <CardHeader>
                     <CardTitle className="text-2xl font-bold text-destructive">Commande non trouvée</CardTitle>
-                    <CardDescription>ID de commande manquant ou invalide. Veuillez vérifier le lien ou contacter le support.</CardDescription>
+                    <CardDescription>Aucun détail de commande n'a été trouvé. Cela peut se produire si vous accédez directement à cette page ou après un long moment. Veuillez vérifier vos e-mails ou nous contacter.</CardDescription>
                 </CardHeader>
                  <CardContent>
                     <Button asChild>
@@ -113,7 +111,7 @@ function CheckoutSuccessContent() {
   let title = "Merci pour votre commande!";
   let description = "Votre commande a été enregistrée avec succès. Nous préparons votre colis.";
 
-  if (paymentMethod === 'cod') {
+  if (order.paymentMethod === 'cod') {
     title = "Commande (Paiement à la livraison) Réussie!";
     description = "Votre commande a été enregistrée. Vous serez contacté(e) sous peu pour la confirmation et la livraison. Merci de préparer le montant exact.";
   }
@@ -231,24 +229,4 @@ function CheckoutSuccessContent() {
 
     </div>
   );
-}
-
-
-function Loading() {
-  return (
-    <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
-      <div className="flex justify-center items-center py-4">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="ml-2 text-xl">Chargement de la confirmation...</p>
-      </div>
-    </div>
-  );
-}
-
-export default function CheckoutSuccessPage() {
-  return (
-    <Suspense fallback={<Loading />}>
-      <CheckoutSuccessContent />
-    </Suspense>
-  )
 }

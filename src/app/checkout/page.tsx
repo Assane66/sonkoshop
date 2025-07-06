@@ -85,7 +85,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (!hydrated) return;
-
+    
     if (cartItems.length === 0 && grandTotal === 0 && !isProcessing && !isRedirectingToWave) {
       if (typeof window !== 'undefined' && !window.location.pathname.includes('/checkout/success')) {
         console.log("CheckoutPage: Cart is empty, NOT processing, NOT redirecting to Wave. Redirecting to /cart");
@@ -159,7 +159,7 @@ export default function CheckoutPage() {
           title: "Commande confirmée!",
           description: "Votre commande a été enregistrée. Nous vous contacterons bientôt.",
         });
-        router.push(`/checkout/success?method=cod`);
+        router.push(`/checkout/success`);
       } else if (data.paymentMethod === 'wave' && settings?.wavePaymentUrl) {
          toast({
           title: "Redirection vers Wave...",
