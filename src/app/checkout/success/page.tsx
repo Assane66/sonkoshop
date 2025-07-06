@@ -7,8 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { CheckCircle, Package, Download, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { db } from '@/lib/firebase';
-import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import type { Order, OrderItem } from '@/types';
 import Image from 'next/image';
 import jsPDF from 'jspdf';
@@ -18,7 +16,6 @@ import { useToast } from '@/hooks/use-toast';
 function CheckoutSuccessContent() {
   const searchParams = useSearchParams();
   const paymentMethod = searchParams.get('method');
-  const orderId = searchParams.get('orderId');
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoadingOrder, setIsLoadingOrder] = useState(true);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -26,40 +23,27 @@ function CheckoutSuccessContent() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (orderId) {
-      const fetchOrder = async () => {
-        setIsLoadingOrder(true);
-        try {
-          const orderDocRef = doc(db, 'orders', orderId);
-          const orderSnap = await getDoc(orderDocRef);
-          if (orderSnap.exists()) {
-            const orderData = orderSnap.data() as Omit<Order, 'id'>;
-            const itemsWithCorrectDate = orderData.items.map(item => ({
-                ...item
-            }));
-
-            setOrder({ 
-              id: orderSnap.id, 
-              ...orderData,
-              orderDate: orderData.orderDate instanceof Timestamp ? orderData.orderDate.toDate().toISOString() : orderData.orderDate,
-              items: itemsWithCorrectDate,
-            });
-          } else {
-            console.error("Aucune commande trouvée pour cet ID:", orderId);
-            toast({ variant: "destructive", title: "Erreur", description: "Commande non trouvée." });
-          }
-        } catch (error) {
-          console.error("Erreur lors de la récupération de la commande:", error);
-          toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les détails de la commande." });
-        } finally {
-          setIsLoadingOrder(false);
+    setIsLoadingOrder(true);
+    try {
+      if (typeof window !== 'undefined') {
+        const storedOrder = sessionStorage.getItem('lastSuccessfulOrder');
+        if (storedOrder) {
+          const parsedOrder = JSON.parse(storedOrder) as Order;
+          setOrder(parsedOrder);
+          // We can leave the item in sessionStorage in case the user wants to refresh and re-download the PDF.
+          // It will be overwritten by the next successful order.
+        } else {
+          console.warn("CheckoutSuccessPage: No order data found in sessionStorage. This can happen on page refresh or direct access.");
+          // No toast here, the UI will show the "Commande non trouvée" message
         }
-      };
-      fetchOrder();
-    } else {
+      }
+    } catch (error) {
+      console.error("Failed to retrieve or parse order from sessionStorage:", error);
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de récupérer les détails de la commande." });
+    } finally {
       setIsLoadingOrder(false);
     }
-  }, [orderId, toast]);
+  }, []);
 
   const handleDownloadPdf = async () => {
     if (!invoiceRef.current || !order) {
@@ -108,7 +92,7 @@ function CheckoutSuccessContent() {
     );
   }
   
-  if (!orderId || !order) {
+  if (!order) {
     return (
        <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
             <Card className="w-full max-w-lg text-center shadow-xl">
@@ -150,7 +134,7 @@ function CheckoutSuccessContent() {
           <CardTitle className="text-3xl font-bold text-primary">{title}</CardTitle>
           <CardDescription className="text-muted-foreground text-base pt-2">
             {description}
-            {orderId && <p className="mt-2">Votre numéro de commande est : <strong>{orderId.substring(0,8)}...</strong></p>}
+            {order.id && <p className="mt-2">Votre numéro de commande est : <strong>{order.id.substring(0,8)}...</strong></p>}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

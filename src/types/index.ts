@@ -98,7 +98,7 @@ export interface Order {
   items: OrderItem[];
   totalAmount: number; // Grand total (subtotal + shipping)
   status: OrderStatus;
-  orderDate: Timestamp | any; 
+  orderDate: Timestamp | string; // Can be a Firestore Timestamp when writing/reading from DB, or a string for display/sessionStorage
   paymentMethod: 'cod' | 'wave' | string; 
   shippingAddress: string;
   shippingCost?: number; // Frais de livraison

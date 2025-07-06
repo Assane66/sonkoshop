@@ -37,6 +37,7 @@ export default function CheckoutPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isRedirectingToWave, setIsRedirectingToWave] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
@@ -85,17 +86,22 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (!hydrated) return;
 
-    if (cartItems.length === 0 && grandTotal === 0 && !isProcessing) {
+    if (cartItems.length === 0 && grandTotal === 0 && !isProcessing && !isRedirectingToWave) {
       if (typeof window !== 'undefined' && !window.location.pathname.includes('/checkout/success')) {
+        console.log("CheckoutPage: Cart is empty, NOT processing, NOT redirecting to Wave. Redirecting to /cart");
         router.push('/cart');
       }
+    } else {
+       if(hydrated) console.log(`CheckoutPage: Cart is NOT empty. No redirect to /cart. isProcessing = ${isProcessing} isRedirectingToWave = ${isRedirectingToWave}`);
     }
-  }, [cartItems, grandTotal, isProcessing, router, hydrated]);
+  }, [cartItems, grandTotal, isProcessing, isRedirectingToWave, router, hydrated]);
 
 
   const onSubmit = async (data: CheckoutFormValues) => {
+    console.log("CheckoutPage: onSubmit - START. Data:", data, "Subtotal:", subtotal, "Shipping:", shippingCost, "Grand Total:", grandTotal);
     if (isProcessing) return;
     setIsProcessing(true);
+    console.log("CheckoutPage: onSubmit - isProcessing set to true at START.");
 
     const orderItems: OrderItem[] = cartItems.map(item => ({
       productId: item.id,
@@ -125,9 +131,27 @@ export default function CheckoutPage() {
         paymentMethod: data.paymentMethod,
         shippingAddress: data.address,
     };
+    console.log("CheckoutPage: orderDataPayload created:", orderDataPayload);
 
     try {
+      if(data.paymentMethod === 'cod') console.log("CheckoutPage: COD - Attempting: await addDoc(...)");
+      else console.log("CheckoutPage: Wave - Attempting: await addDoc(...)");
+      
       const docRef = await addDoc(collection(db, "orders"), orderDataPayload);
+      
+      if(data.paymentMethod === 'cod') console.log("CheckoutPage: COD - Success: addDoc created with ID:", docRef.id);
+      else console.log("CheckoutPage: Wave - Success: addDoc created with ID:", docRef.id);
+
+      const orderDataForDisplay = {
+        ...orderDataPayload,
+        id: docRef.id,
+        orderDate: new Date().toISOString(), // Replace serverTimestamp with a serializable date for session storage
+      };
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('lastSuccessfulOrder', JSON.stringify(orderDataForDisplay));
+      }
+
       clearCart();
 
       if (data.paymentMethod === 'cod') {
@@ -135,15 +159,16 @@ export default function CheckoutPage() {
           title: "Commande confirmée!",
           description: "Votre commande a été enregistrée. Nous vous contacterons bientôt.",
         });
-        router.push(`/checkout/success?method=cod&orderId=${docRef.id}`);
+        router.push(`/checkout/success?method=cod`);
       } else if (data.paymentMethod === 'wave' && settings?.wavePaymentUrl) {
-        toast({
+         toast({
           title: "Redirection vers Wave...",
           description: "Vous allez être redirigé pour finaliser votre paiement.",
         });
+        setIsRedirectingToWave(true);
+        setIsProcessing(false);
         const wavePaymentUrl = `${settings.wavePaymentUrl}?amount=${grandTotal}`;
         
-        // Use setTimeout to allow the UI to update and toast to show before redirecting
         setTimeout(() => {
           if (typeof window !== 'undefined') {
             window.location.href = wavePaymentUrl;
