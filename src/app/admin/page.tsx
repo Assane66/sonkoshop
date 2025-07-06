@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy, limit, where, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
 import type { Product, Order } from '@/types'; 
 import { OrderStatus } from '@/types';
 
@@ -24,61 +24,80 @@ const getStatusBadgeClass = (status: OrderStatus): string => {
   }
 };
 
-// Mock data for Sales Report - to be replaced with real aggregated data
-const monthlyRevenueData = [
-  { month: "Jan", sales: 120000 }, { month: "Fév", sales: 150000 }, { month: "Mar", sales: 200000 },
-  { month: "Avr", sales: 220000 }, { month: "Mai", sales: 380000 }, { month: "Juin", sales: 300000 },
-  { month: "Juil", sales: 250000 },
-];
-
 export default function AdminDashboardPage() {
   const [totalProducts, setTotalProducts] = useState(0);
   const [stockAlerts, setStockAlerts] = useState(0);
   const [latestOrders, setLatestOrders] = useState<Order[]>([]);
+  const [salesData, setSalesData] = useState<{ month: string; sales: number }[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   useEffect(() => {
     setIsLoadingData(true);
-    let productsUnsubscribe: (() => void) | null = null;
-    let ordersUnsubscribe: (() => void) | null = null;
+    const unsubscribes: (() => void)[] = [];
 
-    const fetchDashboardData = async () => {
-      try {
-        // Fetch total products and stock alerts
-        const productsCollection = collection(db, 'products');
-        productsUnsubscribe = onSnapshot(productsCollection, (snapshot) => {
-          const productsData = snapshot.docs.map(doc => doc.data() as Product);
-          setTotalProducts(productsData.length);
-          setStockAlerts(productsData.filter(p => p.stock > 0 && p.stock < 5).length);
-        });
+    // Fetch total products and stock alerts
+    const productsCollection = collection(db, 'products');
+    unsubscribes.push(onSnapshot(productsCollection, (snapshot) => {
+      const productsData = snapshot.docs.map(doc => doc.data() as Product);
+      setTotalProducts(productsData.length);
+      setStockAlerts(productsData.filter(p => p.stock > 0 && p.stock < 5).length);
+    }, (error) => {
+      console.error("Error fetching products:", error);
+    }));
 
-        // Fetch latest orders
-        const ordersCollection = collection(db, 'orders');
-        const qOrders = query(ordersCollection, orderBy('orderDate', 'desc'), limit(5));
-        ordersUnsubscribe = onSnapshot(qOrders, (snapshot) => {
-          const fetchedOrders: Order[] = snapshot.docs.map(doc => ({
+    // Fetch latest orders
+    const ordersCollection = collection(db, 'orders');
+    const qOrders = query(ordersCollection, orderBy('orderDate', 'desc'), limit(5));
+    unsubscribes.push(onSnapshot(qOrders, (snapshot) => {
+      const fetchedOrders: Order[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        orderDate: doc.data().orderDate?.toDate ? doc.data().orderDate.toDate().toISOString() : doc.data().orderDate,
+      } as Order));
+      setLatestOrders(fetchedOrders);
+    }, (error) => {
+      console.error("Error fetching latest orders:", error);
+    }));
+
+    // Fetch delivered orders for sales report
+    const deliveredOrdersQuery = query(ordersCollection, where("status", "==", OrderStatus.Delivered));
+    unsubscribes.push(onSnapshot(deliveredOrdersQuery, (snapshot) => {
+        const deliveredOrders: Order[] = snapshot.docs.map(doc => ({
             id: doc.id,
-            ...doc.data(),
-            orderDate: doc.data().orderDate?.toDate ? doc.data().orderDate.toDate().toISOString() : doc.data().orderDate,
-          } as Order));
-          setLatestOrders(fetchedOrders);
+            ...doc.data()
+        } as Order));
+
+        const monthNames = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"];
+        
+        const currentYearSales = new Array(12).fill(0).map((_, i) => ({
+            month: monthNames[i],
+            sales: 0
+        }));
+
+        const currentYear = new Date().getFullYear();
+
+        deliveredOrders.forEach(order => {
+            const orderDate = order.orderDate instanceof Timestamp 
+                ? order.orderDate.toDate() 
+                : new Date(order.orderDate as string);
+            
+            if (orderDate.getFullYear() === currentYear) {
+                const monthIndex = orderDate.getMonth();
+                currentYearSales[monthIndex].sales += order.totalAmount;
+            }
         });
-
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-        // Optionally set an error state to display to the user
-      } finally {
-         // Set loading to false after initial attempt, even if snapshots continue
-         // A more granular loading state per card might be better
-        setTimeout(() => setIsLoadingData(false), 1500); // Simulate some loading
-      }
-    };
-
-    fetchDashboardData();
+        setSalesData(currentYearSales);
+    }, (error) => {
+      // This error often indicates a missing Firestore index.
+      console.error("Error fetching delivered orders. This might require a Firestore index. Check console for a link to create it.", error);
+    }));
+    
+    // Using a timeout to prevent flash of loader on fast connections
+    const timer = setTimeout(() => setIsLoadingData(false), 1200);
 
     return () => {
-      if (productsUnsubscribe) productsUnsubscribe();
-      if (ordersUnsubscribe) ordersUnsubscribe();
+      unsubscribes.forEach(unsub => unsub());
+      clearTimeout(timer);
     };
   }, []);
 
@@ -120,7 +139,7 @@ export default function AdminDashboardPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Rapport des Ventes</CardTitle>
+          <CardTitle>Rapport des Ventes (Commandes Livrées - Année en cours)</CardTitle>
         </CardHeader>
         <CardContent className="pl-2 pr-6 pb-6">
           {isLoadingData ? (
@@ -129,7 +148,7 @@ export default function AdminDashboardPage() {
             </div>
           ) : (
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={monthlyRevenueData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+            <LineChart data={salesData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
               <XAxis 
                 dataKey="month" 
