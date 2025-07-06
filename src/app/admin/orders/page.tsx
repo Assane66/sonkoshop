@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Filter, Download, Loader2 } from 'lucide-react';
+import { Eye, Loader2, Trash2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -14,14 +14,16 @@ import {
   DialogDescription,
   DialogFooter,
   DialogClose,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Order, OrderStatus, OrderItem as AppOrderItem, CustomerInfo, orderStatusList } from '@/types'; 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, doc, updateDoc, orderBy, query, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, orderBy, query, Timestamp, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const getStatusBadgeClass = (status: OrderStatus): string => {
   switch (status) {
@@ -42,6 +44,7 @@ export default function AdminOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -68,6 +71,46 @@ export default function AdminOrdersPage() {
 
     return () => unsubscribe();
   }, [toast]);
+  
+  const filteredOrders = orders.filter(order => 
+    order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    order.customerInfo.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    order.status.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleSelectRow = (orderId: string) => {
+    setSelectedRows(prev => 
+      prev.includes(orderId) 
+        ? prev.filter(id => id !== orderId)
+        : [...prev, orderId]
+    );
+  };
+  
+  const handleSelectAll = (checked: boolean | string) => {
+    if (checked) {
+      setSelectedRows(filteredOrders.map(o => o.id));
+    } else {
+      setSelectedRows([]);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedRows.length === 0) return;
+    try {
+        const batch = writeBatch(db);
+        selectedRows.forEach(orderId => {
+            const orderRef = doc(db, 'orders', orderId);
+            batch.delete(orderRef);
+        });
+        await batch.commit();
+        toast({ title: `${selectedRows.length} commande(s) supprimée(s)`, description: "Les commandes sélectionnées ont été supprimées avec succès." });
+        setSelectedRows([]);
+    } catch (error) {
+        console.error("Error deleting selected orders:", error);
+        toast({ variant: "destructive", title: "Erreur", description: "Impossible de supprimer les commandes sélectionnées." });
+    }
+  };
+
 
   const handleViewDetails = (order: Order) => {
     setSelectedOrder(order);
@@ -85,11 +128,6 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const filteredOrders = orders.filter(order => 
-    order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.customerInfo.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.status.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   if (isLoading) {
     return (
@@ -108,18 +146,55 @@ export default function AdminOrdersPage() {
 
        <Card className="shadow-sm">
         <CardHeader>
-            <Input 
-                type="search"
-                placeholder="Rechercher par ID, Client, Statut..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full md:w-1/3"
-            />
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <Input 
+                  type="search"
+                  placeholder="Rechercher par ID, Client, Statut..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full sm:w-1/2 md:w-1/3"
+              />
+              {selectedRows.length > 0 && (
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Button variant="destructive" className="w-full sm:w-auto">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Supprimer la sélection ({selectedRows.length})
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Confirmer la suppression</DialogTitle>
+                            <DialogDescription>
+                                Êtes-vous sûr de vouloir supprimer définitivement les {selectedRows.length} commandes sélectionnées ? Cette action est irréversible.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button variant="outline">Annuler</Button>
+                            </DialogClose>
+                            <DialogClose asChild>
+                                <Button variant="destructive" onClick={handleDeleteSelected}>
+                                    Supprimer
+                                </Button>
+                            </DialogClose>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+              )}
+            </div>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                   <Checkbox
+                    checked={selectedRows.length === filteredOrders.length && filteredOrders.length > 0}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Tout sélectionner"
+                  />
+                </TableHead>
                 <TableHead>ID Commande</TableHead>
                 <TableHead>Client</TableHead>
                 <TableHead>Date</TableHead>
@@ -130,7 +205,14 @@ export default function AdminOrdersPage() {
             </TableHeader>
             <TableBody>
               {filteredOrders.length > 0 ? filteredOrders.map((order) => (
-                <TableRow key={order.id}>
+                <TableRow key={order.id} data-state={selectedRows.includes(order.id) && "selected"}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedRows.includes(order.id)}
+                      onCheckedChange={() => handleSelectRow(order.id)}
+                      aria-label={`Sélectionner la commande ${order.id}`}
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">{order.id.substring(0, 8)}...</TableCell>
                   <TableCell>{order.customerInfo.fullName}</TableCell>
                   <TableCell>{new Date(order.orderDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric'})}</TableCell>
@@ -162,7 +244,7 @@ export default function AdminOrdersPage() {
                 </TableRow>
               )) : (
                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                         Aucune commande trouvée.
                     </TableCell>
                 </TableRow>
@@ -223,4 +305,5 @@ export default function AdminOrdersPage() {
       )}
     </div>
   );
-}
+
+    
