@@ -94,7 +94,7 @@ export default function RegisterPage() {
               <Input
                 id="fullName"
                 type="text"
-                placeholder="Ex: Modou Fall"
+                placeholder="Ex: Assane Ba"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
@@ -106,7 +106,7 @@ export default function RegisterPage() {
               <Input
                 id="phone"
                 type="tel"
-                placeholder="Ex: 771234567"
+                placeholder="Ex: 784513633"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required

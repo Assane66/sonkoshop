@@ -146,26 +146,25 @@ export default function CheckoutPage() {
 
     const orderStatus = data.paymentMethod === 'wave' ? OrderStatus.WavePending : OrderStatus.Pending;
 
-    const basePayload = {
+    const basePayload: Omit<Order, 'id' | 'orderDate'> = {
       customerInfo,
       items: orderItems,
       subtotal: subtotal,
       shippingCost: shippingCost,
       totalAmount: grandTotal,
       status: orderStatus,
-      orderDate: serverTimestamp(),
       paymentMethod: data.paymentMethod,
       shippingAddress: data.paymentMethod === 'pickup' ? "Retrait en boutique" : data.address!,
     };
-
-    const orderDataPayload = user ? { ...basePayload, userId: user.uid } : basePayload;
+    
+    const orderDataPayload = user ? { ...basePayload, userId: user.uid, orderDate: serverTimestamp() } : { ...basePayload, orderDate: serverTimestamp() };
 
 
     try {
       const docRef = await addDoc(collection(db, "orders"), orderDataPayload);
       
       const orderDataForDisplay = {
-        ...orderDataPayload,
+        ...basePayload,
         id: docRef.id,
         orderDate: new Date().toISOString(),
       };
@@ -268,7 +267,7 @@ export default function CheckoutPage() {
                       <FormItem>
                         <FormLabel>Nom Complet</FormLabel>
                         <FormControl>
-                          <Input placeholder="Ex: Modou Fall" {...field} disabled={isProcessing} />
+                          <Input placeholder="Ex: Assane Ba" {...field} disabled={isProcessing} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -282,7 +281,7 @@ export default function CheckoutPage() {
                       <FormItem>
                         <FormLabel>Numéro de Téléphone</FormLabel>
                         <FormControl>
-                          <Input type="tel" placeholder="Ex: 771234567" {...field} disabled={isProcessing} />
+                          <Input type="tel" placeholder="Ex: 784513633" {...field} disabled={isProcessing} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
