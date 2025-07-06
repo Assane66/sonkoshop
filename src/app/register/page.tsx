@@ -2,7 +2,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,15 +10,16 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
 import { Loader2 } from 'lucide-react';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import Link from 'next/link';
-import { User, createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -29,11 +29,19 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+
     if (password !== confirmPassword) {
       setError("Les mots de passe ne correspondent pas.");
       return;
     }
-    setError('');
+    
+    const phoneRegex = /^(70|75|76|77|78)\d{7}$/;
+    if (!phoneRegex.test(phone)) {
+      setError("Veuillez entrer un numéro de téléphone sénégalais valide (ex: 771234567).");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -45,6 +53,8 @@ export default function RegisterPage() {
         uid: user.uid,
         fullName: fullName,
         email: user.email,
+        phone: phone,
+        address: address,
         role: "customer", // Default role
         createdAt: new Date(),
       });
@@ -72,7 +82,7 @@ export default function RegisterPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted/40 p-4">
-      <Card className="w-full max-w-sm shadow-xl">
+      <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-primary">Créer un compte</CardTitle>
           <CardDescription>Rejoignez Sonko Shop pour une meilleure expérience.</CardDescription>
@@ -91,6 +101,30 @@ export default function RegisterPage() {
                 disabled={isLoading}
               />
             </div>
+             <div className="space-y-2">
+              <Label htmlFor="phone">Numéro de téléphone</Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="Ex: 771234567"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+                disabled={isLoading}
+              />
+            </div>
+             <div className="space-y-2">
+              <Label htmlFor="address">Adresse</Label>
+              <Input
+                id="address"
+                type="text"
+                placeholder="Ex: Cité Keur Gorgui, Villa 22B, Dakar"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                required
+                disabled={isLoading}
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -104,7 +138,7 @@ export default function RegisterPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Mot de passe</Label>
+              <Label htmlFor="password">Mot de passe (6 caractères min.)</Label>
               <Input
                 id="password"
                 type="password"

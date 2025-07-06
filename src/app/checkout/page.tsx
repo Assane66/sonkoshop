@@ -61,6 +61,12 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (userData) {
       form.setValue('fullName', userData.fullName);
+      if (userData.phone) {
+        form.setValue('phone', userData.phone);
+      }
+      if (userData.address) {
+        form.setValue('address', userData.address);
+      }
     }
   }, [userData, form]);
 

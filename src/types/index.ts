@@ -22,6 +22,8 @@ export type UserData = {
   uid: string;
   email: string;
   fullName: string;
+  address?: string;
+  phone?: string;
   role: 'customer' | 'admin';
   createdAt: Timestamp;
 };

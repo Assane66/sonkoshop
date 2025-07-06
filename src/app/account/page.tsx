@@ -40,8 +40,10 @@ export default function AccountPage() {
             C'est votre espace personnel. Gérez vos informations et commandes ici.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-1">
           <p><strong>Email :</strong> {userData.email}</p>
+          <p><strong>Téléphone :</strong> {userData.phone || 'Non renseigné'}</p>
+          <p><strong>Adresse :</strong> {userData.address || 'Non renseignée'}</p>
           <p><strong>Rôle :</strong> {userData.role === 'admin' ? 'Administrateur' : 'Client'}</p>
         </CardContent>
        </Card>
