@@ -21,6 +21,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'Sonko Shop - Vêtements et Équipements Sportifs',
   description: 'Boutique en ligne de Sonko Shop: maillots, chaussures, pantalons, équipements sportifs et plus encore.',
+  icons: {
+    icon: '/favicon.png',
+  },
 };
 
 export default function RootLayout({
