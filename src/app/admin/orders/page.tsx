@@ -29,6 +29,7 @@ const getStatusBadgeClass = (status: OrderStatus): string => {
     case OrderStatus.Shipped: return 'bg-blue-100 text-blue-700 border border-blue-200';
     case OrderStatus.Processing: return 'bg-purple-100 text-purple-700 border border-purple-200';
     case OrderStatus.Pending: return 'bg-yellow-100 text-yellow-700 border border-yellow-200';
+    case OrderStatus.ReadyForPickup: return 'bg-indigo-100 text-indigo-700 border border-indigo-200';
     case OrderStatus.Cancelled: return 'bg-red-100 text-red-700 border border-red-200';
     case OrderStatus.WavePending: return 'bg-orange-100 text-orange-700 border border-orange-200';
     default: return 'bg-gray-100 text-gray-700 border border-gray-200';
@@ -204,7 +205,11 @@ export default function AdminOrdersPage() {
                 <p><strong>Frais de livraison:</strong> {selectedOrder.shippingCost !== undefined ? (selectedOrder.shippingCost > 0 ? `${selectedOrder.shippingCost.toLocaleString('fr-FR')} FCFA` : 'Gratuite') : 'N/A'}</p>
                 <p className="text-lg font-bold mt-2">Total Commande: {selectedOrder.totalAmount.toLocaleString('fr-FR')} FCFA</p>
                  <p><strong>Adresse de livraison:</strong> {selectedOrder.shippingAddress}</p>
-                <p><strong>Méthode de paiement:</strong> {selectedOrder.paymentMethod === 'cod' ? 'Paiement à la livraison' : selectedOrder.paymentMethod}</p>
+                <p><strong>Méthode de paiement:</strong> {
+                    selectedOrder.paymentMethod === 'cod' ? 'Paiement à la livraison' : 
+                    selectedOrder.paymentMethod === 'pickup' ? 'Retrait en boutique' : 
+                    selectedOrder.paymentMethod
+                }</p>
                 <p><strong>Statut Actuel:</strong> <Badge className={cn("text-sm", getStatusBadgeClass(selectedOrder.status))}>{selectedOrder.status}</Badge></p>
               </div>
             </div>

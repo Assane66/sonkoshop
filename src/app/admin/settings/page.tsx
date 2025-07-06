@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Globe, CreditCard, Truck, Info, Image as ImageIconLucide, Loader2 } from 'lucide-react';
+import { Globe, CreditCard, Truck, Info, Store, Loader2 } from 'lucide-react';
 import type { SiteSettings } from '@/types';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -21,6 +21,7 @@ const initialSettings: SiteSettings = {
   codEnabled: true,
   waveEnabled: true,
   wavePaymentUrl: 'https://pay.wave.com/m/M_pIXmQ2smGxRM/c/sn/',
+  pickupEnabled: true,
 };
 
 export default function AdminSettingsPage() {
@@ -124,8 +125,8 @@ export default function AdminSettingsPage() {
 
         <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center"><CreditCard className="mr-2 h-5 w-5 text-primary"/> Options de Paiement</CardTitle>
-            <CardDescription>Gérez les méthodes de paiement disponibles pour les clients.</CardDescription>
+            <CardTitle className="flex items-center"><CreditCard className="mr-2 h-5 w-5 text-primary"/> Options de Paiement & Livraison</CardTitle>
+            <CardDescription>Gérez les méthodes disponibles pour les clients.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-center justify-between p-3 border rounded-md">
@@ -137,6 +138,17 @@ export default function AdminSettingsPage() {
                 </div>
               </div>
               <Switch id="codEnabled" checked={settings.codEnabled} onCheckedChange={(checked) => handleSwitchChange('codEnabled', checked)} disabled={isSaving} />
+            </div>
+
+            <div className="flex items-center justify-between p-3 border rounded-md">
+              <div className="flex items-center">
+                <Store className="mr-3 h-6 w-6 text-muted-foreground" />
+                <div>
+                  <Label htmlFor="pickupEnabled" className="font-medium">Retrait en boutique</Label>
+                  <p className="text-xs text-muted-foreground">Permettre aux clients de récupérer leur commande en magasin.</p>
+                </div>
+              </div>
+              <Switch id="pickupEnabled" checked={settings.pickupEnabled} onCheckedChange={(checked) => handleSwitchChange('pickupEnabled', checked)} disabled={isSaving} />
             </div>
 
             <div className="p-3 border rounded-md space-y-3">

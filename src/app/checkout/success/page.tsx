@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { CheckCircle, Package, Download, Loader2 } from 'lucide-react';
@@ -12,7 +12,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
 
-export default function CheckoutSuccessPage() {
+function SuccessPageContent() {
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoadingOrder, setIsLoadingOrder] = useState(true);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -27,10 +27,8 @@ export default function CheckoutSuccessPage() {
         if (storedOrder) {
           const parsedOrder = JSON.parse(storedOrder) as Order;
           setOrder(parsedOrder);
-          // We can leave the item in sessionStorage in case the user wants to refresh and re-download the PDF.
-          // It will be overwritten by the next successful order.
         } else {
-          console.warn("CheckoutSuccessPage: No order data found in sessionStorage. This can happen on page refresh or direct access.");
+          console.warn("CheckoutSuccessPage: No order data found in sessionStorage.");
         }
       }
     } catch (error) {
@@ -81,30 +79,26 @@ export default function CheckoutSuccessPage() {
 
   if (isLoadingOrder) {
     return (
-        <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
-            <div className="flex justify-center items-center py-4">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="ml-2 text-xl">Chargement de la confirmation...</p>
-            </div>
+        <div className="flex justify-center items-center py-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="ml-2 text-xl">Chargement de la confirmation...</p>
         </div>
     );
   }
   
   if (!order) {
     return (
-       <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
-            <Card className="w-full max-w-lg text-center shadow-xl">
-                <CardHeader>
-                    <CardTitle className="text-2xl font-bold text-destructive">Commande non trouvée</CardTitle>
-                    <CardDescription>Aucun détail de commande n'a été trouvé. Cela peut se produire si vous accédez directement à cette page ou après un long moment. Veuillez vérifier vos e-mails ou nous contacter.</CardDescription>
-                </CardHeader>
-                 <CardContent>
-                    <Button asChild>
-                        <Link href="/">Retour à l'accueil</Link>
-                    </Button>
-                </CardContent>
-            </Card>
-        </div>
+       <Card className="w-full max-w-lg text-center shadow-xl">
+          <CardHeader>
+              <CardTitle className="text-2xl font-bold text-destructive">Commande non trouvée</CardTitle>
+              <CardDescription>Aucun détail de commande n'a été trouvé. Cela peut se produire si vous accédez directement à cette page ou après un long moment. Veuillez vérifier vos e-mails ou nous contacter.</CardDescription>
+          </CardHeader>
+            <CardContent>
+              <Button asChild>
+                  <Link href="/">Retour à l'accueil</Link>
+              </Button>
+          </CardContent>
+      </Card>
     );
   }
 
@@ -114,6 +108,9 @@ export default function CheckoutSuccessPage() {
   if (order.paymentMethod === 'cod') {
     title = "Commande (Paiement à la livraison) Réussie!";
     description = "Votre commande a été enregistrée. Vous serez contacté(e) sous peu pour la confirmation et la livraison. Merci de préparer le montant exact.";
+  } else if (order.paymentMethod === 'pickup') {
+    title = "Commande (Retrait en boutique) Enregistrée!";
+    description = "Votre commande est en cours de préparation. Nous vous informerons dès qu'elle sera prête à être récupérée.";
   }
 
   const formatDate = (dateString: string | Date) => {
@@ -123,7 +120,7 @@ export default function CheckoutSuccessPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
+    <>
       <Card className="w-full max-w-lg text-center shadow-xl mb-8">
         <CardHeader>
           <div className="mx-auto bg-green-100 rounded-full p-3 w-fit mb-4">
@@ -169,7 +166,7 @@ export default function CheckoutSuccessPage() {
                 <div>
                     <h3 className="font-semibold text-gray-700 mb-1">Facturé à :</h3>
                     <p className="text-sm text-gray-600">{order.customerInfo.fullName}</p>
-                    <p className="text-sm text-gray-600">{order.customerInfo.address}</p>
+                    {order.customerInfo.address && <p className="text-sm text-gray-600">{order.customerInfo.address}</p>}
                     <p className="text-sm text-gray-600">{order.customerInfo.phone}</p>
                 </div>
                 <div className="text-right">
@@ -211,8 +208,8 @@ export default function CheckoutSuccessPage() {
                         <span>{order.subtotal?.toLocaleString('fr-FR') || 0} FCFA</span>
                     </div>
                     <div className="flex justify-between text-sm text-gray-600">
-                        <span>Livraison :</span>
-                        <span>{order.shippingCost?.toLocaleString('fr-FR') || 0} FCFA</span>
+                        <span>Livraison ({order.shippingAddress}):</span>
+                        <span>{order.shippingCost !== undefined ? (order.shippingCost > 0 ? `${order.shippingCost.toLocaleString('fr-FR')} FCFA` : 'Gratuite') : 'N/A'}</span>
                     </div>
                     <hr className="my-2 border-gray-300"/>
                     <div className="flex justify-between font-bold text-md text-gray-800">
@@ -226,7 +223,22 @@ export default function CheckoutSuccessPage() {
             </div>
         </div>
       )}
+    </>
+  );
+}
 
+
+export default function CheckoutSuccessPage() {
+  return (
+    <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
+      <Suspense fallback={
+        <div className="flex justify-center items-center py-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="ml-2 text-xl">Chargement...</p>
+        </div>
+      }>
+        <SuccessPageContent />
+      </Suspense>
     </div>
   );
 }

@@ -14,7 +14,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Truck } from 'lucide-react';
+import { Loader2, Truck, Store } from 'lucide-react';
 import Image from 'next/image';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
@@ -22,12 +22,16 @@ import { OrderStatus, type Order, type CustomerInfo, type OrderItem, type SiteSe
 
 const checkoutFormSchema = z.object({
   fullName: z.string().min(3, "Le nom complet est requis (minimum 3 caractères)."),
-  address: z.string().min(1, "L'adresse de livraison est requise."),
   phone: z.string().regex(/^(70|75|76|77|78)\d{7}$/, "Le numéro de téléphone doit être un numéro sénégalais valide (ex: 771234567)."),
-  paymentMethod: z.enum(['cod', 'wave'], {
+  paymentMethod: z.enum(['cod', 'wave', 'pickup'], {
     required_error: "Vous devez sélectionner une méthode de paiement."
   }),
+  address: z.string().optional(),
+}).refine(data => data.paymentMethod === 'pickup' || (!!data.address && data.address.trim().length >= 1), {
+  message: "L'adresse de livraison est requise.",
+  path: ["address"],
 });
+
 
 type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
 
@@ -52,9 +56,12 @@ export default function CheckoutPage() {
     },
   });
 
+  const paymentMethod = form.watch('paymentMethod');
   const subtotal = getCartSubtotal();
-  const shippingCost = getShippingCost(subtotal);
-  const grandTotal = getCartGrandTotal();
+  const baseShippingCost = getShippingCost(subtotal);
+  const shippingCost = paymentMethod === 'pickup' ? 0 : baseShippingCost;
+  const grandTotal = subtotal + shippingCost;
+
 
   useEffect(() => {
     setHydrated(true);
@@ -75,7 +82,7 @@ export default function CheckoutPage() {
              title: "Configuration manquante",
              description: "Les paramètres du site sont introuvables. Paiement Wave désactivé.",
            });
-          setSettings({ waveEnabled: false, wavePaymentUrl: '', codEnabled: true, siteName: 'Sonko Shop', siteDescription:'', contactEmail:'', contactPhone:'' });
+          setSettings({ waveEnabled: false, pickupEnabled: false, wavePaymentUrl: '', codEnabled: true, siteName: 'Sonko Shop', siteDescription:'', contactEmail:'', contactPhone:'' });
         }
       } catch (error) {
         console.error("Error fetching site settings:", error);
@@ -85,7 +92,7 @@ export default function CheckoutPage() {
             description: "Impossible de charger les options de paiement. Seuls les paiements par défaut sont disponibles.",
         });
         // Fallback on error, with Wave disabled to make the error visible.
-        setSettings({ waveEnabled: false, wavePaymentUrl: '', codEnabled: true, siteName: 'Sonko Shop', siteDescription:'', contactEmail:'', contactPhone:'' });
+        setSettings({ waveEnabled: false, pickupEnabled: false, wavePaymentUrl: '', codEnabled: true, siteName: 'Sonko Shop', siteDescription:'', contactEmail:'', contactPhone:'' });
       } finally {
         setIsSettingsLoading(false);
       }
@@ -124,7 +131,7 @@ export default function CheckoutPage() {
 
     const customerInfo: CustomerInfo = {
       fullName: data.fullName,
-      address: data.address,
+      address: data.address || '',
       phone: data.phone,
     };
 
@@ -139,17 +146,17 @@ export default function CheckoutPage() {
         status: orderStatus,
         orderDate: serverTimestamp(),
         paymentMethod: data.paymentMethod,
-        shippingAddress: data.address,
+        shippingAddress: data.paymentMethod === 'pickup' ? "Retrait en boutique" : data.address!,
     };
     console.log("CheckoutPage: orderDataPayload created:", orderDataPayload);
 
     try {
-      if(data.paymentMethod === 'cod') console.log("CheckoutPage: COD - Attempting: await addDoc(...)");
+      if(data.paymentMethod === 'cod' || data.paymentMethod === 'pickup') console.log("CheckoutPage: COD/Pickup - Attempting: await addDoc(...)");
       else console.log("CheckoutPage: Wave - Attempting: await addDoc(...)");
       
       const docRef = await addDoc(collection(db, "orders"), orderDataPayload);
       
-      if(data.paymentMethod === 'cod') console.log("CheckoutPage: COD - Success: addDoc created with ID:", docRef.id);
+      if(data.paymentMethod === 'cod' || data.paymentMethod === 'pickup') console.log("CheckoutPage: COD/Pickup - Success: addDoc created with ID:", docRef.id);
       else console.log("CheckoutPage: Wave - Success: addDoc created with ID:", docRef.id);
 
       const orderDataForDisplay = {
@@ -164,7 +171,7 @@ export default function CheckoutPage() {
 
       clearCart();
 
-      if (data.paymentMethod === 'cod') {
+      if (data.paymentMethod === 'cod' || data.paymentMethod === 'pickup') {
         toast({
           title: "Commande confirmée!",
           description: "Votre commande a été enregistrée. Nous vous contacterons bientôt.",
@@ -240,7 +247,7 @@ export default function CheckoutPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               <Card>
                 <CardHeader>
-                  <CardTitle>Informations de Livraison et Client</CardTitle>
+                  <CardTitle>Informations Client</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <FormField
@@ -256,19 +263,7 @@ export default function CheckoutPage() {
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Adresse de Livraison</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ex: Cité Keur Gorgui, Villa 22B, Dakar" {...field} disabled={isProcessing} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  
                   <FormField
                     control={form.control}
                     name="phone"
@@ -282,12 +277,28 @@ export default function CheckoutPage() {
                       </FormItem>
                     )}
                   />
+
+                  {paymentMethod !== 'pickup' && (
+                    <FormField
+                      control={form.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Adresse de Livraison</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: Cité Keur Gorgui, Villa 22B, Dakar" {...field} value={field.value ?? ''} disabled={isProcessing} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Méthode de Paiement</CardTitle>
+                  <CardTitle>Méthode de Paiement & Livraison</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <FormField
@@ -312,6 +323,17 @@ export default function CheckoutPage() {
                                 Payer à la livraison
                               </FormLabel>
                             </FormItem>
+                           )}
+                           {settings?.pickupEnabled && (
+                               <FormItem className="flex items-center space-x-3 space-y-0 p-4 border rounded-md has-[:checked]:border-primary">
+                                   <FormControl>
+                                       <RadioGroupItem value="pickup" disabled={isProcessing} />
+                                   </FormControl>
+                                   <FormLabel className="font-normal flex items-center text-base cursor-pointer">
+                                       <Store className="mr-3 h-6 w-6 text-primary" />
+                                       Récupérer en boutique (Paiement sur place)
+                                   </FormLabel>
+                               </FormItem>
                            )}
                            {settings?.waveEnabled && (
                             <FormItem className="flex items-center space-x-3 space-y-0 p-4 border rounded-md has-[:checked]:border-primary">

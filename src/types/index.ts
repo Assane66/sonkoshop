@@ -72,6 +72,7 @@ export enum OrderStatus {
   Delivered = "Livrée",
   Cancelled = "Annulé",
   WavePending = "En attente de paiement Wave",
+  ReadyForPickup = "Prêt pour le retrait",
 }
 
 export const orderStatusList = Object.values(OrderStatus);
@@ -99,7 +100,7 @@ export interface Order {
   totalAmount: number; // Grand total (subtotal + shipping)
   status: OrderStatus;
   orderDate: Timestamp | string; // Can be a Firestore Timestamp when writing/reading from DB, or a string for display/sessionStorage
-  paymentMethod: 'cod' | 'wave' | string; 
+  paymentMethod: 'cod' | 'wave' | 'pickup' | string; 
   shippingAddress: string;
   shippingCost?: number; // Frais de livraison
   subtotal?: number; // Sous-total avant livraison
@@ -113,4 +114,5 @@ export interface SiteSettings {
   codEnabled: boolean;
   waveEnabled: boolean;
   wavePaymentUrl: string;
+  pickupEnabled: boolean;
 }
