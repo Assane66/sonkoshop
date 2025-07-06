@@ -157,16 +157,16 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
 
   const processSubmit: SubmitHandler<ProductFormValues> = async (data) => {
     setIsUploading(true);
-    console.log("ProductForm: Submitting data:", data);
-    let finalImageUrl = data.imageUrl;
-
-    if (imageFile) {
-      console.log("ProductForm: Uploading image to Cloudinary...");
-      const formData = new FormData();
-      formData.append('file', imageFile);
-      formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-
-      try {
+    try {
+      console.log("ProductForm: Submitting data:", data);
+      let finalImageUrl = data.imageUrl;
+  
+      if (imageFile) {
+        console.log("ProductForm: Uploading image to Cloudinary...");
+        const formData = new FormData();
+        formData.append('file', imageFile);
+        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+  
         const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
           method: 'POST',
           body: formData,
@@ -179,53 +179,49 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
           console.error("ProductForm: Cloudinary upload failed, response:", cloudinaryData);
           throw new Error(cloudinaryData.error?.message || 'Cloudinary upload failed');
         }
-      } catch (error: any) {
-        console.error("ProductForm: Cloudinary upload error:", error);
-        toast({ variant: 'destructive', title: 'Erreur de téléversement', description: `Image non téléversée: ${error.message}` });
-        setIsUploading(false);
-        return;
+      } else if (!finalImageUrl && product?.imageUrl) {
+          finalImageUrl = product.imageUrl; // Keep existing image if no new one is uploaded
       }
-    } else if (!finalImageUrl && product?.imageUrl) {
-        finalImageUrl = product.imageUrl; // Keep existing image if no new one is uploaded
-    }
-
-    let promotionEndDateValue: Date | null | typeof deleteField = deleteField();
-
-    if (data.promotionPercentage && data.promotionPercentage > 0) {
-      if (data.isPromotion24h) {
-        promotionEndDateValue = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  
+      const isEditing = !!product?.id;
+      let promotionEndDateValue: Date | null | typeof deleteField;
+  
+      if (data.promotionPercentage && data.promotionPercentage > 0) {
+          if (data.isPromotion24h) {
+              promotionEndDateValue = new Date(Date.now() + 24 * 60 * 60 * 1000);
+          } else {
+              promotionEndDateValue = null; // Infinite promotion
+          }
       } else {
-        // If not 24h promo, and a percentage is set, no end date (or handle manually if a date picker was added)
-        promotionEndDateValue = null; // Explicitly null for Firestore, or deleteField() if you want to remove it
+          data.promotionPercentage = null; // Ensure percentage is nullified
+          if (isEditing) {
+              // If editing an existing product, we want to remove the field.
+              promotionEndDateValue = deleteField();
+          } else {
+              // If creating a new product, it should be null as addDoc can't handle deleteField().
+              promotionEndDateValue = null;
+          }
       }
-    } else {
-      // No promotion or percentage is 0, ensure both fields are cleared/deleted
-      data.promotionPercentage = null; 
-      // promotionEndDateValue is already deleteField()
-    }
-
-
-    const finalProductData = {
-      ...data,
-      imageUrl: finalImageUrl || '',
-      promotionPercentage: data.promotionPercentage || null,
-      promotionEndDate: promotionEndDateValue,
-    };
-    
-    // Remove isPromotion24h as it's not part of the Product type
-    delete (finalProductData as any).isPromotion24h;
-
-    if (product?.id) {
-      (finalProductData as Product).id = product.id;
-    }
-    
-    console.log("ProductForm: Final product data to submit:", finalProductData);
-
-    try {
-      await onSubmit(finalProductData as any); // Cast as any for submission, parent handles full Product type
+  
+      const finalProductData = {
+        ...data,
+        imageUrl: finalImageUrl || '',
+        promotionPercentage: data.promotionPercentage || null,
+        promotionEndDate: promotionEndDateValue,
+      };
+      
+      delete (finalProductData as any).isPromotion24h;
+  
+      if (product?.id) {
+        (finalProductData as Product).id = product.id;
+      }
+      
+      console.log("ProductForm: Final product data to submit:", finalProductData);
+  
+      await onSubmit(finalProductData as any);
     } catch (error: any) {
         console.error("Erreur lors de la soumission du produit (depuis ProductForm):", error);
-        toast({ variant: 'destructive', title: 'Erreur de Sauvegarde', description: `Impossible de sauvegarder le produit. Erreur: ${error.message}` });
+        toast({ variant: 'destructive', title: 'Erreur de Sauvegarde', description: `Impossible de sauvegarder le produit. ${error.message}` });
     } finally {
         setIsUploading(false);
     }
