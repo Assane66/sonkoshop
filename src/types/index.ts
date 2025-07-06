@@ -117,6 +117,7 @@ export interface Order {
   shippingAddress: string;
   shippingCost?: number;
   subtotal?: number;
+  reviewedProductIds?: string[];
 }
 
 export interface SiteSettings {
@@ -128,4 +129,16 @@ export interface SiteSettings {
   waveEnabled: boolean;
   wavePaymentUrl: string;
   pickupEnabled: boolean;
+}
+
+export interface Review {
+  id: string; // Firestore document ID
+  orderId: string;
+  productId: string;
+  productName: string;
+  userId: string;
+  userName: string;
+  rating: number; // 1 to 5
+  comment: string;
+  createdAt: Timestamp;
 }

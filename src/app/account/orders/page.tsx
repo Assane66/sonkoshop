@@ -6,14 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ShoppingCart } from 'lucide-react';
+import { Loader2, ShoppingCart, MessageSquarePlus } from 'lucide-react';
 import { Order, OrderStatus } from '@/types'; 
 import { cn } from '@/lib/utils';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
+import LeaveReviewDialog from '@/components/account/LeaveReviewDialog';
 
 const getStatusBadgeClass = (status: OrderStatus): string => {
   switch (status) {
@@ -32,6 +33,7 @@ export default function UserOrdersPage() {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [reviewOrder, setReviewOrder] = useState<Order | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -42,8 +44,6 @@ export default function UserOrdersPage() {
 
     setIsLoading(true);
     const ordersCollection = collection(db, 'orders');
-    // Removed orderBy from the query to prevent crashes due to missing composite indexes.
-    // Sorting will be handled client-side after fetching.
     const q = query(ordersCollection, where('userId', '==', user.uid));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -55,7 +55,6 @@ export default function UserOrdersPage() {
           orderDate: data.orderDate instanceof Timestamp ? data.orderDate.toDate().toISOString() : data.orderDate,
         } as Order;
       });
-      // Sort orders by date on the client side
       fetchedOrders.sort((a, b) => new Date(b.orderDate as string).getTime() - new Date(a.orderDate as string).getTime());
       setOrders(fetchedOrders);
       setIsLoading(false);
@@ -78,46 +77,73 @@ export default function UserOrdersPage() {
   }
 
   return (
-    <Card className="shadow-sm">
-      <CardHeader>
-        <CardTitle>Mes Commandes</CardTitle>
-        <CardDescription>Voici la liste de toutes les commandes que vous avez passées.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>ID Commande</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Total</TableHead>
-              <TableHead>Statut</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {orders.length > 0 ? orders.map((order) => (
-              <TableRow key={order.id}>
-                <TableCell className="font-medium text-primary">#{order.id.substring(0, 8)}</TableCell>
-                <TableCell>{new Date(order.orderDate as string).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</TableCell>
-                <TableCell>{order.totalAmount.toLocaleString('fr-FR')} FCFA</TableCell>
-                <TableCell>
-                  <Badge className={cn("text-xs", getStatusBadgeClass(order.status))}>{order.status}</Badge>
-                </TableCell>
-              </TableRow>
-            )) : (
+    <>
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle>Mes Commandes</CardTitle>
+          <CardDescription>Voici la liste de toutes les commandes que vous avez passées.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground py-16">
-                  <ShoppingCart className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                  <p className="font-semibold">Vous n'avez aucune commande.</p>
-                  <p className="text-sm">Parcourez nos produits pour commencer.</p>
-                   <Button asChild size="sm" className="mt-4">
-                     <Link href="/products">Voir les produits</Link>
-                   </Button>
-                </TableCell>
+                <TableHead>ID Commande</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Total</TableHead>
+                <TableHead>Statut</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+            </TableHeader>
+            <TableBody>
+              {orders.length > 0 ? orders.map((order) => (
+                <TableRow key={order.id}>
+                  <TableCell className="font-medium text-primary">#{order.id.substring(0, 8)}</TableCell>
+                  <TableCell>{new Date(order.orderDate as string).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</TableCell>
+                  <TableCell>{order.totalAmount.toLocaleString('fr-FR')} FCFA</TableCell>
+                  <TableCell>
+                    <Badge className={cn("text-xs", getStatusBadgeClass(order.status))}>{order.status}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {order.status === OrderStatus.Delivered && (
+                       <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => setReviewOrder(order)}
+                      >
+                        <MessageSquarePlus className="mr-2 h-3 w-3" />
+                        Laisser un avis
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-16">
+                    <ShoppingCart className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                    <p className="font-semibold">Vous n'avez aucune commande.</p>
+                    <p className="text-sm">Parcourez nos produits pour commencer.</p>
+                    <Button asChild size="sm" className="mt-4">
+                      <Link href="/products">Voir les produits</Link>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+      {reviewOrder && (
+        <LeaveReviewDialog
+          order={reviewOrder}
+          isOpen={!!reviewOrder}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) {
+              setReviewOrder(null);
+            }
+          }}
+        />
+      )}
+    </>
   );
 }
