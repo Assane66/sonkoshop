@@ -69,19 +69,29 @@ export default function CheckoutPage() {
         if (docSnap.exists()) {
           setSettings(docSnap.data() as SiteSettings);
         } else {
-          // Fallback to default if no settings are found in DB
-          setSettings({ waveEnabled: true, wavePaymentUrl: 'https://pay.wave.com/m/M_pIXmQ2smGxRM/c/sn/', codEnabled: true, siteName: '', siteDescription:'', contactEmail:'', contactPhone:'' });
+           console.error("Site settings document not found. Using default values with Wave disabled.");
+           toast({
+             variant: "destructive",
+             title: "Configuration manquante",
+             description: "Les paramètres du site sont introuvables. Paiement Wave désactivé.",
+           });
+          setSettings({ waveEnabled: false, wavePaymentUrl: '', codEnabled: true, siteName: 'Sonko Shop', siteDescription:'', contactEmail:'', contactPhone:'' });
         }
       } catch (error) {
         console.error("Error fetching site settings:", error);
-        // Fallback on error
-        setSettings({ waveEnabled: true, wavePaymentUrl: 'https://pay.wave.com/m/M_pIXmQ2smGxRM/c/sn/', codEnabled: true, siteName: '', siteDescription:'', contactEmail:'', contactPhone:'' });
+        toast({
+            variant: "destructive",
+            title: "Erreur de configuration",
+            description: "Impossible de charger les options de paiement. Seuls les paiements par défaut sont disponibles.",
+        });
+        // Fallback on error, with Wave disabled to make the error visible.
+        setSettings({ waveEnabled: false, wavePaymentUrl: '', codEnabled: true, siteName: 'Sonko Shop', siteDescription:'', contactEmail:'', contactPhone:'' });
       } finally {
         setIsSettingsLoading(false);
       }
     };
     fetchSettings();
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -180,6 +190,8 @@ export default function CheckoutPage() {
             finalWaveUrl = baseUrl + `?amount=${grandTotal}`;
         }
         
+        console.log("Redirecting to Wave URL:", finalWaveUrl);
+
         setTimeout(() => {
           if (typeof window !== 'undefined') {
             window.location.href = finalWaveUrl;
