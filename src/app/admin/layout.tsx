@@ -12,7 +12,7 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth(); 
+  const { user, userData, loading } = useAuth(); 
   const router = useRouter(); 
 
   useEffect(() => {
@@ -22,30 +22,29 @@ export default function AdminLayout({
   }, []);
 
   useEffect(() => {
-    console.log("AdminLayout: Auth loading state:", loading, "User:", user ? user.uid : 'null');
-    if (!loading && !user) {
-      console.log("AdminLayout: No user, redirecting to /login");
-      router.push('/login');
+    if (!loading) {
+      if (!user || userData?.role !== 'admin') {
+        toast({ variant: "destructive", title: "Accès non autorisé", description: "Vous devez être administrateur." });
+        router.push('/login');
+      }
     }
-  }, [user, loading, router]);
+  }, [user, userData, loading, router]);
 
-  if (loading) { 
+  if (loading || !userData) { 
     return (
         <div className="flex items-center justify-center min-h-screen bg-[hsl(var(--admin-content-background))]">
             <div className="flex flex-col items-center space-y-3">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="text-muted-foreground">Vérification de l'authentification...</p>
+                <p className="text-muted-foreground">Vérification des permissions...</p>
             </div>
         </div>
     );
   }
 
-  if (!user) {
-    // This case might be hit briefly before redirection, or if redirection fails.
-    // Or if a page is accessed directly without going through the auth check properly.
+  if (userData.role !== 'admin') {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[hsl(var(--admin-content-background))]">
-        <p>Redirection vers la page de connexion...</p>
+        <p>Redirection...</p>
       </div>
     );
   }

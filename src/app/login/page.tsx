@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,30 +11,48 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
 import { Loader2 } from 'lucide-react';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, userData, loading: authLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
+
+  useEffect(() => {
+    // This effect handles redirection after userData is loaded
+    if (!authLoading && userData) {
+      if (userData.role === 'admin') {
+        router.push('/admin');
+      } else {
+        const from = searchParams.get('from') || '/account';
+        router.push(from);
+      }
+    }
+  }, [userData, authLoading, router, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-    console.log("LoginPage: Attempting login with email:", email);
+
     try {
-      await login(email, password);
-      toast({ title: 'Connexion réussie!', description: 'Redirection vers le tableau de bord.' });
-      router.push('/admin');
+      const user = await login(email, password);
+      if (user) {
+        toast({ title: 'Connexion réussie!', description: 'Redirection en cours...' });
+        // The useEffect above will handle the redirection once userData is available.
+      } else {
+         setError('Impossible de récupérer les informations utilisateur.');
+         toast({ variant: 'destructive', title: 'Échec de la connexion', description: 'Impossible de récupérer les informations utilisateur.' });
+         setIsLoading(false);
+      }
     } catch (err: any) {
-      console.error("LoginPage: Login failed, raw error:", err);
       let errorMessage = "Une erreur est survenue lors de la connexion.";
       if (err instanceof FirebaseError) {
-        console.error("LoginPage: Firebase error code:", err.code, "message:", err.message);
         if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
           errorMessage = 'Email ou mot de passe incorrect.';
         } else if (err.code === 'auth/invalid-email') {
@@ -43,7 +61,6 @@ export default function LoginPage() {
       }
       setError(errorMessage);
       toast({ variant: 'destructive', title: 'Échec de la connexion', description: errorMessage });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -52,8 +69,8 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-muted/40 p-4">
       <Card className="w-full max-w-sm shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-primary">Connexion Admin</CardTitle>
-          <CardDescription>Accédez à votre tableau de bord Sonko Shop.</CardDescription>
+          <CardTitle className="text-2xl font-bold text-primary">Connexion</CardTitle>
+          <CardDescription>Accédez à votre compte Sonko Shop.</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
@@ -62,7 +79,7 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@example.com"
+                placeholder="nom@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -83,10 +100,13 @@ export default function LoginPage() {
             </div>
             {error && <p className="text-sm text-destructive text-center">{error}</p>}
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex flex-col gap-4">
             <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading}>
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Se connecter'}
             </Button>
+            <div className="text-sm text-center text-muted-foreground">
+              Pas de compte ? <Link href="/register" className="text-primary hover:underline">Inscrivez-vous</Link>
+            </div>
           </CardFooter>
         </form>
       </Card>

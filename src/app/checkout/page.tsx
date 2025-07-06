@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -38,6 +39,7 @@ type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
 
 export default function CheckoutPage() {
   const { cartItems, getCartSubtotal, getShippingCost, getCartGrandTotal, clearCart } = useCart();
+  const { user, userData } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -55,6 +57,12 @@ export default function CheckoutPage() {
       paymentMethod: 'cod',
     },
   });
+
+  useEffect(() => {
+    if (userData) {
+      form.setValue('fullName', userData.fullName);
+    }
+  }, [userData, form]);
 
   const paymentMethod = form.watch('paymentMethod');
   const subtotal = getCartSubtotal();
@@ -91,7 +99,6 @@ export default function CheckoutPage() {
             title: "Erreur de configuration",
             description: "Impossible de charger les options de paiement. Seuls les paiements par défaut sont disponibles.",
         });
-        // Fallback on error, with Wave disabled to make the error visible.
         setSettings({ waveEnabled: false, pickupEnabled: false, wavePaymentUrl: '', codEnabled: true, siteName: 'Sonko Shop', siteDescription:'', contactEmail:'', contactPhone:'' });
       } finally {
         setIsSettingsLoading(false);
@@ -105,20 +112,15 @@ export default function CheckoutPage() {
     
     if (cartItems.length === 0 && grandTotal === 0 && !isProcessing && !isRedirectingToWave) {
       if (typeof window !== 'undefined' && !window.location.pathname.includes('/checkout/success')) {
-        console.log("CheckoutPage: Cart is empty, NOT processing, NOT redirecting to Wave. Redirecting to /cart");
         router.push('/cart');
       }
-    } else {
-       if(hydrated) console.log(`CheckoutPage: Cart is NOT empty. No redirect to /cart. isProcessing = ${isProcessing} isRedirectingToWave = ${isRedirectingToWave}`);
     }
   }, [cartItems, grandTotal, isProcessing, isRedirectingToWave, router, hydrated]);
 
 
   const onSubmit = async (data: CheckoutFormValues) => {
-    console.log("CheckoutPage: onSubmit - START. Data:", data, "Subtotal:", subtotal, "Shipping:", shippingCost, "Grand Total:", grandTotal);
     if (isProcessing) return;
     setIsProcessing(true);
-    console.log("CheckoutPage: onSubmit - isProcessing set to true at START.");
 
     const orderItems: OrderItem[] = cartItems.map(item => ({
       productId: item.id,
@@ -138,6 +140,7 @@ export default function CheckoutPage() {
     const orderStatus = data.paymentMethod === 'wave' ? OrderStatus.WavePending : OrderStatus.Pending;
 
     const orderDataPayload: Omit<Order, 'id'> = {
+        userId: user ? user.uid : undefined,
         customerInfo,
         items: orderItems,
         subtotal: subtotal,
@@ -148,21 +151,14 @@ export default function CheckoutPage() {
         paymentMethod: data.paymentMethod,
         shippingAddress: data.paymentMethod === 'pickup' ? "Retrait en boutique" : data.address!,
     };
-    console.log("CheckoutPage: orderDataPayload created:", orderDataPayload);
 
     try {
-      if(data.paymentMethod === 'cod' || data.paymentMethod === 'pickup') console.log("CheckoutPage: COD/Pickup - Attempting: await addDoc(...)");
-      else console.log("CheckoutPage: Wave - Attempting: await addDoc(...)");
-      
       const docRef = await addDoc(collection(db, "orders"), orderDataPayload);
       
-      if(data.paymentMethod === 'cod' || data.paymentMethod === 'pickup') console.log("CheckoutPage: COD/Pickup - Success: addDoc created with ID:", docRef.id);
-      else console.log("CheckoutPage: Wave - Success: addDoc created with ID:", docRef.id);
-
       const orderDataForDisplay = {
         ...orderDataPayload,
         id: docRef.id,
-        orderDate: new Date().toISOString(), // Replace serverTimestamp with a serializable date for session storage
+        orderDate: new Date().toISOString(),
       };
 
       if (typeof window !== 'undefined') {
@@ -190,15 +186,11 @@ export default function CheckoutPage() {
         let finalWaveUrl;
 
         if (isMobile) {
-            // Use the deep link URL scheme for mobile to open the app directly
             finalWaveUrl = baseUrl.replace(/^https?:\/\/pay\.wave\.com/, 'wave://pay-without-web') + `?amount=${grandTotal}`;
         } else {
-            // Use the standard web URL for desktops
             finalWaveUrl = baseUrl + `?amount=${grandTotal}`;
         }
         
-        console.log("Redirecting to Wave URL:", finalWaveUrl);
-
         setTimeout(() => {
           if (typeof window !== 'undefined') {
             window.location.href = finalWaveUrl;
@@ -240,6 +232,16 @@ export default function CheckoutPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {!user && (
+        <Card className="mb-8 bg-primary/10 border-primary">
+          <CardHeader>
+            <CardTitle>Déjà client ?</CardTitle>
+            <CardDescription>
+              <Link href="/login?from=/checkout" className="text-primary font-semibold hover:underline">Connectez-vous</Link> pour un paiement plus rapide et pour retrouver vos commandes.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
       <h1 className="text-3xl font-bold text-primary mb-8">Finaliser la Commande</h1>
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">

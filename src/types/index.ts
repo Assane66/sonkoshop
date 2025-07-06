@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Shirt, Footprints, Layers, Baby, Sparkles, Shield, Dumbbell, LayoutGrid, Package } from 'lucide-react';
+import { Shirt, Footprints, Layers, Baby, Sparkles, Shield, Dumbbell, LayoutGrid, Package, User, ShoppingCart, Star } from 'lucide-react';
 import type { Timestamp } from 'firebase/firestore';
 
 export type Product = {
@@ -18,6 +18,14 @@ export type Product = {
   promotionEndDate?: Timestamp | null; // Firestore Timestamp
 };
 
+export type UserData = {
+  uid: string;
+  email: string;
+  fullName: string;
+  role: 'customer' | 'admin';
+  createdAt: Timestamp;
+};
+
 export enum ProductCategoryEnum {
   Maillots = "Maillots",
   Chaussures = "Chaussures",
@@ -32,7 +40,6 @@ export enum ProductCategoryEnum {
 }
 
 export const productCategoriesArray: string[] = Object.values(ProductCategoryEnum);
-
 
 export type Banner = {
   id: string; // Firestore document ID
@@ -60,8 +67,11 @@ export const categoryIcons: Record<string, LucideIcon> = {
   [ProductCategoryEnum.Chemise]: Shirt,
   [ProductCategoryEnum.Baskets]: Footprints,
   [ProductCategoryEnum.Accessoires]: LayoutGrid,
-  "Default": LayoutGrid, // Fallback icon
-  "Package": Package, // Specific for product display if no category icon matches
+  "Default": LayoutGrid,
+  "Package": Package,
+  "Account": User,
+  "Orders": ShoppingCart,
+  "Reviews": Star,
 };
 
 
@@ -95,15 +105,16 @@ export interface CustomerInfo {
 
 export interface Order {
   id: string; // Firestore document ID
+  userId?: string; // Link to the user who made the order
   customerInfo: CustomerInfo;
   items: OrderItem[];
   totalAmount: number; // Grand total (subtotal + shipping)
   status: OrderStatus;
-  orderDate: Timestamp | string; // Can be a Firestore Timestamp when writing/reading from DB, or a string for display/sessionStorage
+  orderDate: Timestamp | string;
   paymentMethod: 'cod' | 'wave' | 'pickup' | string; 
   shippingAddress: string;
-  shippingCost?: number; // Frais de livraison
-  subtotal?: number; // Sous-total avant livraison
+  shippingCost?: number;
+  subtotal?: number;
 }
 
 export interface SiteSettings {
