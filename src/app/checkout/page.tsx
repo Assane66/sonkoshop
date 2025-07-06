@@ -146,21 +146,20 @@ export default function CheckoutPage() {
 
     const orderStatus = data.paymentMethod === 'wave' ? OrderStatus.WavePending : OrderStatus.Pending;
 
-    const orderDataPayload: { [key: string]: any } = {
-        customerInfo,
-        items: orderItems,
-        subtotal: subtotal,
-        shippingCost: shippingCost,
-        totalAmount: grandTotal,
-        status: orderStatus,
-        orderDate: serverTimestamp(),
-        paymentMethod: data.paymentMethod,
-        shippingAddress: data.paymentMethod === 'pickup' ? "Retrait en boutique" : data.address!,
+    const basePayload = {
+      customerInfo,
+      items: orderItems,
+      subtotal: subtotal,
+      shippingCost: shippingCost,
+      totalAmount: grandTotal,
+      status: orderStatus,
+      orderDate: serverTimestamp(),
+      paymentMethod: data.paymentMethod,
+      shippingAddress: data.paymentMethod === 'pickup' ? "Retrait en boutique" : data.address!,
     };
-    
-    if (user) {
-      orderDataPayload.userId = user.uid;
-    }
+
+    const orderDataPayload = user ? { ...basePayload, userId: user.uid } : basePayload;
+
 
     try {
       const docRef = await addDoc(collection(db, "orders"), orderDataPayload);
