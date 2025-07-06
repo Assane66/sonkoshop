@@ -157,7 +157,7 @@ export default function CheckoutSuccessPage() {
         <div ref={invoiceRef} className="p-8 bg-white text-black w-full max-w-2xl mx-auto border rounded-lg shadow-lg my-8">
             <div className="flex justify-between items-start mb-8">
                 <div className="w-1/3">
-                    <Image src="/logo-sonko-shop.png" alt="Sonko Shop Logo" width={150} height={75} data-ai-hint="shop logo" className="object-contain"/>
+                    <Image src="https://res.cloudinary.com/dm6yuokre/image/upload/v1751785241/logo_noqoct.png" alt="Sonko Shop Logo" width={150} height={75} data-ai-hint="shop logo" className="object-contain"/>
                 </div>
                 <div className="text-right">
                     <h2 className="text-2xl font-bold text-gray-800">FACTURE</h2>
