@@ -71,9 +71,13 @@ export default function AdminSettingsPage() {
         title: "Paramètres sauvegardés!",
         description: "Vos modifications ont été enregistrées avec succès.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving settings:", error);
-      toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de sauvegarder les paramètres.' });
+      let description = 'Impossible de sauvegarder les paramètres.';
+      if (error.code === 'permission-denied') {
+        description = 'Permission refusée. Veuillez vérifier vos règles de sécurité Firestore.';
+      }
+      toast({ variant: 'destructive', title: 'Erreur de sauvegarde', description: description });
     } finally {
       setIsSaving(false);
     }
