@@ -161,17 +161,28 @@ export default function CheckoutPage() {
         });
         router.push(`/checkout/success`);
       } else if (data.paymentMethod === 'wave' && settings?.wavePaymentUrl) {
-         toast({
+        toast({
           title: "Redirection vers Wave...",
           description: "Vous allez être redirigé pour finaliser votre paiement.",
         });
         setIsRedirectingToWave(true);
         setIsProcessing(false);
-        const wavePaymentUrl = `${settings.wavePaymentUrl}?amount=${grandTotal}`;
+
+        const isMobile = typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const baseUrl = settings.wavePaymentUrl;
+        let finalWaveUrl;
+
+        if (isMobile) {
+            // Use the deep link URL scheme for mobile to open the app directly
+            finalWaveUrl = baseUrl.replace(/^https?:\/\/pay\.wave\.com/, 'wave://pay-without-web') + `?amount=${grandTotal}`;
+        } else {
+            // Use the standard web URL for desktops
+            finalWaveUrl = baseUrl + `?amount=${grandTotal}`;
+        }
         
         setTimeout(() => {
           if (typeof window !== 'undefined') {
-            window.location.href = wavePaymentUrl;
+            window.location.href = finalWaveUrl;
           }
         }, 1500);
       }
