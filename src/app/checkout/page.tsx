@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -145,8 +146,7 @@ export default function CheckoutPage() {
 
     const orderStatus = data.paymentMethod === 'wave' ? OrderStatus.WavePending : OrderStatus.Pending;
 
-    const orderDataPayload: Omit<Order, 'id'> = {
-        userId: user ? user.uid : undefined,
+    const orderDataPayload: { [key: string]: any } = {
         customerInfo,
         items: orderItems,
         subtotal: subtotal,
@@ -157,6 +157,10 @@ export default function CheckoutPage() {
         paymentMethod: data.paymentMethod,
         shippingAddress: data.paymentMethod === 'pickup' ? "Retrait en boutique" : data.address!,
     };
+    
+    if (user) {
+      orderDataPayload.userId = user.uid;
+    }
 
     try {
       const docRef = await addDoc(collection(db, "orders"), orderDataPayload);
