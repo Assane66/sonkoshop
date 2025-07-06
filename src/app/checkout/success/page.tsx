@@ -34,7 +34,6 @@ function CheckoutSuccessContent() {
           const orderSnap = await getDoc(orderDocRef);
           if (orderSnap.exists()) {
             const orderData = orderSnap.data() as Omit<Order, 'id'>;
-            // Convert Firestore Timestamps to Date objects or string for display
             const itemsWithCorrectDate = orderData.items.map(item => ({
                 ...item
             }));
@@ -59,7 +58,6 @@ function CheckoutSuccessContent() {
       fetchOrder();
     } else {
       setIsLoadingOrder(false);
-      toast({ variant: "destructive", title: "Erreur", description: "ID de commande manquant." });
     }
   }, [orderId, toast]);
 
@@ -71,14 +69,14 @@ function CheckoutSuccessContent() {
     setIsGeneratingPdf(true);
     try {
       const canvas = await html2canvas(invoiceRef.current, {
-        scale: 2, // Améliore la qualité
-        useCORS: true, // Si votre logo vient d'une URL externe
+        scale: 2,
+        useCORS: true,
         logging: true,
       });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
         orientation: 'portrait',
-        unit: 'pt', // points
+        unit: 'pt',
         format: 'a4',
       });
 
@@ -88,7 +86,7 @@ function CheckoutSuccessContent() {
       const imgHeight = canvas.height;
       const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
       const imgX = (pdfWidth - imgWidth * ratio) / 2;
-      const imgY = 10; // Marge en haut
+      const imgY = 10;
 
       pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
       pdf.save(`facture-${order.id.substring(0,8)}.pdf`);
@@ -100,6 +98,33 @@ function CheckoutSuccessContent() {
         setIsGeneratingPdf(false);
     }
   };
+
+  if (isLoadingOrder) {
+    return (
+        <div className="flex justify-center items-center py-4 min-h-[300px]">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <p className="ml-2">Chargement des détails de la commande...</p>
+        </div>
+    );
+  }
+  
+  if (!orderId || !order) {
+    return (
+       <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
+            <Card className="w-full max-w-lg text-center shadow-xl">
+                <CardHeader>
+                    <CardTitle className="text-2xl font-bold text-destructive">Commande non trouvée</CardTitle>
+                    <CardDescription>ID de commande manquant ou invalide. Veuillez vérifier le lien ou contacter le support.</CardDescription>
+                </CardHeader>
+                 <CardContent>
+                    <Button asChild>
+                        <Link href="/">Retour à l'accueil</Link>
+                    </Button>
+                </CardContent>
+            </Card>
+        </div>
+    );
+  }
 
   let title = "Merci pour votre commande!";
   let description = "Votre commande a été enregistrée avec succès. Nous préparons votre colis.";
@@ -129,19 +154,10 @@ function CheckoutSuccessContent() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-           {order && !isLoadingOrder && (
             <Button onClick={handleDownloadPdf} disabled={isGeneratingPdf || !invoiceRef.current} className="w-full bg-primary hover:bg-primary/90">
               {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
               {isGeneratingPdf ? 'Génération...' : 'Télécharger la Facture (PDF)'}
             </Button>
-          )}
-          {isLoadingOrder && orderId && (
-            <div className="flex justify-center items-center py-4">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              <p className="ml-2">Chargement des détails de la commande...</p>
-            </div>
-          )}
-
           <div className="flex items-center justify-center text-muted-foreground">
             <Package className="h-5 w-5 mr-2" />
             <span>Suivi de commande bientôt disponible.</span>
@@ -155,10 +171,8 @@ function CheckoutSuccessContent() {
         </CardContent>
       </Card>
 
-      {/* Section Facture pour html2canvas - sera visible pour le moment */}
       {order && (
         <div ref={invoiceRef} className="p-8 bg-white text-black w-full max-w-2xl mx-auto border rounded-lg shadow-lg my-8">
-            {/* En-tête de la facture */}
             <div className="flex justify-between items-start mb-8">
                 <div className="w-1/3">
                     <Image src="/logo-sonko-shop.png" alt="Sonko Shop Logo" width={150} height={75} data-ai-hint="shop logo" className="object-contain"/>
@@ -169,8 +183,6 @@ function CheckoutSuccessContent() {
                     <p className="text-sm text-gray-600">Date: {formatDate(order.orderDate as string)}</p>
                 </div>
             </div>
-
-            {/* Informations client et vendeur */}
             <div className="grid grid-cols-2 gap-4 mb-8">
                 <div>
                     <h3 className="font-semibold text-gray-700 mb-1">Facturé à :</h3>
@@ -186,8 +198,6 @@ function CheckoutSuccessContent() {
                     <p className="text-sm text-gray-600">78 451 36 33 / 78 139 58 93</p>
                 </div>
             </div>
-
-            {/* Tableau des articles */}
             <div className="mb-8">
                 <table className="w-full text-sm text-left text-gray-600">
                     <thead className="bg-gray-100">
@@ -212,8 +222,6 @@ function CheckoutSuccessContent() {
                     </tbody>
                 </table>
             </div>
-
-            {/* Totaux */}
             <div className="flex justify-end mb-8">
                 <div className="w-full md:w-1/3">
                     <div className="flex justify-between text-sm text-gray-600">
@@ -231,8 +239,6 @@ function CheckoutSuccessContent() {
                     </div>
                 </div>
             </div>
-
-            {/* Message de remerciement */}
             <div className="text-center text-sm text-gray-500">
                 <p>Merci pour votre confiance et à bientôt sur Sonko Shop !</p>
             </div>
