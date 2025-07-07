@@ -2,6 +2,7 @@
 'use client'; 
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { ShoppingBag, UserCircle, LogOut, LayoutDashboard, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
@@ -44,7 +45,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
         <Link href="/" className="mr-6 flex items-center space-x-2">
-          <ShoppingBag className="h-6 w-6 text-primary" />
+          <Image src="https://res.cloudinary.com/dm6yuokre/image/upload/v1751785241/logo_noqoct.png" alt="Sonko Shop Logo" width={28} height={28} data-ai-hint="shop logo" />
           <span className="font-bold text-xl text-primary">Sonko Shop</span>
         </Link>
         <nav className="flex flex-1 items-center space-x-4">
