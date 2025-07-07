@@ -47,7 +47,15 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     const productDocRef = doc(db, 'products', params.id);
     const unsubscribeProduct = onSnapshot(productDocRef, (docSnap) => {
       if (docSnap.exists()) {
-        const productData = { id: docSnap.id, ...docSnap.data() } as Product;
+        const data = docSnap.data();
+        let imageUrls: string[] = [];
+        if (data.imageUrls && Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
+            imageUrls = data.imageUrls;
+        } else if (data.imageUrl && typeof data.imageUrl === 'string') {
+            imageUrls = [data.imageUrl];
+        }
+        
+        const productData = { id: docSnap.id, ...data, imageUrls: imageUrls } as Product;
         setProduct(productData);
         if (productData.imageUrls && productData.imageUrls.length > 0) {
           setMainImageUrl(productData.imageUrls[0]);

@@ -31,6 +31,13 @@ export default function HomePage() {
       }
       const fetchedProducts: Product[] = snapshot.docs.map(doc => {
         const data = doc.data();
+        let imageUrls: string[] = [];
+        if (data.imageUrls && Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
+            imageUrls = data.imageUrls;
+        } else if (data.imageUrl && typeof data.imageUrl === 'string') {
+            imageUrls = [data.imageUrl];
+        }
+
         console.log("HomePage: Mapping product data:", data);
         return {
           id: doc.id,
@@ -38,7 +45,7 @@ export default function HomePage() {
           description: data.description || 'Description manquante',
           price: data.price || 0,
           category: data.category || 'Catégorie manquante',
-          imageUrls: data.imageUrls || [],
+          imageUrls: imageUrls,
           stock: data.stock || 0,
           sizes: data.sizes || [],
           featured: data.featured || false,
