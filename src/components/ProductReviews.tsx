@@ -2,11 +2,12 @@
 'use client';
 
 import { Review } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent, CardHeader } from "./ui/card";
 import { Loader2, MessageSquare, Star } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Timestamp } from "firebase/firestore";
 
 interface ProductReviewsProps {
   reviews: Review[];
@@ -14,8 +15,37 @@ interface ProductReviewsProps {
 }
 
 const getInitials = (name: string) => {
+    if (!name) return '';
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 };
+
+const formatDate = (createdAt: any): string => {
+  if (!createdAt) return 'Date inconnue';
+
+  let date: Date;
+
+  // Check if it's a Firestore Timestamp object or a serialized version
+  if (typeof createdAt.toDate === 'function') {
+      date = createdAt.toDate();
+  } else if (createdAt.seconds !== undefined && createdAt.nanoseconds !== undefined) {
+      date = new Timestamp(createdAt.seconds, createdAt.nanoseconds).toDate();
+  } else if (createdAt instanceof Date) {
+      date = createdAt;
+  } else if (typeof createdAt === 'string') {
+      date = new Date(createdAt);
+  } else {
+      console.warn("Unsupported date format for review:", createdAt);
+      return "Date invalide";
+  }
+
+  if (isNaN(date.getTime())) {
+    console.warn("Failed to parse date from:", createdAt);
+    return "Date invalide";
+  }
+
+  return formatDistanceToNow(date, { addSuffix: true, locale: fr });
+};
+
 
 export default function ProductReviews({ reviews, isLoading }: ProductReviewsProps) {
   if (isLoading) {
@@ -48,7 +78,7 @@ export default function ProductReviews({ reviews, isLoading }: ProductReviewsPro
                 <div className="flex-grow">
                   <p className="font-semibold">{review.userName}</p>
                   <p className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(review.createdAt.toDate(), { addSuffix: true, locale: fr })}
+                    {formatDate(review.createdAt)}
                   </p>
                 </div>
                 <div className="flex items-center">
