@@ -215,7 +215,7 @@ export default function AdminOrdersPage() {
                   </TableCell>
                   <TableCell className="font-medium">{order.id.substring(0, 8)}...</TableCell>
                   <TableCell>{order.customerInfo.fullName}</TableCell>
-                  <TableCell>{new Date(order.orderDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric'})}</TableCell>
+                  <TableCell>{new Date(order.orderDate as string).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric'})}</TableCell>
                   <TableCell>{order.totalAmount.toLocaleString('fr-FR')} FCFA</TableCell>
                   <TableCell>
                      <Select 
@@ -260,7 +260,7 @@ export default function AdminOrdersPage() {
             <DialogHeader>
               <DialogTitle>Détails de la Commande : {selectedOrder.id.substring(0,8)}...</DialogTitle>
               <DialogDescription>
-                Date : {new Date(selectedOrder.orderDate).toLocaleString('fr-FR', {dateStyle: 'full', timeStyle: 'short'})}
+                Date : {new Date(selectedOrder.orderDate as string).toLocaleString('fr-FR', {dateStyle: 'full', timeStyle: 'short'})}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -305,5 +305,4 @@ export default function AdminOrdersPage() {
       )}
     </div>
   );
-
-    
+}
