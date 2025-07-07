@@ -39,7 +39,7 @@ export default function ProductsPage() {
           description: data.description || 'Description manquante',
           price: data.price || 0,
           category: data.category || 'Catégorie manquante',
-          imageUrl: data.imageUrl || '',
+          imageUrls: data.imageUrls || [],
           stock: data.stock || 0,
           sizes: data.sizes || [],
           featured: data.featured || false,
@@ -47,8 +47,6 @@ export default function ProductsPage() {
         } as Product;
       });
       setAllProducts(fetchedProducts);
-      // Apply initial filtering (which will also set filteredProducts)
-      // This is deferred to the next useEffect to ensure allProducts is set first
       console.log("ProductsPage: All products state updated:", fetchedProducts);
       setIsLoading(false);
     }, (error) => {

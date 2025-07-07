@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { PackageOpen, Image as ImageIconLucide, Loader2 } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, limit, onSnapshot, orderBy } from 'firebase/firestore';
+import Link from 'next/link';
 
 export default function HomePage() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
@@ -21,8 +22,6 @@ export default function HomePage() {
     setIsLoadingProducts(true);
     console.log("HomePage: Setting up Firestore listener for featured products...");
     const productsCollection = collection(db, 'products');
-    // Temporarily removed orderBy('name', 'asc') to avoid needing a composite index immediately.
-    // User should create the index: featured (asc), name (asc)
     const qProducts = query(productsCollection, where('featured', '==', true), limit(8));
 
     const unsubscribeProducts = onSnapshot(qProducts, (snapshot) => {
@@ -39,7 +38,7 @@ export default function HomePage() {
           description: data.description || 'Description manquante',
           price: data.price || 0,
           category: data.category || 'Catégorie manquante',
-          imageUrl: data.imageUrl || '',
+          imageUrls: data.imageUrls || [],
           stock: data.stock || 0,
           sizes: data.sizes || [],
           featured: data.featured || false,

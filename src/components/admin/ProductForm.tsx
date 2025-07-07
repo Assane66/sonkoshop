@@ -14,7 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import type { Product, SiteCategory } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
-import { Loader2 } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy, Timestamp, serverTimestamp, deleteField } from 'firebase/firestore';
 
@@ -28,13 +28,14 @@ const productFormSchema = z.object({
   price: z.coerce.number().min(0, "Le prix doit être positif."),
   category: z.string().min(1, "Une catégorie est requise."),
   stock: z.coerce.number().min(0, "Le stock doit être positif ou nul."),
-  imageUrl: z.string().optional().or(z.literal('')),
+  imageUrls: z.array(z.string()).min(1, "Au moins une image est requise."),
   imageAiHint: z.string().optional().default(''),
   sizes: z.array(z.string()).optional(),
   featured: z.boolean().optional(),
   promotionPercentage: z.coerce.number().min(0).max(100).optional().nullable().default(null),
   isPromotion24h: z.boolean().optional().default(false),
 });
+
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
 
@@ -55,8 +56,8 @@ const promotionOptions = [
 export default function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
   const [categories, setCategories] = useState<SiteCategory[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(product?.imageUrl || null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
 
@@ -68,7 +69,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
       price: 0,
       category: '',
       stock: 0,
-      imageUrl: '',
+      imageUrls: [],
       imageAiHint: '',
       sizes: [],
       featured: false,
@@ -102,47 +103,62 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
 
   useEffect(() => {
     if (product) {
-      reset({
+      const defaultValues = {
         ...product,
         price: product.price || 0,
         stock: product.stock || 0,
         sizes: product.sizes || [],
         featured: product.featured || false,
         category: product.category || (categories.length > 0 ? categories[0].name : ''),
-        imageUrl: product.imageUrl || '',
+        imageUrls: product.imageUrls || [],
         imageAiHint: product.imageAiHint || '',
         promotionPercentage: product.promotionPercentage || null,
-        isPromotion24h: !!(product.promotionPercentage && product.promotionEndDate), // Approx. Needs better logic if editing non-24h promo
-      });
-      setImagePreview(product.imageUrl || null);
+        isPromotion24h: !!(product.promotionPercentage && product.promotionEndDate),
+      };
+      reset(defaultValues);
+      setImagePreviews(product.imageUrls || []);
+      setValue('imageUrls', product.imageUrls || [], { shouldValidate: true });
     } else {
-       reset({
+       const defaultValues = {
         name: '', description: '', price: 0,
         category: categories.length > 0 ? categories[0].name : '',
-        stock: 0, imageUrl: '', imageAiHint: '', sizes: [], featured: false,
+        stock: 0, imageUrls: [], imageAiHint: '', sizes: [], featured: false,
         promotionPercentage: null, isPromotion24h: false,
-      });
-      setImagePreview(null);
+      };
+      reset(defaultValues);
+      setImagePreviews([]);
+      setValue('imageUrls', [], { shouldValidate: true });
     }
-    setImageFile(null);
-  }, [product, reset, categories]);
+    setImageFiles([]);
+  }, [product, reset, categories, setValue]);
 
 
   const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-      setValue('imageUrl', '', { shouldValidate: true });
-    } else {
-      setImageFile(null);
-      setImagePreview(product?.imageUrl || null);
+    const files = event.target.files;
+    if (files) {
+      const newFiles = Array.from(files);
+      setImageFiles(prev => [...prev, ...newFiles]);
+
+      const newPreviews = newFiles.map(file => URL.createObjectURL(file));
+      const allPreviews = [...imagePreviews, ...newPreviews];
+      setImagePreviews(allPreviews);
+      setValue('imageUrls', allPreviews, { shouldValidate: true });
     }
   };
+
+  const removeImage = (indexToRemove: number) => {
+    const removedUrl = imagePreviews[indexToRemove];
+    const newPreviews = imagePreviews.filter((_, index) => index !== indexToRemove);
+    setImagePreviews(newPreviews);
+    setValue('imageUrls', newPreviews, { shouldValidate: true });
+
+    if (removedUrl.startsWith('blob:')) {
+      // It's a preview for a new file, find and remove the corresponding file from state
+      const newImageFiles = imageFiles.filter(file => URL.createObjectURL(file) !== removedUrl);
+      setImageFiles(newImageFiles);
+    }
+  };
+
 
   const selectedSizes = watch('sizes') || [];
 
@@ -158,30 +174,27 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
   const processSubmit: SubmitHandler<ProductFormValues> = async (data) => {
     setIsUploading(true);
     try {
-      console.log("ProductForm: Submitting data:", data);
-      let finalImageUrl = data.imageUrl;
-  
-      if (imageFile) {
-        console.log("ProductForm: Uploading image to Cloudinary...");
+      const uploadPromises = imageFiles.map(file => {
         const formData = new FormData();
-        formData.append('file', imageFile);
+        formData.append('file', file);
         formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
   
-        const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+        return fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
           method: 'POST',
           body: formData,
-        });
-        const cloudinaryData = await response.json();
-        if (cloudinaryData.secure_url) {
-          finalImageUrl = cloudinaryData.secure_url;
-          console.log("ProductForm: Cloudinary upload successful, URL:", finalImageUrl);
-        } else {
-          console.error("ProductForm: Cloudinary upload failed, response:", cloudinaryData);
-          throw new Error(cloudinaryData.error?.message || 'Cloudinary upload failed');
+        }).then(response => response.json());
+      });
+
+      const uploadedImages = await Promise.all(uploadPromises);
+      const newImageUrls = uploadedImages.map(result => {
+        if (result.secure_url) {
+          return result.secure_url;
         }
-      } else if (!finalImageUrl && product?.imageUrl) {
-          finalImageUrl = product.imageUrl; // Keep existing image if no new one is uploaded
-      }
+        throw new Error(result.error?.message || 'Cloudinary upload failed');
+      });
+
+      const existingUrls = imagePreviews.filter(url => !url.startsWith('blob:'));
+      const finalImageUrls = [...existingUrls, ...newImageUrls];
   
       const isEditing = !!product?.id;
       let promotionEndDateValue: Date | null | typeof deleteField;
@@ -194,18 +207,12 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
           }
       } else {
           data.promotionPercentage = null; // Ensure percentage is nullified
-          if (isEditing) {
-              // If editing an existing product, we want to remove the field.
-              promotionEndDateValue = deleteField();
-          } else {
-              // If creating a new product, it should be null as addDoc can't handle deleteField().
-              promotionEndDateValue = null;
-          }
+          promotionEndDateValue = isEditing ? deleteField() : null;
       }
   
       const finalProductData = {
         ...data,
-        imageUrl: finalImageUrl || '',
+        imageUrls: finalImageUrls,
         promotionPercentage: data.promotionPercentage || null,
         promotionEndDate: promotionEndDateValue,
       };
@@ -216,8 +223,6 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
         (finalProductData as Product).id = product.id;
       }
       
-      console.log("ProductForm: Final product data to submit:", finalProductData);
-  
       await onSubmit(finalProductData as any);
     } catch (error: any) {
         console.error("Erreur lors de la soumission du produit (depuis ProductForm):", error);
@@ -226,8 +231,6 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
         setIsUploading(false);
     }
   };
-  
-  const displayPreview = imagePreview || watch('imageUrl');
 
   return (
     <form onSubmit={handleSubmit(processSubmit)} className="space-y-6">
@@ -336,22 +339,39 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
 
 
       <div>
-        <Label htmlFor="imageFile">Image du Produit</Label>
+        <Label htmlFor="imageFile">Images du Produit</Label>
         <Input
           id="imageFile"
           type="file"
           accept="image/*"
+          multiple
           onChange={handleImageFileChange}
           className="mt-1"
           disabled={isUploading || isLoadingCategories}
         />
-        {displayPreview && (
-          <div className="mt-4 relative w-32 h-32 border rounded-md overflow-hidden">
-            <Image src={displayPreview} alt="Aperçu" fill sizes="128px" className="object-cover" data-ai-hint={watch('imageAiHint') || "product preview"} onError={(e) => (e.currentTarget.style.display = 'none')} />
+        <input type="hidden" {...register('imageUrls')} />
+        {errors.imageUrls && <p className="text-sm text-destructive mt-1">{errors.imageUrls.message}</p>}
+
+        {imagePreviews.length > 0 && (
+          <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
+            {imagePreviews.map((previewUrl, index) => (
+              <div key={index} className="relative w-24 h-24 border rounded-md overflow-hidden group">
+                <Image src={previewUrl} alt={`Aperçu ${index + 1}`} fill sizes="96px" className="object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-0.5 right-0.5 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  onClick={() => removeImage(index)}
+                  disabled={isUploading}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
           </div>
         )}
-        <p className="text-xs text-muted-foreground mt-1">Si aucune nouvelle image n'est sélectionnée et qu'une image existe, l'image actuelle sera conservée.</p>
-        {errors.imageUrl && !imageFile && <p className="text-sm text-destructive mt-1">{errors.imageUrl.message}</p>}
+        <p className="text-xs text-muted-foreground mt-1">La première image sera l'image principale du produit.</p>
       </div>
 
       <div>

@@ -68,8 +68,8 @@ export default function ProductCard({ product }: ProductCardProps) {
     });
   };
 
-  const displayImageUrl = product.imageUrl && product.imageUrl.trim() !== '' ? product.imageUrl : 'https://placehold.co/600x400.png';
-  const displayImageAiHint = product.imageUrl && product.imageUrl.trim() !== '' ? (product.imageAiHint || 'product image') : 'placeholder image';
+  const displayImageUrl = product.imageUrls?.[0] || 'https://placehold.co/600x400.png';
+  const displayImageAiHint = product.imageAiHint || 'product image';
 
 
   return (

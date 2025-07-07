@@ -84,14 +84,13 @@ export default function AdminProductsPage() {
     try {
       if (editingProduct && 'id' in productData && productData.id) {
         const productRef = doc(db, 'products', productData.id);
-        // Ensure all fields are correctly structured for Firestore
         const dataToUpdate = { ...productData };
-        delete (dataToUpdate as any).id; // Don't store 'id' as a field within the document
+        delete (dataToUpdate as any).id;
         await updateDoc(productRef, { ...dataToUpdate /*, updatedAt: serverTimestamp() */});
         toast({ title: "Produit modifié", description: `${productData.name} a été mis à jour.` });
       } else {
         const dataToAdd = { ...productData };
-        delete (dataToAdd as any).id; // Ensure id is not part of the data being added
+        delete (dataToAdd as any).id;
         await addDoc(collection(db, 'products'), { ...dataToAdd /*, createdAt: serverTimestamp() */ });
         toast({ title: "Produit ajouté", description: `${productData.name} a été ajouté.` });
       }
@@ -116,7 +115,6 @@ export default function AdminProductsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-foreground">Gestion des Produits</h1>
-        {/* Dialog Trigger is part of the Dialog component structure, not a separate button here */}
       </div>
       
       <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setEditingProduct(null);}}>
@@ -140,7 +138,7 @@ export default function AdminProductsPage() {
           </DialogContent>
         </Dialog>
 
-      <Card className="shadow-sm mt-4"> {/* Added margin-top */}
+      <Card className="shadow-sm mt-4">
         <CardHeader>
           <div className="relative">
             <Input
@@ -168,8 +166,8 @@ export default function AdminProductsPage() {
             <TableBody>
               {filteredProducts.length > 0 ? filteredProducts.map((product) => {
                 const CategoryIconComponent = product.category ? categoryIcons[product.category as keyof typeof categoryIcons] || categoryIcons["Package"] : categoryIcons["Package"];
-                const displayImageUrl = product.imageUrl && product.imageUrl.trim() !== '' ? product.imageUrl : 'https://placehold.co/100x100.png';
-                const displayImageAiHint = product.imageUrl && product.imageUrl.trim() !== '' ? (product.imageAiHint || "product thumbnail") : 'placeholder image';
+                const displayImageUrl = product.imageUrls?.[0] || 'https://placehold.co/100x100.png';
+                const displayImageAiHint = product.imageAiHint || "product thumbnail";
 
                 return (
                   <TableRow key={product.id}>

@@ -135,7 +135,7 @@ export default function CheckoutPage() {
       quantity: item.quantity,
       price: item.priceInCart,
       selectedSize: item.selectedSize || '',
-      imageUrl: item.imageUrl || '',
+      imageUrl: item.imageUrls?.[0] || '',
     }));
 
     const customerInfo: CustomerInfo = {

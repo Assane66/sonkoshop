@@ -9,7 +9,7 @@ export type Product = {
   description: string;
   price: number;
   category: string; // This will be the name of the category
-  imageUrl: string;
+  imageUrls: string[];
   stock: number;
   sizes?: string[];
   featured?: boolean;

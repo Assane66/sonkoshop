@@ -84,7 +84,7 @@ export default function CartPage() {
             <Card key={`${item.id}-${item.selectedSize || 'default'}`} className="flex flex-col sm:flex-row items-center p-4 shadow-md gap-4">
               <div className="relative w-24 h-24 sm:w-20 sm:h-20 flex-shrink-0">
                 <Image
-                  src={item.imageUrl || 'https://placehold.co/100x100.png'}
+                  src={item.imageUrls?.[0] || 'https://placehold.co/100x100.png'}
                   alt={item.name}
                   fill
                   sizes="100px"

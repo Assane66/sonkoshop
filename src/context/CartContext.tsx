@@ -96,6 +96,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         }
         updatedItems[existingItemIndex].quantity = newQuantity;
         updatedItems[existingItemIndex].priceInCart = priceInCart;
+        updatedItems[existingItemIndex].imageUrls = product.imageUrls; // Ensure images are up to date
         return updatedItems;
       } else {
         if (newQuantity > product.stock) {
@@ -192,4 +193,3 @@ export const useCart = () => {
   }
   return context;
 };
-

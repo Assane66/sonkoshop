@@ -30,6 +30,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingReviews, setIsLoadingReviews] = useState(true);
+  const [mainImageUrl, setMainImageUrl] = useState<string>('');
   const [selectedSize, setSelectedSize] = useState<string | undefined>(undefined);
   const [quantity, setQuantity] = useState(1);
   const { toast } = useToast();
@@ -46,7 +47,13 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     const productDocRef = doc(db, 'products', params.id);
     const unsubscribeProduct = onSnapshot(productDocRef, (docSnap) => {
       if (docSnap.exists()) {
-        setProduct({ id: docSnap.id, ...docSnap.data() } as Product);
+        const productData = { id: docSnap.id, ...docSnap.data() } as Product;
+        setProduct(productData);
+        if (productData.imageUrls && productData.imageUrls.length > 0) {
+          setMainImageUrl(productData.imageUrls[0]);
+        } else {
+          setMainImageUrl('https://placehold.co/600x600.png');
+        }
       } else {
         setProduct(null);
         toast({ variant: "destructive", title: "Produit non trouvé" });
@@ -142,7 +149,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     );
   }
   
-  const displayImageUrl = product.imageUrl || 'https://placehold.co/600x600.png';
   const displayImageAiHint = product.imageAiHint || 'product image detail';
   const CategoryIconComponent = categoryIcons[product.category as keyof typeof categoryIcons] || categoryIcons["Default"];
 
@@ -152,12 +158,27 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         <Link href="/products" className="flex items-center text-sm"><ArrowLeft className="mr-2 h-4 w-4" />Tous les produits</Link>
       </Button>
       <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-start">
-        <Card className="shadow-xl overflow-hidden rounded-lg group">
-          <div className="relative w-full aspect-square">
-            <Image src={displayImageUrl} alt={product.name} fill priority sizes="(max-width: 768px) 100vw, 50vw" className="object-cover transition-transform duration-300 group-hover:scale-105" data-ai-hint={displayImageAiHint} onError={(e) => e.currentTarget.src = 'https://placehold.co/600x600.png'} />
+        <Card className="shadow-xl rounded-lg group">
+          <div className="relative w-full aspect-square overflow-hidden rounded-t-lg">
+            <Image src={mainImageUrl} alt={product.name} fill priority sizes="(max-width: 768px) 100vw, 50vw" className="object-cover transition-transform duration-300 group-hover:scale-105" data-ai-hint={displayImageAiHint} onError={(e) => e.currentTarget.src = 'https://placehold.co/600x600.png'} />
             {promotionActive && promotionPercentage && <Badge className="absolute top-2 left-2 bg-red-600 text-white text-base px-3 py-1" variant="destructive">-{promotionPercentage}%</Badge>}
             {product.stock === 0 && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><Badge variant="destructive" className="text-lg px-4 py-2">ÉPUISÉ</Badge></div>}
           </div>
+          {product.imageUrls && product.imageUrls.length > 1 && (
+            <div className="p-2 bg-muted/50 rounded-b-lg">
+                <div className="flex gap-2 justify-center">
+                    {product.imageUrls.map((url, index) => (
+                        <button 
+                            key={index} 
+                            className={`relative w-16 h-16 rounded-md overflow-hidden border-2 transition-all ${mainImageUrl === url ? 'border-primary scale-110' : 'border-transparent hover:border-primary/50'}`}
+                            onClick={() => setMainImageUrl(url)}
+                        >
+                            <Image src={url} alt={`Thumbnail ${index + 1}`} fill sizes="64px" className="object-cover" onError={(e) => e.currentTarget.style.display='none'} />
+                        </button>
+                    ))}
+                </div>
+            </div>
+          )}
         </Card>
 
         <div className="space-y-6">
