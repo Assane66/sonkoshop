@@ -20,30 +20,35 @@ const getInitials = (name: string) => {
 };
 
 const formatDate = (createdAt: any): string => {
-  if (!createdAt) return 'Date inconnue';
+  try {
+    if (!createdAt) return 'Date inconnue';
 
-  let date: Date;
+    let date: Date;
 
-  // Check if it's a Firestore Timestamp object or a serialized version
-  if (typeof createdAt.toDate === 'function') {
-      date = createdAt.toDate();
-  } else if (createdAt.seconds !== undefined && createdAt.nanoseconds !== undefined) {
-      date = new Timestamp(createdAt.seconds, createdAt.nanoseconds).toDate();
-  } else if (createdAt instanceof Date) {
-      date = createdAt;
-  } else if (typeof createdAt === 'string') {
-      date = new Date(createdAt);
-  } else {
-      console.warn("Unsupported date format for review:", createdAt);
+    // Check if it's a Firestore Timestamp object or a serialized version
+    if (typeof createdAt.toDate === 'function') {
+        date = createdAt.toDate();
+    } else if (createdAt.seconds !== undefined && createdAt.nanoseconds !== undefined) {
+        date = new Timestamp(createdAt.seconds, createdAt.nanoseconds).toDate();
+    } else if (createdAt instanceof Date) {
+        date = createdAt;
+    } else if (typeof createdAt === 'string') {
+        date = new Date(createdAt);
+    } else {
+        console.warn("Unsupported date format for review:", createdAt);
+        return "Date invalide";
+    }
+
+    if (isNaN(date.getTime())) {
+      console.warn("Failed to parse date from:", createdAt);
       return "Date invalide";
-  }
+    }
 
-  if (isNaN(date.getTime())) {
-    console.warn("Failed to parse date from:", createdAt);
+    return formatDistanceToNow(date, { addSuffix: true, locale: fr });
+  } catch (error) {
+    console.error("Error formatting date:", error, "with value:", createdAt);
     return "Date invalide";
   }
-
-  return formatDistanceToNow(date, { addSuffix: true, locale: fr });
 };
 
 
