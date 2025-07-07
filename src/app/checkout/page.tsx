@@ -52,9 +52,9 @@ export default function CheckoutPage() {
   const form = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutFormSchema),
     defaultValues: {
-      fullName: 'Assane Ba',
+      fullName: '',
       address: '',
-      phone: '784513633',
+      phone: '',
       paymentMethod: 'cod',
     },
   });
