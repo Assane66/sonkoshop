@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,8 @@ import { FirebaseError } from 'firebase/app';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
-export default function LoginPage() {
+// The actual form logic is moved into this component
+function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -65,58 +66,68 @@ export default function LoginPage() {
   };
 
   return (
+    <Card className="w-full max-w-sm shadow-xl">
+      <CardHeader className="text-center">
+        <CardTitle className="text-2xl font-bold text-primary">Connexion</CardTitle>
+        <CardDescription>Accédez à votre compte Sonko Shop.</CardDescription>
+      </CardHeader>
+      <form onSubmit={handleSubmit}>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="nom@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={isLoading}
+            />
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Mot de passe</Label>
+              <Link
+                href="/forgot-password"
+                className="text-sm text-primary hover:underline"
+              >
+                Mot de passe oublié ?
+              </Link>
+            </div>
+            <Input
+              id="password"
+              type="password"
+              placeholder="********"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              disabled={isLoading}
+            />
+          </div>
+          {error && <p className="text-sm text-destructive text-center">{error}</p>}
+        </CardContent>
+        <CardFooter className="flex flex-col gap-4">
+          <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading}>
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Se connecter'}
+          </Button>
+          <div className="text-sm text-center text-muted-foreground">
+            Pas de compte ? <Link href="/register" className="text-primary hover:underline">Inscrivez-vous</Link>
+          </div>
+        </CardFooter>
+      </form>
+    </Card>
+  );
+}
+
+
+// The main page component now wraps LoginForm in a Suspense boundary
+export default function LoginPage() {
+  return (
     <div className="flex items-center justify-center min-h-screen bg-muted/40 p-4">
-      <Card className="w-full max-w-sm shadow-xl">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-primary">Connexion</CardTitle>
-          <CardDescription>Accédez à votre compte Sonko Shop.</CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="nom@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={isLoading}
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Mot de passe</Label>
-                <Link
-                  href="/forgot-password"
-                  className="text-sm text-primary hover:underline"
-                >
-                  Mot de passe oublié ?
-                </Link>
-              </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="********"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={isLoading}
-              />
-            </div>
-            {error && <p className="text-sm text-destructive text-center">{error}</p>}
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading}>
-              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Se connecter'}
-            </Button>
-            <div className="text-sm text-center text-muted-foreground">
-              Pas de compte ? <Link href="/register" className="text-primary hover:underline">Inscrivez-vous</Link>
-            </div>
-          </CardFooter>
-        </form>
-      </Card>
+      <Suspense fallback={<Loader2 className="h-10 w-10 animate-spin text-primary" />}>
+        <LoginForm />
+      </Suspense>
     </div>
   );
 }
