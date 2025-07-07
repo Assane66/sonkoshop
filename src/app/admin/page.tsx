@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore';
 import type { Product, Order } from '@/types'; 
 import { OrderStatus } from '@/types';
 
@@ -45,27 +45,25 @@ export default function AdminDashboardPage() {
       console.error("Error fetching products:", error);
     }));
 
-    // Fetch latest orders
+    // Consolidated listener for all orders data to prevent indexing issues and improve efficiency
     const ordersCollection = collection(db, 'orders');
-    const qOrders = query(ordersCollection, orderBy('orderDate', 'desc'), limit(5));
-    unsubscribes.push(onSnapshot(qOrders, (snapshot) => {
-      const fetchedOrders: Order[] = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        orderDate: doc.data().orderDate?.toDate ? doc.data().orderDate.toDate().toISOString() : doc.data().orderDate,
-      } as Order));
-      setLatestOrders(fetchedOrders);
-    }, (error) => {
-      console.error("Error fetching latest orders:", error);
-    }));
+    const allOrdersQuery = query(ordersCollection, orderBy('orderDate', 'desc'));
+    
+    unsubscribes.push(onSnapshot(allOrdersQuery, (snapshot) => {
+        const allFetchedOrders: Order[] = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                orderDate: data.orderDate?.toDate ? data.orderDate.toDate().toISOString() : data.orderDate,
+            } as Order
+        });
 
-    // Fetch delivered orders for sales report
-    const deliveredOrdersQuery = query(ordersCollection, where("status", "==", OrderStatus.Delivered));
-    unsubscribes.push(onSnapshot(deliveredOrdersQuery, (snapshot) => {
-        const deliveredOrders: Order[] = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        } as Order));
+        // 1. Set latest orders from the fetched list
+        setLatestOrders(allFetchedOrders.slice(0, 5));
+
+        // 2. Process sales data from delivered orders
+        const deliveredOrders = allFetchedOrders.filter(order => order.status === OrderStatus.Delivered);
 
         const monthNames = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"];
         
@@ -87,9 +85,9 @@ export default function AdminDashboardPage() {
             }
         });
         setSalesData(currentYearSales);
+
     }, (error) => {
-      // This error often indicates a missing Firestore index.
-      console.error("Error fetching delivered orders. This might require a Firestore index. Check console for a link to create it.", error);
+      console.error("Error fetching orders for dashboard. This may be a permissions issue.", error);
     }));
     
     // Using a timeout to prevent flash of loader on fast connections
