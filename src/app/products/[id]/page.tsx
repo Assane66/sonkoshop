@@ -8,16 +8,15 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Input as ShadcnInput } from '@/components/ui/input';
-import { ShoppingCart, Zap, Star, CheckCircle, ShieldCheck, Tag, Minus, Plus, ArrowLeft, Loader2 } from 'lucide-react';
-import type { Product, Review } from '@/types';
+import { ShoppingCart, Zap, CheckCircle, ShieldCheck, Tag, Minus, Plus, ArrowLeft, Loader2 } from 'lucide-react';
+import type { Product } from '@/types';
 import { categoryIcons } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/context/CartContext';
-import { doc, onSnapshot, Timestamp, collection, query, where, orderBy } from 'firebase/firestore';
+import { doc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
-import ProductReviews from '@/components/ProductReviews';
 
 const Label = ({ htmlFor, children, className }: { htmlFor?: string; children: React.ReactNode; className?: string }) => (
   <label htmlFor={htmlFor} className={`block text-sm font-medium text-gray-700 dark:text-gray-300 ${className || ''}`}>
@@ -27,9 +26,7 @@ const Label = ({ htmlFor, children, className }: { htmlFor?: string; children: R
 
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
   const [product, setProduct] = useState<Product | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingReviews, setIsLoadingReviews] = useState(true);
   const [mainImageUrl, setMainImageUrl] = useState<string>('');
   const [selectedSize, setSelectedSize] = useState<string | undefined>(undefined);
   const [quantity, setQuantity] = useState(1);
@@ -72,20 +69,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       setIsLoading(false);
     });
 
-    setIsLoadingReviews(true);
-    const reviewsQuery = query(collection(db, "reviews"), where("productId", "==", params.id), orderBy("createdAt", "desc"));
-    const unsubscribeReviews = onSnapshot(reviewsQuery, (snapshot) => {
-        const fetchedReviews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review));
-        setReviews(fetchedReviews);
-        setIsLoadingReviews(false);
-    }, (error) => {
-        toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les avis." });
-        setIsLoadingReviews(false);
-    });
-
     return () => {
       unsubscribeProduct();
-      unsubscribeReviews();
     };
   }, [params.id, toast]);
 
@@ -131,9 +116,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     toast({ title: "Produit ajouté au panier!", action: <CheckCircle className="text-green-500" /> });
   };
   
-  const totalReviews = reviews.length;
-  const averageRating = totalReviews > 0 ? reviews.reduce((acc, review) => acc + review.rating, 0) / totalReviews : 0;
-
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
@@ -199,11 +181,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 </div>
                 <Badge variant={product.stock > 0 ? "default" : "destructive"} className={`text-sm py-1 px-3 ${product.stock > 0 && product.stock <=10 ? 'bg-yellow-500 text-black' : ''}`}>{product.stock > 0 ? `En Stock (${product.stock})` : "Épuisé"}</Badge>
               </div>
-              <div className="flex items-center mt-2">
-                {[...Array(5)].map((_, i) => <Star key={i} className={`h-5 w-5 ${i < Math.round(averageRating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />)}
-                {totalReviews > 0 && <span className="ml-2 text-sm text-muted-foreground">{averageRating.toFixed(1)} sur 5 ({totalReviews} avis)</span>}
-                {totalReviews === 0 && <span className="ml-2 text-sm text-muted-foreground">Aucun avis</span>}
-              </div>
             </CardHeader>
             <CardContent>
               <div className="mb-4">
@@ -243,8 +220,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           </Card>
         </div>
       </div>
-      <Separator className="my-10" />
-      <ProductReviews reviews={reviews} isLoading={isLoadingReviews} />
     </div>
   );
 }

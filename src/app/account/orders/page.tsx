@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ShoppingCart, MessageSquarePlus } from 'lucide-react';
+import { Loader2, ShoppingCart } from 'lucide-react';
 import { Order, OrderStatus } from '@/types'; 
 import { cn } from '@/lib/utils';
 import { db } from '@/lib/firebase';
@@ -14,7 +14,6 @@ import { collection, onSnapshot, query, where, Timestamp } from 'firebase/firest
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
-import LeaveReviewDialog from '@/components/account/LeaveReviewDialog';
 
 const getStatusBadgeClass = (status: OrderStatus): string => {
   switch (status) {
@@ -33,7 +32,6 @@ export default function UserOrdersPage() {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [reviewOrder, setReviewOrder] = useState<Order | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -104,17 +102,7 @@ export default function UserOrdersPage() {
                     <Badge className={cn("text-xs", getStatusBadgeClass(order.status))}>{order.status}</Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    {order.status === OrderStatus.Delivered && (
-                       <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs"
-                        onClick={() => setReviewOrder(order)}
-                      >
-                        <MessageSquarePlus className="mr-2 h-3 w-3" />
-                        Laisser un avis
-                      </Button>
-                    )}
+                    {/* Action button space, can be used for "View Details" in the future */}
                   </TableCell>
                 </TableRow>
               )) : (
@@ -133,17 +121,6 @@ export default function UserOrdersPage() {
           </Table>
         </CardContent>
       </Card>
-      {reviewOrder && (
-        <LeaveReviewDialog
-          order={reviewOrder}
-          isOpen={!!reviewOrder}
-          onOpenChange={(isOpen) => {
-            if (!isOpen) {
-              setReviewOrder(null);
-            }
-          }}
-        />
-      )}
     </>
   );
 }
