@@ -14,9 +14,11 @@ import { categoryIcons } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/context/CartContext';
-import { doc, onSnapshot, Timestamp } from 'firebase/firestore';
+import { doc, onSnapshot, Timestamp, collection, query, where, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
+import ProductCard from '@/components/ProductCard';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const Label = ({ htmlFor, children, className }: { htmlFor?: string; children: React.ReactNode; className?: string }) => (
   <label htmlFor={htmlFor} className={`block text-sm font-medium text-gray-700 dark:text-gray-300 ${className || ''}`}>
@@ -32,6 +34,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const [quantity, setQuantity] = useState(1);
   const { toast } = useToast();
   const cart = useCart();
+  const [suggestedProducts, setSuggestedProducts] = useState<Product[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(true);
 
   useEffect(() => {
     if (!params.id) {
@@ -73,6 +77,46 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       unsubscribeProduct();
     };
   }, [params.id, toast]);
+  
+  useEffect(() => {
+    if (!product || !product.category) return;
+
+    setIsLoadingSuggestions(true);
+    const productsCollection = collection(db, 'products');
+    const q = query(
+        productsCollection,
+        where('category', '==', product.category),
+        limit(5)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const fetchedProducts: Product[] = snapshot.docs
+            .map(doc => {
+              const data = doc.data();
+              let imageUrls: string[] = [];
+              if (data.imageUrls && Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
+                  imageUrls = data.imageUrls;
+              } else if (data.imageUrl && typeof data.imageUrl === 'string') {
+                  imageUrls = [data.imageUrl];
+              }
+              return {
+                id: doc.id,
+                ...data,
+                imageUrls
+              } as Product;
+            })
+            .filter(p => p.id !== product.id)
+            .slice(0, 4);
+
+        setSuggestedProducts(fetchedProducts);
+        setIsLoadingSuggestions(false);
+    }, (error) => {
+        console.error("Error fetching suggested products:", error);
+        setIsLoadingSuggestions(false);
+    });
+
+    return () => unsubscribe();
+}, [product]);
 
   useEffect(() => {
     if (product && product.sizes && product.sizes.length > 0) {
@@ -220,6 +264,29 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           </Card>
         </div>
       </div>
+      <Separator className="my-12" />
+      <section>
+        <h2 className="text-3xl font-bold text-center mb-8 text-primary">Vous aimerez aussi</h2>
+        {isLoadingSuggestions ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, i) => (
+                    <div key={i} className="space-y-2">
+                        <Skeleton className="h-48 md:h-60 w-full rounded-lg" />
+                        <Skeleton className="h-6 w-3/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                    </div>
+                ))}
+            </div>
+        ) : suggestedProducts.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {suggestedProducts.map((p) => (
+                    <ProductCard key={p.id} product={p} />
+                ))}
+            </div>
+        ) : (
+            <p className="text-center text-muted-foreground">Aucun produit similaire trouvé.</p>
+        )}
+      </section>
     </div>
   );
 }
