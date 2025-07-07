@@ -24,7 +24,7 @@ import { OrderStatus, type Order, type CustomerInfo, type OrderItem, type SiteSe
 
 const checkoutFormSchema = z.object({
   fullName: z.string().min(3, "Le nom complet est requis (minimum 3 caractères)."),
-  phone: z.string().regex(/^(70|75|76|77|78)\d{7}$/, "Le numéro de téléphone doit être un numéro sénégalais valide (ex: 771234567)."),
+  phone: z.string().regex(/^(70|75|76|77|78)\d{7}$/, "Le numéro de téléphone doit être un numéro sénégalais valide (ex: 784513633)."),
   paymentMethod: z.enum(['cod', 'wave', 'pickup'], {
     required_error: "Vous devez sélectionner une méthode de paiement."
   }),
@@ -52,9 +52,9 @@ export default function CheckoutPage() {
   const form = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutFormSchema),
     defaultValues: {
-      fullName: '',
+      fullName: 'Assane Ba',
       address: '',
-      phone: '',
+      phone: '784513633',
       paymentMethod: 'cod',
     },
   });
@@ -189,15 +189,8 @@ export default function CheckoutPage() {
         setIsRedirectingToWave(true);
         setIsProcessing(false);
 
-        const isMobile = typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         const baseUrl = settings.wavePaymentUrl;
-        let finalWaveUrl;
-
-        if (isMobile) {
-            finalWaveUrl = baseUrl.replace(/^https?:\/\/pay\.wave\.com/, 'wave://pay-without-web') + `?amount=${grandTotal}`;
-        } else {
-            finalWaveUrl = baseUrl + `?amount=${grandTotal}`;
-        }
+        const finalWaveUrl = baseUrl + `?amount=${grandTotal}`;
         
         setTimeout(() => {
           if (typeof window !== 'undefined') {
