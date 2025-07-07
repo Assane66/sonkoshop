@@ -54,6 +54,9 @@ export default function Header() {
           <Link href="/products" className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground">
             Produits
           </Link>
+          <Link href="/about" className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground">
+            À propos
+          </Link>
         </nav>
         <div className="flex items-center space-x-2">
           <Button variant="ghost" size="icon" asChild className="relative">

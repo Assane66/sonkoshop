@@ -28,6 +28,7 @@ export default function Footer() {
           <div>
             <h3 className="text-lg font-semibold text-primary mb-4">Liens Rapides</h3>
             <ul className="space-y-2 text-sm">
+              <li><Link href="/about" className="text-foreground/80 hover:text-foreground">À propos de nous</Link></li>
               <li><Link href="/products" className="text-foreground/80 hover:text-foreground">Tous les produits</Link></li>
               <li><Link href="/politique-de-retour" className="text-foreground/80 hover:text-foreground">Politique de retour</Link></li>
               <li><Link href="/termes-et-conditions" className="text-foreground/80 hover:text-foreground">Termes et Conditions</Link></li>
