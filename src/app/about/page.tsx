@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -22,7 +21,7 @@ export default function AboutPage() {
             <div>
               <h2 className="text-2xl font-semibold text-foreground mb-2">Une idée née avec peu, mais portée par la volonté</h2>
               <p className="text-foreground/80">
-                Créée le 28 août 2023, Sonko Shop est le fruit de la collaboration entre <strong>Mohamed Saho</strong>, l’initiateur de l’idée, et <strong>Alhassane Ba (Al Hasanba)</strong>, tous deux animés par le rêve de proposer des produits de qualité accessibles à tous. À l’origine, l’équipe comptait également Abdoulaye Sow, qui a contribué au lancement avant de se retirer. Aujourd’hui, Mohamed et Alhassane assurent ensemble la gestion et le développement de la boutique.
+                Créée le 28 août 2023, Sonko Shop est le fruit de la collaboration entre <strong>Mohamed Saho</strong>, l’initiateur de l’idée, et <strong>Alhassane Ba</strong>, tous deux animés par le rêve de proposer des produits de qualité accessibles à tous. À l’origine, l’équipe comptait également Abdoulaye Sow, qui a contribué au lancement avant de se retirer. Aujourd’hui, Mohamed et Alhassane assurent ensemble la gestion et le développement de la boutique.
               </p>
               <p className="text-foreground/80 mt-2">
                 Nous avons démarré avec des moyens très limités, en investissant chacun une petite part. Pas de grands fonds, pas de vitrines luxueuses. Seulement la foi en notre projet, la confiance entre nous et une détermination à toute épreuve. Petit à petit, Alhamdoulilah, nous avons grandi, élargi notre gamme et fidélisé nos premiers clients.
