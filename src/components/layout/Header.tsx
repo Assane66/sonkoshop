@@ -1,4 +1,3 @@
-
 'use client'; 
 
 import Link from 'next/link';
@@ -44,8 +43,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
-        <Link href="/" className="mr-6 flex items-center space-x-2">
-          <Image src="https://res.cloudinary.com/dm6yuokre/image/upload/v1751785241/logo_noqoct.png" alt="Sonko Shop Logo" width={28} height={28} data-ai-hint="shop logo" />
+        <Link href="/" className="mr-6 flex items-center">
           <span className="font-bold text-xl text-primary">Sonko Shop</span>
         </Link>
         <nav className="flex flex-1 items-center space-x-4">
