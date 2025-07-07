@@ -23,15 +23,23 @@ import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/fires
 import { OrderStatus, type Order, type CustomerInfo, type OrderItem, type SiteSettings } from '@/types';
 
 const checkoutFormSchema = z.object({
-  fullName: z.string().min(3, "Le nom complet est requis (minimum 3 caractères)."),
-  phone: z.string().regex(/^(70|75|76|77|78)\d{7}$/, "Le numéro de téléphone doit être un numéro sénégalais valide (ex: 784513633)."),
+  fullName: z.string().min(3, "Le nom complet est requis (minimum 3 caractères).").optional(),
+  phone: z.string().regex(/^(70|75|76|77|78)\d{7}$/, "Le numéro de téléphone doit être un numéro sénégalais valide (ex: 784513633).").optional(),
   paymentMethod: z.enum(['cod', 'wave', 'pickup'], {
     required_error: "Vous devez sélectionner une méthode de paiement."
   }),
   address: z.string().optional(),
-}).refine(data => data.paymentMethod === 'pickup' || (!!data.address && data.address.trim().length >= 1), {
-  message: "L'adresse de livraison est requise.",
-  path: ["address"],
+}).refine(data => {
+    if (data.paymentMethod === 'cod' || data.paymentMethod === 'wave') {
+        return !!data.fullName && data.fullName.trim().length >= 3 && !!data.phone && /^(70|75|76|77|78)\d{7}$/.test(data.phone) && !!data.address && data.address.trim().length >= 1;
+    }
+     if (data.paymentMethod === 'pickup') {
+        return !!data.fullName && data.fullName.trim().length >= 3 && !!data.phone && /^(70|75|76|77|78)\d{7}$/.test(data.phone);
+    }
+    return true;
+}, {
+    message: "Veuillez remplir tous les champs requis pour la méthode sélectionnée.",
+    path: ["fullName"], // This path is somewhat arbitrary, but a path is required.
 });
 
 
@@ -139,9 +147,9 @@ export default function CheckoutPage() {
     }));
 
     const customerInfo: CustomerInfo = {
-      fullName: data.fullName,
+      fullName: data.fullName!,
       address: data.address || '',
-      phone: data.phone,
+      phone: data.phone!,
     };
 
     const orderStatus = data.paymentMethod === 'wave' ? OrderStatus.WavePending : OrderStatus.Pending;
@@ -187,16 +195,14 @@ export default function CheckoutPage() {
           description: "Vous allez être redirigé pour finaliser votre paiement.",
         });
         setIsRedirectingToWave(true);
-        setIsProcessing(false);
 
         const baseUrl = settings.wavePaymentUrl;
         const finalWaveUrl = baseUrl + `?amount=${grandTotal}`;
         
-        setTimeout(() => {
-          if (typeof window !== 'undefined') {
-            window.location.href = finalWaveUrl;
-          }
-        }, 1500);
+        // Redirect immediately to improve Universal Link reliability on iOS
+        if (typeof window !== 'undefined') {
+          window.location.href = finalWaveUrl;
+        }
       }
     } catch (error: any) {
       console.error("Error during order processing:", error);
@@ -260,7 +266,7 @@ export default function CheckoutPage() {
                       <FormItem>
                         <FormLabel>Nom Complet</FormLabel>
                         <FormControl>
-                          <Input placeholder="Ex: Assane Ba" {...field} disabled={isProcessing} />
+                          <Input placeholder="Ex: Assane Ba" {...field} value={field.value ?? ''} disabled={isProcessing} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -274,7 +280,7 @@ export default function CheckoutPage() {
                       <FormItem>
                         <FormLabel>Numéro de Téléphone</FormLabel>
                         <FormControl>
-                          <Input type="tel" placeholder="Ex: 784513633" {...field} disabled={isProcessing} />
+                          <Input type="tel" placeholder="Ex: 784513633" {...field} value={field.value ?? ''} disabled={isProcessing} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
