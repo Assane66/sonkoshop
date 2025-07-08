@@ -116,6 +116,9 @@ export interface Order {
   shippingAddress: string;
   shippingCost?: number;
   subtotal?: number;
+  waveSessionId?: string;
+  wavePaymentStatus?: string;
+  lastWaveCheck?: Timestamp;
 }
 
 export interface SiteSettings {

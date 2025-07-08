@@ -4,42 +4,86 @@
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { CheckCircle, Package, Download, Loader2, Hourglass } from 'lucide-react';
+import { CheckCircle, Package, Download, Loader2, Hourglass, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import type { Order, OrderItem } from '@/types';
 import Image from 'next/image';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
+import { useSearchParams } from 'next/navigation';
+import { verifyWavePayment } from '@/lib/wave';
+import { useCart } from '@/context/CartContext';
+
 
 function SuccessPageContent() {
   const [order, setOrder] = useState<Order | null>(null);
-  const [isLoadingOrder, setIsLoadingOrder] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<'verifying' | 'success' | 'failed' | 'cod'>('verifying');
+  const [errorMessage, setErrorMessage] = useState('');
+
   const invoiceRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const searchParams = useSearchParams();
+  const { clearCart } = useCart();
+
 
   useEffect(() => {
-    setIsLoadingOrder(true);
-    try {
-      if (typeof window !== 'undefined') {
-        const storedOrder = sessionStorage.getItem('lastSuccessfulOrder');
-        if (storedOrder) {
-          const parsedOrder = JSON.parse(storedOrder) as Order;
-          setOrder(parsedOrder);
-          // Do not clear the item here, as the user might refresh the page.
-          // The cart is already cleared in checkout page.
+    const waveSessionId = searchParams.get('session_id');
+
+    const handleVerification = async (sessionId: string) => {
+      try {
+        const result = await verifyWavePayment(sessionId);
+        if (result.success && result.order) {
+          setOrder(result.order);
+          setVerificationStatus('success');
+          // Clear cart and session storage only on successful verification
+          clearCart();
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('lastSuccessfulOrder', JSON.stringify(result.order));
+          }
         } else {
-          console.warn("CheckoutSuccessPage: No order data found in sessionStorage.");
+          setVerificationStatus('failed');
+          setErrorMessage(result.error || "La vérification du paiement a échoué. Veuillez contacter le support.");
         }
+      } catch (error: any) {
+        setVerificationStatus('failed');
+        setErrorMessage(error.message || "Une erreur critique est survenue lors de la vérification.");
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Failed to retrieve or parse order from sessionStorage:", error);
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de récupérer les détails de la commande." });
-    } finally {
-      setIsLoadingOrder(false);
+    };
+
+    // If waveSessionId is present, it's a Wave payment callback
+    if (waveSessionId) {
+      handleVerification(waveSessionId);
+    } else {
+      // It's a COD/Pickup order, load from sessionStorage
+      setIsLoading(true);
+      try {
+        if (typeof window !== 'undefined') {
+          const storedOrder = sessionStorage.getItem('lastSuccessfulOrder');
+          if (storedOrder) {
+            const parsedOrder = JSON.parse(storedOrder) as Order;
+            setOrder(parsedOrder);
+            setVerificationStatus('cod');
+          } else {
+            console.warn("CheckoutSuccessPage: No order data found in sessionStorage for non-Wave payment.");
+            setVerificationStatus('failed');
+            setErrorMessage("Détails de la commande non trouvés. Votre session a peut-être expiré.");
+          }
+        }
+      } catch (error) {
+        console.error("Failed to retrieve or parse order from sessionStorage:", error);
+        setVerificationStatus('failed');
+        setErrorMessage("Impossible de récupérer les détails de la commande.");
+      } finally {
+        setIsLoading(false);
+      }
     }
-  }, [toast]);
+  }, [searchParams, toast, clearCart]);
+
 
   const handleDownloadPdf = async () => {
     if (!invoiceRef.current || !order) {
@@ -78,16 +122,41 @@ function SuccessPageContent() {
         setIsGeneratingPdf(false);
     }
   };
+  
+  const formatDate = (dateString: string | Date) => {
+    return new Date(dateString).toLocaleDateString('fr-FR', {
+      day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+  };
 
-  if (isLoadingOrder) {
+  if (isLoading) {
     return (
-        <div className="flex justify-center items-center py-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="ml-2 text-xl">Chargement de la confirmation...</p>
-        </div>
+      <div className="flex flex-col justify-center items-center py-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="ml-2 text-xl mt-4 text-muted-foreground">Vérification du paiement en cours...</p>
+      </div>
     );
   }
   
+  if (verificationStatus === 'failed') {
+     return (
+       <Card className="w-full max-w-lg text-center shadow-xl">
+          <CardHeader>
+              <div className="mx-auto bg-red-100 rounded-full p-3 w-fit mb-4">
+                <XCircle className="h-12 w-12 text-red-600" />
+              </div>
+              <CardTitle className="text-2xl font-bold text-destructive">Échec de la Transaction</CardTitle>
+              <CardDescription>{errorMessage || "Une erreur est survenue."}</CardDescription>
+          </CardHeader>
+          <CardContent>
+              <Button asChild>
+                  <Link href="/cart">Retour au panier</Link>
+              </Button>
+          </CardContent>
+      </Card>
+    );
+  }
+
   if (!order) {
     return (
        <Card className="w-full max-w-lg text-center shadow-xl">
@@ -104,16 +173,15 @@ function SuccessPageContent() {
     );
   }
 
+  // --- Display logic for success states ---
   let title = "Merci pour votre commande!";
   let description = "Votre commande a été enregistrée avec succès. Nous préparons votre colis.";
   let icon = <CheckCircle className="h-12 w-12 text-green-600" />;
   let iconBg = "bg-green-100";
 
-  if (order.paymentMethod === 'wave') {
-    title = "Paiement en attente de confirmation";
-    description = "Votre commande est enregistrée. Nous attendons la confirmation de Wave. Le statut sera mis à jour automatiquement une fois le paiement reçu.";
-    icon = <Hourglass className="h-12 w-12 text-orange-600" />;
-    iconBg = "bg-orange-100";
+  if (verificationStatus === 'success' && order.paymentMethod === 'wave') {
+      title = "Paiement confirmé !";
+      description = "Merci ! Votre paiement a été validé et votre commande est maintenant en cours de traitement.";
   } else if (order.paymentMethod === 'cod') {
     title = "Commande (Paiement à la livraison) Réussie!";
     description = "Votre commande a été enregistrée. Vous serez contacté(e) sous peu pour la confirmation et la livraison. Merci de préparer le montant exact.";
@@ -122,11 +190,6 @@ function SuccessPageContent() {
     description = "Votre commande est en cours de préparation. Nous vous informerons dès qu'elle sera prête à être récupérée.";
   }
 
-  const formatDate = (dateString: string | Date) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
-  };
 
   return (
     <>
@@ -241,9 +304,9 @@ export default function CheckoutSuccessPage() {
   return (
     <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
       <Suspense fallback={
-        <div className="flex justify-center items-center py-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="ml-2 text-xl">Chargement...</p>
+        <div className="flex flex-col justify-center items-center py-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="ml-2 text-xl mt-4 text-muted-foreground">Chargement...</p>
         </div>
       }>
         <SuccessPageContent />

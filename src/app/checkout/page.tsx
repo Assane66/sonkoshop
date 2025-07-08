@@ -21,6 +21,8 @@ import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { OrderStatus, type Order, type CustomerInfo, type OrderItem, type SiteSettings } from '@/types';
+import { createWaveCheckoutSession } from '@/lib/wave';
+
 
 const checkoutFormSchema = z.object({
   fullName: z.string().min(3, "Le nom complet est requis (minimum 3 caractères).").optional(),
@@ -152,8 +154,39 @@ export default function CheckoutPage() {
       phone: data.phone!,
     };
 
-    const orderStatus = data.paymentMethod === 'wave' ? OrderStatus.WavePending : OrderStatus.Pending;
+    const shippingAddress = data.paymentMethod === 'pickup' ? "Retrait en boutique" : data.address!;
 
+    // Wave payment has its own flow
+    if (data.paymentMethod === 'wave') {
+      setIsRedirectingToWave(true);
+      try {
+        const waveData = await createWaveCheckoutSession({
+            amount: grandTotal,
+            customerInfo,
+            orderItems,
+            shippingCost,
+            subtotal,
+            shippingAddress
+        });
+
+        if (waveData.checkout_url) {
+            // Redirect to Wave for payment
+            window.location.href = waveData.checkout_url;
+        } else {
+            throw new Error(waveData.error || "Impossible de générer le lien de paiement Wave.");
+        }
+      } catch (error: any) {
+        console.error("Erreur lors de la création de la session Wave:", error);
+        toast({ variant: "destructive", title: "Échec Wave", description: error.message });
+        setIsProcessing(false);
+        setIsRedirectingToWave(false);
+      }
+      return; // Stop execution here for Wave
+    }
+
+    // --- COD and Pickup Flow ---
+    const orderStatus = OrderStatus.Pending;
+    
     const basePayload: Omit<Order, 'id' | 'orderDate'> = {
       customerInfo,
       items: orderItems,
@@ -162,11 +195,10 @@ export default function CheckoutPage() {
       totalAmount: grandTotal,
       status: orderStatus,
       paymentMethod: data.paymentMethod,
-      shippingAddress: data.paymentMethod === 'pickup' ? "Retrait en boutique" : data.address!,
+      shippingAddress: shippingAddress,
     };
     
     const orderDataPayload = user ? { ...basePayload, userId: user.uid, orderDate: serverTimestamp() } : { ...basePayload, orderDate: serverTimestamp() };
-
 
     try {
       const docRef = await addDoc(collection(db, "orders"), orderDataPayload);
@@ -182,26 +214,13 @@ export default function CheckoutPage() {
       }
 
       clearCart();
-
-      if (data.paymentMethod === 'cod' || data.paymentMethod === 'pickup') {
-        toast({
-          title: "Commande confirmée!",
-          description: "Votre commande a été enregistrée. Nous vous contacterons bientôt.",
-        });
-        router.push(`/checkout/success`);
-      } else if (data.paymentMethod === 'wave' && settings?.wavePaymentUrl) {
-        setIsRedirectingToWave(true);
-
-        const baseUrl = settings.wavePaymentUrl;
-        const finalWaveUrl = baseUrl + `?amount=${grandTotal}`;
-        
-        if (typeof window !== 'undefined') {
-          // Add a very small delay to allow sessionStorage to persist before redirecting
-          setTimeout(() => {
-            window.location.href = finalWaveUrl;
-          }, 100);
-        }
-      }
+      
+      toast({
+        title: "Commande confirmée!",
+        description: "Votre commande a été enregistrée. Nous vous contacterons bientôt.",
+      });
+      router.push(`/checkout/success`);
+      
     } catch (error: any) {
       console.error("Error during order processing:", error);
       let errorMessage = "Impossible d'enregistrer votre commande. Veuillez réessayer.";
@@ -369,7 +388,7 @@ export default function CheckoutPage() {
                 disabled={isProcessing || cartItems.length === 0 || !form.formState.isValid || !hydrated || isSettingsLoading}
               >
                 {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : ''}
-                {isProcessing ? (isRedirectingToWave ? 'Redirection...' : 'Traitement...') : 'Confirmer la Commande'}
+                {isProcessing ? (isRedirectingToWave ? 'Redirection vers Wave...' : 'Traitement...') : 'Confirmer la Commande'}
               </Button>
             </form>
           </Form>
