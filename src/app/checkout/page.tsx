@@ -190,18 +190,16 @@ export default function CheckoutPage() {
         });
         router.push(`/checkout/success`);
       } else if (data.paymentMethod === 'wave' && settings?.wavePaymentUrl) {
-        toast({
-          title: "Redirection vers Wave...",
-          description: "Vous allez être redirigé pour finaliser votre paiement.",
-        });
         setIsRedirectingToWave(true);
 
         const baseUrl = settings.wavePaymentUrl;
         const finalWaveUrl = baseUrl + `?amount=${grandTotal}`;
         
-        // Redirect immediately to improve Universal Link reliability on iOS
         if (typeof window !== 'undefined') {
-          window.location.href = finalWaveUrl;
+          // Add a very small delay to allow sessionStorage to persist before redirecting
+          setTimeout(() => {
+            window.location.href = finalWaveUrl;
+          }, 100);
         }
       }
     } catch (error: any) {
@@ -371,7 +369,7 @@ export default function CheckoutPage() {
                 disabled={isProcessing || cartItems.length === 0 || !form.formState.isValid || !hydrated || isSettingsLoading}
               >
                 {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : ''}
-                {isProcessing ? 'Traitement...' : 'Confirmer la Commande'}
+                {isProcessing ? (isRedirectingToWave ? 'Redirection...' : 'Traitement...') : 'Confirmer la Commande'}
               </Button>
             </form>
           </Form>

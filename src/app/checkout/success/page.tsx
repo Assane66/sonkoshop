@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { CheckCircle, Package, Download, Loader2 } from 'lucide-react';
+import { CheckCircle, Package, Download, Loader2, Hourglass } from 'lucide-react';
 import Link from 'next/link';
 import type { Order, OrderItem } from '@/types';
 import Image from 'next/image';
@@ -27,6 +27,8 @@ function SuccessPageContent() {
         if (storedOrder) {
           const parsedOrder = JSON.parse(storedOrder) as Order;
           setOrder(parsedOrder);
+          // Do not clear the item here, as the user might refresh the page.
+          // The cart is already cleared in checkout page.
         } else {
           console.warn("CheckoutSuccessPage: No order data found in sessionStorage.");
         }
@@ -91,7 +93,7 @@ function SuccessPageContent() {
        <Card className="w-full max-w-lg text-center shadow-xl">
           <CardHeader>
               <CardTitle className="text-2xl font-bold text-destructive">Commande non trouvée</CardTitle>
-              <CardDescription>Aucun détail de commande n'a été trouvé. Cela peut se produire si vous accédez directement à cette page ou après un long moment. Veuillez vérifier vos e-mails ou nous contacter.</CardDescription>
+              <CardDescription>Aucun détail de commande n'a été trouvé. Cela peut se produire si vous accédez directement à cette page ou après un long moment. Veuillez vérifier votre historique de commandes ou nous contacter.</CardDescription>
           </CardHeader>
             <CardContent>
               <Button asChild>
@@ -104,8 +106,15 @@ function SuccessPageContent() {
 
   let title = "Merci pour votre commande!";
   let description = "Votre commande a été enregistrée avec succès. Nous préparons votre colis.";
+  let icon = <CheckCircle className="h-12 w-12 text-green-600" />;
+  let iconBg = "bg-green-100";
 
-  if (order.paymentMethod === 'cod') {
+  if (order.paymentMethod === 'wave') {
+    title = "Paiement en attente de confirmation";
+    description = "Votre commande est enregistrée. Nous attendons la confirmation de Wave. Le statut sera mis à jour automatiquement une fois le paiement reçu.";
+    icon = <Hourglass className="h-12 w-12 text-orange-600" />;
+    iconBg = "bg-orange-100";
+  } else if (order.paymentMethod === 'cod') {
     title = "Commande (Paiement à la livraison) Réussie!";
     description = "Votre commande a été enregistrée. Vous serez contacté(e) sous peu pour la confirmation et la livraison. Merci de préparer le montant exact.";
   } else if (order.paymentMethod === 'pickup') {
@@ -123,8 +132,8 @@ function SuccessPageContent() {
     <>
       <Card className="w-full max-w-lg text-center shadow-xl mb-8">
         <CardHeader>
-          <div className="mx-auto bg-green-100 rounded-full p-3 w-fit mb-4">
-            <CheckCircle className="h-12 w-12 text-green-600" />
+          <div className={`mx-auto ${iconBg} rounded-full p-3 w-fit mb-4`}>
+            {icon}
           </div>
           <CardTitle className="text-3xl font-bold text-primary">{title}</CardTitle>
           <CardDescription className="text-muted-foreground text-base pt-2">
@@ -139,7 +148,7 @@ function SuccessPageContent() {
             </Button>
           <div className="flex items-center justify-center text-muted-foreground">
             <Package className="h-5 w-5 mr-2" />
-            <span>Suivi de commande bientôt disponible.</span>
+            <span>Vous pouvez suivre le statut de votre commande dans votre compte.</span>
           </div>
           <Button asChild size="lg" className="w-full">
             <Link href="/products">Continuer les achats</Link>

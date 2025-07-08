@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Loader2, Trash2 } from 'lucide-react';
+import { Eye, Loader2, Trash2, CheckCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -128,6 +128,17 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const handleConfirmWavePayment = async (orderId: string) => {
+    try {
+      const orderRef = doc(db, 'orders', orderId);
+      await updateDoc(orderRef, { status: OrderStatus.Processing });
+      toast({ title: "Paiement Wave confirmé!", description: "Le statut de la commande est passé à 'En traitement'." });
+    } catch (error) {
+      console.error("Error confirming Wave payment:", error);
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de confirmer le paiement de la commande." });
+    }
+  };
+
 
   if (isLoading) {
     return (
@@ -237,9 +248,23 @@ export default function AdminOrdersPage() {
                     </Select>
                   </TableCell>
                   <TableCell className="text-center">
-                    <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order)} title="Voir détails">
-                      <Eye className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center justify-center gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order)} title="Voir détails">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      {order.status === OrderStatus.WavePending && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-2 border-green-600 text-green-600 hover:bg-green-50 hover:text-green-700"
+                          onClick={() => handleConfirmWavePayment(order.id)}
+                          title="Confirmer la réception du paiement Wave"
+                        >
+                          <CheckCircle className="mr-1.5 h-4 w-4" />
+                          Confirmer
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               )) : (
