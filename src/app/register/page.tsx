@@ -36,9 +36,8 @@ export default function RegisterPage() {
       return;
     }
     
-    const phoneRegex = /^(70|75|76|77|78)\d{7}$/;
-    if (!phoneRegex.test(phone)) {
-      setError("Veuillez entrer un numéro de téléphone sénégalais valide (ex: 771234567).");
+    if (phone.trim().length < 9) {
+      setError("Le numéro de téléphone doit contenir au moins 9 chiffres.");
       return;
     }
 
@@ -106,7 +105,7 @@ export default function RegisterPage() {
               <Input
                 id="phone"
                 type="tel"
-                placeholder="Ex: 784513633"
+                placeholder="Ex: +221781234567"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required

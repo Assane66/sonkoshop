@@ -26,17 +26,17 @@ import { createWaveCheckoutSession } from '@/lib/wave';
 
 const checkoutFormSchema = z.object({
   fullName: z.string().min(3, "Le nom complet est requis (minimum 3 caractères).").optional(),
-  phone: z.string().regex(/^(70|75|76|77|78)\d{7}$/, "Le numéro de téléphone doit être un numéro sénégalais valide (ex: 784513633).").optional(),
+  phone: z.string().min(9, { message: "Le numéro de téléphone doit contenir au moins 9 chiffres." }).optional(),
   paymentMethod: z.enum(['cod', 'wave', 'pickup'], {
     required_error: "Vous devez sélectionner une méthode de paiement."
   }),
   address: z.string().optional(),
 }).refine(data => {
     if (data.paymentMethod === 'cod' || data.paymentMethod === 'wave') {
-        return !!data.fullName && data.fullName.trim().length >= 3 && !!data.phone && /^(70|75|76|77|78)\d{7}$/.test(data.phone) && !!data.address && data.address.trim().length >= 1;
+        return !!data.fullName && data.fullName.trim().length >= 3 && !!data.phone && data.phone.trim().length >= 9 && !!data.address && data.address.trim().length >= 1;
     }
      if (data.paymentMethod === 'pickup') {
-        return !!data.fullName && data.fullName.trim().length >= 3 && !!data.phone && /^(70|75|76|77|78)\d{7}$/.test(data.phone);
+        return !!data.fullName && data.fullName.trim().length >= 3 && !!data.phone && data.phone.trim().length >= 9;
     }
     return true;
 }, {
@@ -297,7 +297,7 @@ export default function CheckoutPage() {
                       <FormItem>
                         <FormLabel>Numéro de Téléphone</FormLabel>
                         <FormControl>
-                          <Input type="tel" placeholder="Ex: 784513633" {...field} value={field.value ?? ''} disabled={isProcessing} />
+                          <Input type="tel" placeholder="Ex: +221781234567" {...field} value={field.value ?? ''} disabled={isProcessing} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
