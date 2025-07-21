@@ -5,12 +5,13 @@ import { useState, useEffect } from 'react';
 import ProductCard from '@/components/ProductCard';
 import type { Banner, Product } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { PackageOpen, Loader2, ArrowRight } from 'lucide-react';
+import { PackageOpen, ArrowRight } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, limit, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, where, limit, onSnapshot, orderBy } from 'firebase/firestore';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
+import BannerCarousel from '@/components/BannerCarousel';
 
 const ProductCarousel = ({ products }: { products: Product[] }) => {
   if (!products || products.length === 0) return null;
@@ -25,6 +26,7 @@ const ProductCarousel = ({ products }: { products: Product[] }) => {
 };
 
 export default function HomePage() {
+  const [banners, setBanners] = useState<Banner[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [bonsPlansProducts, setBonsPlansProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,6 +35,18 @@ export default function HomePage() {
   useEffect(() => {
     setIsLoading(true);
     
+    // Fetch Banners
+    const bannersCollection = collection(db, 'banners');
+    const bannersQuery = query(bannersCollection, orderBy('title', 'asc'));
+    const unsubBanners = onSnapshot(bannersQuery, (snapshot) => {
+      const fetchedBanners: Banner[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Banner));
+      setBanners(fetchedBanners);
+    }, (error) => {
+      console.error("Error fetching banners:", error);
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les bannières." });
+    });
+
+    // Fetch Products
     const productsCollection = collection(db, 'products');
     const featuredQuery = query(productsCollection, where('featured', '==', true), limit(4));
     const bonsPlansQuery = query(productsCollection, orderBy('price', 'asc'), limit(4));
@@ -56,6 +70,7 @@ export default function HomePage() {
     const timer = setTimeout(() => setIsLoading(false), 1500);
 
     return () => {
+      unsubBanners();
       unsubFeatured();
       unsubBonsPlans();
       clearTimeout(timer);
@@ -66,13 +81,12 @@ export default function HomePage() {
     <div className="bg-background text-foreground">
       <main className="container mx-auto px-4">
 
-        {/* Hero Banner */}
-        <section className="my-8 relative h-[60vh] flex items-center justify-center text-white rounded-lg overflow-hidden">
-          <Image src="https://placehold.co/1200x600/000000/FFFFFF.png" alt="Fear Nothing" layout="fill" objectFit="cover" data-ai-hint="sports shoes dark" />
-          <div className="absolute inset-0 bg-black bg-opacity-40" />
-          <div className="relative z-10 text-center">
-            <h1 className="text-6xl font-bold tracking-tighter">FEAR NOTHING</h1>
-          </div>
+        {/* Dynamic Banner Carousel */}
+        <section className="my-8">
+           {isLoading ? 
+            <div className="w-full h-[300px] md:h-[400px] lg:h-[500px] bg-muted animate-pulse rounded-lg shadow-md" /> :
+            <BannerCarousel banners={banners} />
+           }
         </section>
 
         {/* Top Produits */}
