@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -12,15 +12,17 @@ import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { debounce } from 'lodash';
 
 interface ProductFiltersProps {
   onFilterChange: (filters: any) => void;
+  initialCategory?: string | null;
 }
 
 const SIZES = ['S', 'M', 'L', 'XL', 'XXL', '38', '39', '40', '41', '42', '43', '44', '45'];
 const MAX_PRICE = 100000; 
 
-export default function ProductFilters({ onFilterChange }: ProductFiltersProps) {
+export default function ProductFilters({ onFilterChange, initialCategory }: ProductFiltersProps) {
   const [availableCategories, setAvailableCategories] = useState<SiteCategory[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -28,6 +30,12 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
   const [priceRange, setPriceRange] = useState<[number, number]>([0, MAX_PRICE]);
   
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (initialCategory) {
+      setSelectedCategories([decodeURIComponent(initialCategory)]);
+    }
+  }, [initialCategory]);
 
   useEffect(() => {
     setIsLoadingCategories(true);
@@ -50,6 +58,20 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
     return () => unsubscribe();
   }, [toast]);
 
+  // Debounced version of onFilterChange to avoid too many re-renders with the slider
+  const debouncedFilterChange = useCallback(debounce(onFilterChange, 300), [onFilterChange]);
+
+  useEffect(() => {
+    debouncedFilterChange({
+      categories: selectedCategories,
+      sizes: selectedSizes,
+      priceRange,
+    });
+    // Cleanup debounce on component unmount
+    return () => debouncedFilterChange.cancel();
+  }, [selectedCategories, selectedSizes, priceRange, debouncedFilterChange]);
+
+
   const handleCategoryChange = (categoryName: string) => {
     setSelectedCategories(prev =>
       prev.includes(categoryName) ? prev.filter(c => c !== categoryName) : [...prev, categoryName]
@@ -66,14 +88,6 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
     if (Array.isArray(value) && value.length === 2) {
         setPriceRange([value[0], value[1]]);
     }
-  };
-
-  const applyFilters = () => {
-    onFilterChange({
-      categories: selectedCategories,
-      sizes: selectedSizes,
-      priceRange,
-    });
   };
 
   return (
@@ -144,7 +158,6 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
         </AccordionItem>
 
       </Accordion>
-      <Button onClick={applyFilters} className="w-full bg-primary hover:bg-primary/90">Appliquer Filtres</Button>
     </div>
   );
 }

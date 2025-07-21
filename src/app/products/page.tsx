@@ -1,35 +1,37 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import ProductCard from '@/components/ProductCard';
 import ProductFilters from '@/components/ProductFilters';
-import type { Product } from '@/types';
+import type { Product, SiteCategory } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Search, PackageOpen, Loader2 } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy, where, QueryConstraint } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { useSearchParams } from 'next/navigation';
 
-export default function ProductsPage() {
+function ProductsPageContent() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeFilters, setActiveFilters] = useState<any>({}); 
   const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeFilters, setActiveFilters] = useState({
+    categories: [] as string[],
+    sizes: [] as string[],
+    priceRange: [0, 100000] as [number, number],
+  });
   const { toast } = useToast();
+  const searchParams = useSearchParams();
 
+  // Effect to fetch all products from Firestore
   useEffect(() => {
     setIsLoading(true);
-    console.log("ProductsPage: Setting up Firestore listener for all products...");
     const productsCollection = collection(db, 'products');
-    const q = query(productsCollection, orderBy('name', 'asc')); 
+    const q = query(productsCollection, orderBy('name', 'asc'));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      console.log("ProductsPage: All products snapshot received, docs count:", snapshot.docs.length);
-      if (snapshot.empty) {
-        console.log("ProductsPage: No products found in snapshot.");
-      }
       const fetchedProducts: Product[] = snapshot.docs.map(doc => {
         const data = doc.data();
         let imageUrls: string[] = [];
@@ -38,8 +40,6 @@ export default function ProductsPage() {
         } else if (data.imageUrl && typeof data.imageUrl === 'string') {
             imageUrls = [data.imageUrl];
         }
-
-        console.log("ProductsPage: Mapping product data:", data);
         return {
           id: doc.id,
           name: data.name || 'Nom manquant',
@@ -54,7 +54,6 @@ export default function ProductsPage() {
         } as Product;
       });
       setAllProducts(fetchedProducts);
-      console.log("ProductsPage: All products state updated:", fetchedProducts);
       setIsLoading(false);
     }, (error) => {
       console.error("ProductsPage: Error fetching products:", error);
@@ -62,17 +61,25 @@ export default function ProductsPage() {
       setIsLoading(false);
     });
 
-    return () => {
-      console.log("ProductsPage: Unsubscribing from Firestore listener.");
-      unsubscribe();
-    }
+    return () => unsubscribe();
   }, [toast]);
 
-
+  // Effect to handle initial category filter from URL
   useEffect(() => {
-    console.log("ProductsPage: Applying filters. SearchTerm:", searchTerm, "ActiveFilters:", activeFilters, "AllProducts count:", allProducts.length);
+    const categoryFromUrl = searchParams.get('category');
+    if (categoryFromUrl) {
+      setActiveFilters(prev => ({
+        ...prev,
+        categories: [decodeURIComponent(categoryFromUrl)],
+      }));
+    }
+  }, [searchParams]);
+
+  // Effect to apply filters whenever products, search term, or active filters change
+  useEffect(() => {
     let productsToFilter = [...allProducts];
 
+    // Search term filter
     if (searchTerm) {
       productsToFilter = productsToFilter.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -81,26 +88,35 @@ export default function ProductsPage() {
       );
     }
 
-    if (activeFilters.categories && activeFilters.categories.length > 0) {
-      productsToFilter = productsToFilter.filter(p => p.category && activeFilters.categories.includes(p.category));
+    // Category filter
+    if (activeFilters.categories.length > 0) {
+      productsToFilter = productsToFilter.filter(p =>
+        p.category && activeFilters.categories.includes(p.category)
+      );
     }
-    if (activeFilters.sizes && activeFilters.sizes.length > 0) {
-      productsToFilter = productsToFilter.filter(p => p.sizes && p.sizes.some((s: string) => activeFilters.sizes.includes(s)));
+
+    // Size filter
+    if (activeFilters.sizes.length > 0) {
+      productsToFilter = productsToFilter.filter(p =>
+        p.sizes && p.sizes.some((s: string) => activeFilters.sizes.includes(s))
+      );
     }
+
+    // Price range filter
     if (activeFilters.priceRange) {
-      productsToFilter = productsToFilter.filter(p => p.price >= activeFilters.priceRange[0] && p.price <= activeFilters.priceRange[1]);
+      productsToFilter = productsToFilter.filter(p =>
+        p.price >= activeFilters.priceRange[0] && p.price <= activeFilters.priceRange[1]
+      );
     }
 
     setFilteredProducts(productsToFilter);
-    console.log("ProductsPage: Filtered products count:", productsToFilter.length);
   }, [searchTerm, activeFilters, allProducts]);
 
   const handleFilterChange = (filters: any) => {
-    console.log("ProductsPage: Filters changed:", filters);
     setActiveFilters(filters);
   };
   
-  if (isLoading && allProducts.length === 0) { // Show loader only if truly loading initial data
+  if (isLoading && allProducts.length === 0) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <div className="flex flex-col items-center">
@@ -114,7 +130,6 @@ export default function ProductsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-4xl font-bold text-center mb-10 text-primary">Nos Produits</h1>
-
       <div className="mb-8 relative">
         <Input
           type="search"
@@ -128,10 +143,13 @@ export default function ProductsPage() {
 
       <div className="flex flex-col md:flex-row gap-8">
         <aside className="w-full md:w-1/4 lg:w-1/5">
-          <ProductFilters onFilterChange={handleFilterChange} />
+          <ProductFilters
+            onFilterChange={handleFilterChange}
+            initialCategory={searchParams.get('category')}
+          />
         </aside>
         <main className="w-full md:w-3/4 lg:w-4/5">
-          {(!isLoading && allProducts.length === 0) ? ( // No products at all
+          {(!isLoading && allProducts.length === 0) ? (
              <div className="text-center py-10">
               <PackageOpen className="mx-auto h-20 w-20 text-muted-foreground mb-4" />
               <p className="text-xl text-muted-foreground">Aucun produit disponible dans la boutique pour le moment.</p>
@@ -142,7 +160,7 @@ export default function ProductsPage() {
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
-          ) : ( // Products exist, but filters yield no results
+          ) : (
             <div className="text-center py-10">
               <PackageOpen className="mx-auto h-20 w-20 text-muted-foreground mb-4" />
               <p className="text-xl text-muted-foreground">Aucun produit ne correspond à vos critères.</p>
@@ -152,5 +170,20 @@ export default function ProductsPage() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto px-4 py-12 text-center">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-16 w-16 text-primary animate-spin mb-4" />
+          <p className="text-xl text-muted-foreground">Chargement...</p>
+        </div>
+      </div>
+    }>
+      <ProductsPageContent />
+    </Suspense>
   );
 }

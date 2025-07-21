@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Shirt, Footprints, Layers, Baby, Sparkles, Shield, Dumbbell, LayoutGrid, Package, User, ShoppingCart } from 'lucide-react';
+import { Shirt, Footprints, Layers, Baby, Sparkles, Shield, Dumbbell, LayoutGrid, Package, User, ShoppingCart, Star } from 'lucide-react';
 import type { Timestamp } from 'firebase/firestore';
 
 export type Product = {
@@ -17,6 +17,18 @@ export type Product = {
   promotionPercentage?: number | null; // ex: 10, 20, 30
   promotionEndDate?: Timestamp | null; // Firestore Timestamp
 };
+
+export type Review = {
+  id: string; // Firestore document ID
+  productId: string;
+  productName: string;
+  userId: string;
+  userName: string;
+  rating: number; // 1-5
+  comment: string;
+  createdAt: Timestamp | string; // Use string for client-side rendering from JSON
+};
+
 
 export type UserData = {
   uid: string;
@@ -73,6 +85,7 @@ export const categoryIcons: Record<string, LucideIcon> = {
   "Package": Package,
   "Account": User,
   "Orders": ShoppingCart,
+  "Reviews": Star,
 };
 
 
@@ -119,6 +132,7 @@ export interface Order {
   waveSessionId?: string;
   wavePaymentStatus?: string;
   lastWaveCheck?: Timestamp;
+  reviewedProductIds?: string[];
 }
 
 export interface SiteSettings {
