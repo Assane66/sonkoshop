@@ -32,9 +32,11 @@ export default function Header() {
   const { toast } = useToast();
   const router = useRouter();
   const [navCategories, setNavCategories] = useState<SiteCategory[]>([]);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   useEffect(() => {
     const categoriesCollection = collection(db, 'categories');
+    // We still order by name as a fallback for items not in the custom order list
     const q = query(categoriesCollection, orderBy('name', 'asc'));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -42,7 +44,27 @@ export default function Header() {
         id: doc.id,
         ...doc.data()
       } as SiteCategory));
-      setNavCategories(fetchedCategories);
+
+      // Custom sort order defined by the user
+      const customOrder = ["Maillots", "Chaussures", "Pantalons", "Modes", "SAISON 2026", "trophée", "Équipements sportifs", "Accessoires"];
+      
+      const sortedCategories = [...fetchedCategories].sort((a, b) => {
+        const indexA = customOrder.indexOf(a.name);
+        const indexB = customOrder.indexOf(b.name);
+
+        if (indexA !== -1 && indexB !== -1) {
+          return indexA - indexB; // Both are in the custom list, sort by custom order
+        }
+        if (indexA !== -1) {
+          return -1; // Only A is in the list, so it comes first
+        }
+        if (indexB !== -1) {
+          return 1; // Only B is in the list, so it comes first
+        }
+        return 0; // Neither is in the list, keep original (alphabetic) order
+      });
+      
+      setNavCategories(sortedCategories);
     }, (error) => {
       console.error("Error fetching categories for header:", error);
       toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les catégories de navigation." });
@@ -64,6 +86,10 @@ export default function Header() {
     } catch (error) {
       toast({ variant: 'destructive', title: "Erreur lors de la déconnexion" });
     }
+  };
+  
+  const handleMobileLinkClick = () => {
+    setIsSheetOpen(false);
   };
 
   const UserMenu = () => (
@@ -106,7 +132,7 @@ export default function Header() {
         {/* Top Bar */}
         <div className="flex h-16 items-center justify-between">
           {/* Mobile Menu */}
-           <Sheet>
+           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden">
                 <Menu className="h-6 w-6" />
@@ -116,7 +142,12 @@ export default function Header() {
             <SheetContent side="left">
                 <nav className="grid gap-6 text-lg font-medium mt-8">
                     {navCategories.map(category => (
-                        <Link key={category.id} href={`/products?category=${encodeURIComponent(category.name)}`} className="text-muted-foreground hover:text-foreground">
+                        <Link 
+                          key={category.id} 
+                          href={`/products?category=${encodeURIComponent(category.name)}`} 
+                          className="text-muted-foreground hover:text-foreground"
+                          onClick={handleMobileLinkClick}
+                        >
                             {category.name}
                         </Link>
                     ))}
