@@ -27,8 +27,6 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, MAX_PRICE]);
   
-  const [minPriceDisplay, setMinPriceDisplay] = useState<string>(priceRange[0].toLocaleString('fr-FR'));
-  const [maxPriceDisplay, setMaxPriceDisplay] = useState<string>(priceRange[1].toLocaleString('fr-FR'));
   const { toast } = useToast();
 
   useEffect(() => {
@@ -51,11 +49,6 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
 
     return () => unsubscribe();
   }, [toast]);
-
-  useEffect(() => {
-    setMinPriceDisplay(priceRange[0].toLocaleString('fr-FR'));
-    setMaxPriceDisplay(priceRange[1].toLocaleString('fr-FR'));
-  }, [priceRange]);
 
   const handleCategoryChange = (categoryName: string) => {
     setSelectedCategories(prev =>
@@ -128,8 +121,8 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
               className="mb-2"
             />
             <div className="flex justify-between text-sm text-muted-foreground">
-              <span>{minPriceDisplay} FCFA</span>
-              <span>{maxPriceDisplay} FCFA</span>
+              <span>{priceRange[0].toLocaleString('fr-FR')} FCFA</span>
+              <span>{priceRange[1].toLocaleString('fr-FR')} FCFA</span>
             </div>
           </AccordionContent>
         </AccordionItem>
