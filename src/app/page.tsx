@@ -133,9 +133,11 @@ export default function HomePage() {
         </section>
 
         {/* Destockage Banner */}
-        <section className="my-16 relative h-80 flex items-center justify-center text-white rounded-lg overflow-hidden">
-          <Image src="https://res.cloudinary.com/dm6yuokre/image/upload/v1753066980/sonko_shop_banner_1200x400_uo67kz.png" alt="Destockage" layout="fill" objectFit="cover" data-ai-hint="soccer jerseys sale" />
-          <div className="absolute inset-0 bg-red-800 bg-opacity-30" />
+        <section className="my-16">
+          <Link href="/products?category=Promos" className="block relative h-80 flex items-center justify-center text-white rounded-lg overflow-hidden group">
+            <Image src="https://res.cloudinary.com/dm6yuokre/image/upload/v1753066980/sonko_shop_banner_1200x400_uo67kz.png" alt="Destockage" layout="fill" objectFit="cover" data-ai-hint="soccer jerseys sale" className="transition-transform duration-300 group-hover:scale-105" />
+            <div className="absolute inset-0 bg-red-800 bg-opacity-30 group-hover:bg-opacity-20 transition-all" />
+          </Link>
         </section>
 
         {/* Bons Plans */}
