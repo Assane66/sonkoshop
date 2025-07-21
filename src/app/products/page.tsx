@@ -76,7 +76,8 @@ export default function ProductsPage() {
     if (searchTerm) {
       productsToFilter = productsToFilter.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()))
+        (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (p.category && p.category.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
@@ -117,7 +118,7 @@ export default function ProductsPage() {
       <div className="mb-8 relative">
         <Input
           type="search"
-          placeholder="Rechercher un produit..."
+          placeholder="Rechercher un produit, une catégorie..."
           className="pl-10 text-base"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
