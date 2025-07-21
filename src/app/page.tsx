@@ -119,7 +119,7 @@ export default function HomePage() {
 
         {/* Destockage Banner */}
         <section className="my-16 relative h-80 flex items-center justify-center text-white rounded-lg overflow-hidden">
-          <Image src="https://placehold.co/1200x400/B22222/FFFFFF.png" alt="Destockage" layout="fill" objectFit="cover" data-ai-hint="soccer jerseys sale" />
+          <Image src="https://res.cloudinary.com/dm6yuokre/image/upload/v1753066980/sonko_shop_banner_1200x400_uo67kz.png" alt="Destockage" layout="fill" objectFit="cover" data-ai-hint="soccer jerseys sale" />
           <div className="absolute inset-0 bg-red-800 bg-opacity-30" />
           <div className="relative z-10 text-center">
             <h2 className="text-6xl font-black tracking-wider">DESTOCKAGE</h2>
