@@ -19,16 +19,10 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Input } from '../ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '../ui/sheet';
-
-
-const navLinks = [
-    { href: "/products?category=Maillots", label: "Maillots" },
-    { href: "/products?category=Chaussures", label: "Chaussures" },
-    { href: "/products?category=Pantalons", label: "Pantalons" },
-    { href: "/products", label: "Equipements" },
-    { href: "/products", label: "Accessoires" },
-    { href: "/products", label: "Promos" },
-];
+import { useState, useEffect } from 'react';
+import { db } from '@/lib/firebase';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import type { SiteCategory } from '@/types';
 
 
 export default function Header() {
@@ -37,6 +31,30 @@ export default function Header() {
   const totalItems = getCartTotalItems();
   const { toast } = useToast();
   const router = useRouter();
+  const [navCategories, setNavCategories] = useState<SiteCategory[]>([]);
+
+  useEffect(() => {
+    const categoriesCollection = collection(db, 'categories');
+    const q = query(categoriesCollection, orderBy('name', 'asc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedCategories: SiteCategory[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as SiteCategory));
+      setNavCategories(fetchedCategories);
+    }, (error) => {
+      console.error("Error fetching categories for header:", error);
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les catégories de navigation." });
+    });
+
+    return () => unsubscribe();
+  }, [toast]);
+  
+  const getInitials = (name: string | undefined) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  };
 
   const handleLogout = async () => {
     try {
@@ -46,11 +64,6 @@ export default function Header() {
     } catch (error) {
       toast({ variant: 'destructive', title: "Erreur lors de la déconnexion" });
     }
-  };
-  
-  const getInitials = (name: string | undefined) => {
-    if (!name) return 'U';
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   };
 
   const UserMenu = () => (
@@ -102,9 +115,9 @@ export default function Header() {
             </SheetTrigger>
             <SheetContent side="left">
                 <nav className="grid gap-6 text-lg font-medium mt-8">
-                    {navLinks.map(link => (
-                        <Link key={link.href} href={link.href} className="text-muted-foreground hover:text-foreground">
-                            {link.label}
+                    {navCategories.map(category => (
+                        <Link key={category.id} href={`/products?category=${encodeURIComponent(category.name)}`} className="text-muted-foreground hover:text-foreground">
+                            {category.name}
                         </Link>
                     ))}
                 </nav>
@@ -152,9 +165,9 @@ export default function Header() {
 
         {/* Bottom Nav */}
         <nav className="hidden md:flex h-12 items-center justify-center space-x-6">
-            {navLinks.map(link => (
-                <Link key={link.href} href={link.href} className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-                    {link.label}
+            {navCategories.map(category => (
+                <Link key={category.id} href={`/products?category=${encodeURIComponent(category.name)}`} className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+                    {category.name}
                 </Link>
             ))}
         </nav>
