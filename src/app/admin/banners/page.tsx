@@ -19,19 +19,21 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { useForm, SubmitHandler } from 'react-hook-form';
+import { useForm, SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import type { Banner } from '@/types';
+import type { Banner, BannerPlacement } from '@/types';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import Image from 'next/image';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const bannerFormSchema = z.object({
   title: z.string().min(3, { message: "Le titre doit contenir au moins 3 caractères." }),
   subtitle: z.string().optional(),
   imageUrl: z.string().url({ message: "Veuillez entrer une URL d'image valide." }),
   link: z.string().min(1, { message: "Un lien de destination est requis." }),
+  placement: z.enum(['top_carousel', 'category_promo'], { required_error: "Un emplacement est requis."}),
   imageAiHint: z.string().optional(),
 });
 
@@ -51,6 +53,7 @@ export default function AdminBannersPage() {
       subtitle: '',
       imageUrl: '',
       link: '/',
+      placement: 'top_carousel',
       imageAiHint: '',
     },
   });
@@ -58,7 +61,6 @@ export default function AdminBannersPage() {
   useEffect(() => {
     setIsLoading(true);
     const bannersCollection = collection(db, 'banners');
-    // Add orderBy if you have a field like 'createdAt' or 'order'
     const q = query(bannersCollection, orderBy('title', 'asc')); 
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -81,7 +83,7 @@ export default function AdminBannersPage() {
     if (editingBanner) {
       form.reset(editingBanner);
     } else {
-      form.reset({ title: '', subtitle: '', imageUrl: '', link: '/', imageAiHint: '' });
+      form.reset({ title: '', subtitle: '', imageUrl: '', link: '/', placement: 'top_carousel', imageAiHint: '' });
     }
   }, [editingBanner, form, isFormOpen]);
 
@@ -110,10 +112,10 @@ export default function AdminBannersPage() {
     try {
       if (editingBanner) {
         const bannerRef = doc(db, 'banners', editingBanner.id);
-        await updateDoc(bannerRef, { ...data /*, updatedAt: serverTimestamp() */ });
+        await updateDoc(bannerRef, { ...data });
         toast({ title: "Bannière modifiée", description: `La bannière "${data.title}" a été mise à jour.` });
       } else {
-        await addDoc(collection(db, 'banners'), { ...data /*, createdAt: serverTimestamp() */ });
+        await addDoc(collection(db, 'banners'), { ...data });
         toast({ title: "Bannière ajoutée", description: `La bannière "${data.title}" a été ajoutée.` });
       }
       setIsFormOpen(false);
@@ -157,6 +159,25 @@ export default function AdminBannersPage() {
               <Label htmlFor="subtitle">Sous-titre (Optionnel)</Label>
               <Input id="subtitle" {...form.register('subtitle')} className="mt-1" />
             </div>
+             <div>
+              <Label htmlFor="placement">Emplacement</Label>
+               <Controller
+                  name="placement"
+                  control={form.control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger id="placement" className="mt-1">
+                        <SelectValue placeholder="Choisir un emplacement" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="top_carousel">Carrousel du haut</SelectItem>
+                        <SelectItem value="category_promo">Promotion des catégories</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              {form.formState.errors.placement && <p className="text-sm text-destructive mt-1">{form.formState.errors.placement.message}</p>}
+            </div>
             <div>
               <Label htmlFor="imageUrl">URL de l'Image</Label>
               <Input id="imageUrl" {...form.register('imageUrl')} className="mt-1" placeholder="https://example.com/image.png" />
@@ -193,6 +214,7 @@ export default function AdminBannersPage() {
               <TableRow>
                 <TableHead className="w-24">Image</TableHead>
                 <TableHead>Titre</TableHead>
+                <TableHead>Emplacement</TableHead>
                 <TableHead>Lien</TableHead>
                 <TableHead className="text-center w-32">Actions</TableHead>
               </TableRow>
@@ -206,6 +228,7 @@ export default function AdminBannersPage() {
                     </div>
                   </TableCell>
                   <TableCell className="font-medium">{banner.title}</TableCell>
+                   <TableCell className="text-xs text-muted-foreground">{banner.placement === 'top_carousel' ? 'Carrousel haut' : 'Promo catégorie'}</TableCell>
                   <TableCell><a href={banner.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate max-w-xs block">{banner.link}</a></TableCell>
                   <TableCell className="text-center space-x-1">
                     <Button variant="ghost" size="icon" onClick={() => handleEditBanner(banner)} title="Modifier">
@@ -238,7 +261,7 @@ export default function AdminBannersPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                     <ImageIcon className="mx-auto h-12 w-12 text-gray-400 mb-2" />
                     Aucune bannière trouvée. Ajoutez-en une pour commencer!
                   </TableCell>

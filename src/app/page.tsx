@@ -26,7 +26,8 @@ const ProductCarousel = ({ products }: { products: Product[] }) => {
 };
 
 export default function HomePage() {
-  const [banners, setBanners] = useState<Banner[]>([]);
+  const [topCarouselBanners, setTopCarouselBanners] = useState<Banner[]>([]);
+  const [categoryPromoBanners, setCategoryPromoBanners] = useState<Banner[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [bonsPlansProducts, setBonsPlansProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,12 +36,13 @@ export default function HomePage() {
   useEffect(() => {
     setIsLoading(true);
     
-    // Fetch Banners
+    // Fetch Banners and filter them by placement
     const bannersCollection = collection(db, 'banners');
     const bannersQuery = query(bannersCollection, orderBy('title', 'asc'));
     const unsubBanners = onSnapshot(bannersQuery, (snapshot) => {
       const fetchedBanners: Banner[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Banner));
-      setBanners(fetchedBanners);
+      setTopCarouselBanners(fetchedBanners.filter(b => b.placement === 'top_carousel'));
+      setCategoryPromoBanners(fetchedBanners.filter(b => b.placement === 'category_promo'));
     }, (error) => {
       console.error("Error fetching banners:", error);
       toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les bannières." });
@@ -85,7 +87,7 @@ export default function HomePage() {
         <section className="my-8">
            {isLoading ? 
             <div className="w-full h-[300px] md:h-[400px] lg:h-[500px] bg-muted animate-pulse rounded-lg shadow-md" /> :
-            <BannerCarousel banners={banners} />
+            <BannerCarousel banners={topCarouselBanners} />
            }
         </section>
 
@@ -106,29 +108,28 @@ export default function HomePage() {
           )}
         </section>
 
-        {/* Categories Grid */}
+        {/* Categories Grid - Now Dynamic */}
         <section className="my-16">
           <h2 className="text-2xl font-bold text-center mb-6">CATÉGORIES LES PLUS POPULAIRES</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Link href="/products?category=Maillots" className="relative h-96 rounded-lg overflow-hidden group">
-              <Image src="https://placehold.co/600x800.png" alt="Prism Pack" layout="fill" objectFit="cover" className="transition-transform duration-300 group-hover:scale-105" data-ai-hint="soccer jersey promotion" />
-              <div className="absolute inset-0 bg-black bg-opacity-40 flex items-end p-8">
-                <div>
-                  <h3 className="text-4xl font-bold text-white">PRISM PACK</h3>
-                  <Button variant="secondary" className="mt-2">NIKE PRISM</Button>
-                </div>
-              </div>
-            </Link>
-            <Link href="/products?category=Chaussures" className="relative h-96 rounded-lg overflow-hidden group">
-              <Image src="https://placehold.co/600x800/228B22/FFFFFF.png" alt="Road to Glory" layout="fill" objectFit="cover" className="transition-transform duration-300 group-hover:scale-105" data-ai-hint="soccer cleats grass" />
-              <div className="absolute inset-0 bg-black bg-opacity-40 flex items-end p-8">
-                <div>
-                  <h3 className="text-4xl font-bold text-white">ROAD TO GLORY</h3>
-                  <Button variant="secondary" className="mt-2">ADIDAS</Button>
-                </div>
-              </div>
-            </Link>
-          </div>
+          {isLoading ? (
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="h-96 bg-muted rounded-lg animate-pulse" /><div className="h-96 bg-muted rounded-lg animate-pulse" /></div>
+          ) : categoryPromoBanners.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {categoryPromoBanners.slice(0, 2).map(banner => (
+                 <Link key={banner.id} href={banner.link} className="relative h-96 rounded-lg overflow-hidden group">
+                    <Image src={banner.imageUrl} alt={banner.title} layout="fill" objectFit="cover" className="transition-transform duration-300 group-hover:scale-105" data-ai-hint={banner.imageAiHint || 'category promotion'} />
+                    <div className="absolute inset-0 bg-black bg-opacity-40 flex items-end p-8">
+                      <div>
+                        <h3 className="text-4xl font-bold text-white">{banner.title}</h3>
+                        {banner.subtitle && <Button variant="secondary" className="mt-2">{banner.subtitle}</Button>}
+                      </div>
+                    </div>
+                  </Link>
+              ))}
+            </div>
+          ) : (
+             <div className="text-center py-10"><p className="text-muted-foreground">Aucune promotion de catégorie pour le moment.</p></div>
+          )}
         </section>
 
         {/* Destockage Banner */}

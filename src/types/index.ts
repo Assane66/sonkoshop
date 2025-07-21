@@ -55,6 +55,8 @@ export enum ProductCategoryEnum {
 
 export const productCategoriesArray: string[] = Object.values(ProductCategoryEnum);
 
+export type BannerPlacement = 'top_carousel' | 'category_promo';
+
 export type Banner = {
   id: string; // Firestore document ID
   imageUrl: string;
@@ -62,6 +64,7 @@ export type Banner = {
   subtitle?: string;
   link: string;
   imageAiHint?: string;
+  placement: BannerPlacement;
 };
 
 export interface SiteCategory {
