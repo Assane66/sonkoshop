@@ -46,9 +46,7 @@ export default function Footer() {
           <div>
             <h3 className="font-bold mb-4">Nos boutiques</h3>
             <ul className="space-y-2 text-sm text-gray-400">
-              <li><Link href="#" className="hover:text-white">Tivaouane Peulh</Link></li>
-              <li><Link href="#" className="hover:text-white">Keur Massar</Link></li>
-              <li><Link href="#" className="hover:text-white">Pikine</Link></li>
+              <li><Link href="https://maps.app.goo.gl/vb67yYM6BqKWq6jh7" target="_blank" rel="noopener noreferrer" className="hover:text-white">Tivaouane Peulh</Link></li>
             </ul>
           </div>
           <div className="md:col-span-2">
