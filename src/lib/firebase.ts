@@ -3,7 +3,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-// import { getAnalytics } from "firebase/analytics"; // Analytics can be added if needed
+import { getAnalytics } from "firebase/analytics"; // Analytics can be added if needed
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -26,6 +26,6 @@ if (!getApps().length) {
 
 const db = getFirestore(app);
 const auth = getAuth(app);
-// const analytics = typeof window !== 'undefined' ? getAnalytics(app) : undefined; // Initialize Analytics only on client side if needed
+const analytics = typeof window !== 'undefined' ? getAnalytics(app) : undefined; // Initialize Analytics only on client side if needed
 
-export { app, db, auth };
+export { app, db, auth, analytics };
