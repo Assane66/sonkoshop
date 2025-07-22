@@ -55,6 +55,8 @@ export default function AdminPromotionsPage() {
     },
   });
 
+  const isSubmitting = form.formState.isSubmitting;
+
   useEffect(() => {
     setIsLoading(true);
     const promotionsCollection = collection(db, 'promotions');
@@ -108,8 +110,6 @@ export default function AdminPromotionsPage() {
   };
 
   const handleDeletePromotion = async (promotion: Promotion) => {
-    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer la promotion "${promotion.name}" ? Cela retirera la réduction sur tous les produits de la catégorie ${promotion.category}.`)) return;
-
     try {
       await removePromotionFromCategory(promotion.category);
       await deleteDoc(doc(db, 'promotions', promotion.id));
@@ -121,10 +121,8 @@ export default function AdminPromotionsPage() {
   };
 
   const onSubmit: SubmitHandler<PromotionFormValues> = async (data) => {
-    form.formState.isSubmitting = true;
     try {
       if (editingPromotion) {
-        // If category changes, first remove promo from old category
         if (editingPromotion.category !== data.category) {
           await removePromotionFromCategory(editingPromotion.category);
         }
@@ -142,8 +140,6 @@ export default function AdminPromotionsPage() {
     } catch (error) {
        console.error("Error saving promotion:", error);
        toast({ variant: "destructive", title: "Erreur", description: "Impossible de sauvegarder la promotion." });
-    } finally {
-        form.formState.isSubmitting = false;
     }
   };
 
@@ -182,7 +178,7 @@ export default function AdminPromotionsPage() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
             <div>
               <Label htmlFor="name">Nom de la promotion</Label>
-              <Input id="name" {...form.register('name')} className="mt-1" placeholder="Ex: Soldes d'hiver" disabled={form.formState.isSubmitting} />
+              <Input id="name" {...form.register('name')} className="mt-1" placeholder="Ex: Soldes d'hiver" disabled={isSubmitting} />
               {form.formState.errors.name && <p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>}
             </div>
              <div>
@@ -191,7 +187,7 @@ export default function AdminPromotionsPage() {
                   name="category"
                   control={form.control}
                   render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value} disabled={categories.length === 0 || form.formState.isSubmitting}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={categories.length === 0 || isSubmitting}>
                       <SelectTrigger id="category" className="mt-1">
                         <SelectValue placeholder="Choisir une catégorie" />
                       </SelectTrigger>
@@ -207,13 +203,13 @@ export default function AdminPromotionsPage() {
             </div>
             <div>
               <Label htmlFor="discountAmount">Montant de la Réduction (FCFA)</Label>
-              <Input id="discountAmount" type="number" {...form.register('discountAmount')} className="mt-1" placeholder="Ex: 1000" disabled={form.formState.isSubmitting}/>
+              <Input id="discountAmount" type="number" {...form.register('discountAmount')} className="mt-1" placeholder="Ex: 1000" disabled={isSubmitting}/>
               {form.formState.errors.discountAmount && <p className="text-sm text-destructive mt-1">{form.formState.errors.discountAmount.message}</p>}
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={form.formState.isSubmitting}>Annuler</Button>
-              <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isSubmitting}>Annuler</Button>
+              <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {editingPromotion ? 'Sauvegarder' : 'Appliquer la Promotion'}
               </Button>
             </DialogFooter>
@@ -261,9 +257,11 @@ export default function AdminPromotionsPage() {
                               <DialogClose asChild>
                                   <Button variant="outline">Annuler</Button>
                               </DialogClose>
-                              <Button variant="destructive" onClick={() => handleDeletePromotion(promo)}>
-                                  Supprimer
-                              </Button>
+                              <DialogClose asChild>
+                                  <Button variant="destructive" onClick={() => handleDeletePromotion(promo)}>
+                                      Supprimer
+                                  </Button>
+                              </DialogClose>
                           </DialogFooter>
                       </DialogContent>
                     </Dialog>
@@ -284,3 +282,5 @@ export default function AdminPromotionsPage() {
     </div>
   );
 }
+
+    
