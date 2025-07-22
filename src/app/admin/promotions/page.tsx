@@ -237,7 +237,9 @@ export default function AdminPromotionsPage() {
                 <TableRow key={promo.id}>
                   <TableCell className="font-medium">{promo.name}</TableCell>
                   <TableCell>{promo.category}</TableCell>
-                  <TableCell className="text-green-600 font-semibold">{promo.discountAmount.toLocaleString('fr-FR')} FCFA</TableCell>
+                  <TableCell className="text-green-600 font-semibold">
+                    {promo.discountAmount ? `${promo.discountAmount.toLocaleString('fr-FR')} FCFA` : 'N/A'}
+                  </TableCell>
                   <TableCell className="text-center space-x-1">
                     <Button variant="ghost" size="icon" onClick={() => handleEditPromotion(promo)} title="Modifier">
                       <Edit3 className="h-4 w-4" />
@@ -282,5 +284,3 @@ export default function AdminPromotionsPage() {
     </div>
   );
 }
-
-    
