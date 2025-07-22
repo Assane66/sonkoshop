@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation'; 
-import { LayoutDashboard, Archive, LayoutGrid, ImageIcon, ShoppingCart, Settings, LogOut } from 'lucide-react'; 
+import { LayoutDashboard, Archive, LayoutGrid, ImageIcon, ShoppingCart, Settings, LogOut, Megaphone } from 'lucide-react'; 
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext'; 
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ const sidebarNavItems = [
   { href: '/admin/categories', label: 'Catégories', icon: LayoutGrid },
   { href: '/admin/banners', label: 'Bannières', icon: ImageIcon },
   { href: '/admin/orders', label: 'Commandes', icon: ShoppingCart },
+  { href: '/admin/promotions', label: 'Promotions', icon: Megaphone },
   { href: '/admin/settings', label: 'Paramètres', icon: Settings },
 ];
 
