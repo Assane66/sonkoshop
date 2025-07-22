@@ -129,22 +129,13 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   }, [product, selectedSize]);
   
   const getDisplayPrice = () => {
-    if (!product) return { currentPrice: 0, originalPrice: null, promotionActive: false, promotionPercentage: null };
-    let currentPrice = product.price;
-    let originalPrice = null;
-    let promotionActive = false;
-    if (product.promotionPercentage && product.promotionPercentage > 0) {
-      const endDate = product.promotionEndDate ? (product.promotionEndDate as Timestamp).toDate() : null;
-      if (!endDate || new Date() < endDate) {
-        originalPrice = product.price;
-        currentPrice = product.price * (1 - product.promotionPercentage / 100);
-        promotionActive = true;
-      }
-    }
-    return { currentPrice, originalPrice, promotionActive, promotionPercentage: product.promotionPercentage };
+    if (!product) return { currentPrice: 0, originalPrice: null };
+    const currentPrice = product.promotionPrice || product.price;
+    const originalPrice = product.promotionPrice ? product.price : null;
+    return { currentPrice, originalPrice };
   };
 
-  const { currentPrice, originalPrice, promotionActive, promotionPercentage } = getDisplayPrice();
+  const { currentPrice, originalPrice } = getDisplayPrice();
 
   const handleAddToCart = () => {
     if (!product) return;
@@ -185,6 +176,9 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   
   const displayImageAiHint = product.imageAiHint || 'product image detail';
   const CategoryIconComponent = categoryIcons[product.category as keyof typeof categoryIcons] || categoryIcons["Default"];
+  const promotionActive = !!originalPrice;
+  const discountAmount = originalPrice && currentPrice ? originalPrice - currentPrice : 0;
+
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">
@@ -195,7 +189,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         <Card className="shadow-xl rounded-lg group">
           <div className="relative w-full aspect-square overflow-hidden rounded-t-lg">
             <Image src={mainImageUrl} alt={product.name} fill priority sizes="(max-width: 768px) 100vw, 50vw" className="object-cover transition-transform duration-300 group-hover:scale-105" data-ai-hint={displayImageAiHint} onError={(e) => e.currentTarget.src = 'https://placehold.co/600x600.png'} />
-            {promotionActive && promotionPercentage && <Badge className="absolute top-2 left-2 bg-red-600 text-white text-base px-3 py-1" variant="destructive">-{promotionPercentage}%</Badge>}
+            {promotionActive && <Badge className="absolute top-2 left-2 bg-red-600 text-white text-base px-3 py-1" variant="destructive">-{discountAmount.toLocaleString('fr-FR')} FCFA</Badge>}
             {product.stock === 0 && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><Badge variant="destructive" className="text-lg px-4 py-2">ÉPUISÉ</Badge></div>}
           </div>
           {product.imageUrls && product.imageUrls.length > 1 && (
@@ -229,7 +223,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             <CardContent>
               <div className="mb-4">
                 {originalPrice && <p className="text-xl lg:text-2xl text-muted-foreground line-through">{originalPrice.toLocaleString('fr-FR')} FCFA</p>}
-                <p className={`text-2xl lg:text-3xl font-semibold ${promotionActive ? 'text-red-600' : 'text-accent'}`}>{currentPrice.toLocaleString('fr-FR')} FCFA {promotionActive && promotionPercentage && <Badge variant="destructive" className="ml-2 text-sm">-{promotionPercentage}%</Badge>}</p>
+                <p className={`text-2xl lg:text-3xl font-semibold ${promotionActive ? 'text-red-600' : 'text-accent'}`}>{currentPrice.toLocaleString('fr-FR')} FCFA {promotionActive && <Badge variant="destructive" className="ml-2 text-sm">PROMO</Badge>}</p>
               </div>
               <CardDescription className="text-base text-foreground/80 leading-relaxed">{product.description}</CardDescription>
               <Separator className="my-6" />

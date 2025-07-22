@@ -14,7 +14,6 @@ import {
   DialogFooter,
   DialogClose,
   DialogTrigger,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,26 +21,18 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm, SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import type { SiteCategory } from '@/types';
+import type { SiteCategory, Promotion } from '@/types';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy, doc, addDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-// Define the type for a Promotion
-interface Promotion {
-  id: string;
-  name: string;
-  category: string;
-  discountPercentage: number;
-}
+import { applyPromotionToCategory, removePromotionFromCategory } from '@/lib/promotions';
 
 const promotionFormSchema = z.object({
   name: z.string().min(3, { message: "Le nom doit contenir au moins 3 caractères." }),
   category: z.string().min(1, { message: "Une catégorie est requise." }),
-  discountPercentage: z.coerce
+  discountAmount: z.coerce
     .number()
-    .min(1, { message: "La réduction doit être d'au moins 1%." })
-    .max(90, { message: "La réduction ne peut pas dépasser 90%." }),
+    .min(1, { message: "Le montant de la réduction doit être d'au moins 1 FCFA." }),
 });
 
 type PromotionFormValues = z.infer<typeof promotionFormSchema>;
@@ -59,7 +50,7 @@ export default function AdminPromotionsPage() {
     defaultValues: {
       name: '',
       category: '',
-      discountPercentage: 10,
+      discountAmount: 1000,
     },
   });
 
@@ -101,7 +92,7 @@ export default function AdminPromotionsPage() {
     if (editingPromotion) {
       form.reset(editingPromotion);
     } else {
-      form.reset({ name: '', category: '', discountPercentage: 10 });
+      form.reset({ name: '', category: '', discountAmount: 1000 });
     }
   }, [editingPromotion, form, isFormOpen]);
   
@@ -115,12 +106,13 @@ export default function AdminPromotionsPage() {
     setIsFormOpen(true);
   };
 
-  const handleDeletePromotion = async (promotionId: string, promotionName: string) => {
+  const handleDeletePromotion = async (promotion: Promotion) => {
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer la promotion "${promotion.name}" ? Cela retirera la réduction sur tous les produits de la catégorie ${promotion.category}.`)) return;
+
     try {
-      // NOTE: Here you would trigger the logic to remove the promotion from products.
-      // For now, we only delete the promotion document itself.
-      await deleteDoc(doc(db, 'promotions', promotionId));
-      toast({ title: "Promotion supprimée", description: `La promotion "${promotionName}" a été supprimée.` });
+      await removePromotionFromCategory(promotion.category);
+      await deleteDoc(doc(db, 'promotions', promotion.id));
+      toast({ title: "Promotion supprimée", description: `La promotion "${promotion.name}" et les réductions associées ont été supprimées.` });
     } catch (error) {
       console.error("Error deleting promotion:", error);
       toast({ variant: "destructive", title: "Erreur", description: "Impossible de supprimer la promotion." });
@@ -129,16 +121,22 @@ export default function AdminPromotionsPage() {
 
   const onSubmit: SubmitHandler<PromotionFormValues> = async (data) => {
     try {
-        if (editingPromotion) {
-            const promotionRef = doc(db, 'promotions', editingPromotion.id);
-            await updateDoc(promotionRef, { ...data });
-            toast({ title: "Promotion modifiée", description: "La logique d'application sera bientôt disponible." });
-        } else {
-            await addDoc(collection(db, 'promotions'), { ...data });
-            toast({ title: "Promotion ajoutée", description: "La logique d'application sera bientôt disponible." });
+      if (editingPromotion) {
+        // If category changes, first remove promo from old category
+        if (editingPromotion.category !== data.category) {
+          await removePromotionFromCategory(editingPromotion.category);
         }
-        setIsFormOpen(false);
-        setEditingPromotion(null);
+        const promotionRef = doc(db, 'promotions', editingPromotion.id);
+        await updateDoc(promotionRef, { ...data });
+        await applyPromotionToCategory(data.category, data.discountAmount);
+        toast({ title: "Promotion modifiée", description: `La promotion a été mise à jour pour la catégorie ${data.category}.` });
+      } else {
+        await addDoc(collection(db, 'promotions'), { ...data });
+        await applyPromotionToCategory(data.category, data.discountAmount);
+        toast({ title: "Promotion ajoutée", description: `La promotion a été appliquée à la catégorie ${data.category}.` });
+      }
+      setIsFormOpen(false);
+      setEditingPromotion(null);
     } catch (error) {
        console.error("Error saving promotion:", error);
        toast({ variant: "destructive", title: "Erreur", description: "Impossible de sauvegarder la promotion." });
@@ -165,9 +163,9 @@ export default function AdminPromotionsPage() {
       
       <Card>
         <CardHeader>
-          <CardTitle>Important</CardTitle>
+          <CardTitle>Comment ça marche ?</CardTitle>
           <CardDescription>
-            Cette section vous permet de définir des campagnes de promotion. La logique pour appliquer automatiquement ces réductions aux produits est en cours de développement et sera disponible prochainement.
+            Créez une campagne de promotion qui s'appliquera à tous les produits d'une catégorie. La réduction sera automatiquement calculée et affichée sur le site.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -204,15 +202,15 @@ export default function AdminPromotionsPage() {
               {form.formState.errors.category && <p className="text-sm text-destructive mt-1">{form.formState.errors.category.message}</p>}
             </div>
             <div>
-              <Label htmlFor="discountPercentage">Pourcentage de Réduction (%)</Label>
-              <Input id="discountPercentage" type="number" {...form.register('discountPercentage')} className="mt-1" placeholder="Ex: 15" disabled={form.formState.isSubmitting}/>
-              {form.formState.errors.discountPercentage && <p className="text-sm text-destructive mt-1">{form.formState.errors.discountPercentage.message}</p>}
+              <Label htmlFor="discountAmount">Montant de la Réduction (FCFA)</Label>
+              <Input id="discountAmount" type="number" {...form.register('discountAmount')} className="mt-1" placeholder="Ex: 1000" disabled={form.formState.isSubmitting}/>
+              {form.formState.errors.discountAmount && <p className="text-sm text-destructive mt-1">{form.formState.errors.discountAmount.message}</p>}
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={form.formState.isSubmitting}>Annuler</Button>
               <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {editingPromotion ? 'Sauvegarder' : 'Créer la Promotion'}
+                {editingPromotion ? 'Sauvegarder' : 'Appliquer la Promotion'}
               </Button>
             </DialogFooter>
           </form>
@@ -235,9 +233,9 @@ export default function AdminPromotionsPage() {
                 <TableRow key={promo.id}>
                   <TableCell className="font-medium">{promo.name}</TableCell>
                   <TableCell>{promo.category}</TableCell>
-                  <TableCell className="text-green-600 font-semibold">{promo.discountPercentage}%</TableCell>
+                  <TableCell className="text-green-600 font-semibold">{promo.discountAmount.toLocaleString('fr-FR')} FCFA</TableCell>
                   <TableCell className="text-center space-x-1">
-                    <Button variant="ghost" size="icon" onClick={() => handleEditPromotion(promo)} title="Modifier" disabled>
+                    <Button variant="ghost" size="icon" onClick={() => handleEditPromotion(promo)} title="Modifier">
                       <Edit3 className="h-4 w-4" />
                     </Button>
                      <Dialog>
@@ -257,11 +255,9 @@ export default function AdminPromotionsPage() {
                               <DialogClose asChild>
                                   <Button variant="outline">Annuler</Button>
                               </DialogClose>
-                              <DialogClose asChild>
-                                  <Button variant="destructive" onClick={() => handleDeletePromotion(promo.id, promo.name)}>
-                                      Supprimer
-                                  </Button>
-                              </DialogClose>
+                              <Button variant="destructive" onClick={() => handleDeletePromotion(promo)}>
+                                  Supprimer
+                              </Button>
                           </DialogFooter>
                       </DialogContent>
                     </Dialog>

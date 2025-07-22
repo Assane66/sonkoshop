@@ -22,25 +22,10 @@ export default function ProductCard({ product }: ProductCardProps) {
   const { toast } = useToast();
 
   const getDisplayPrice = () => {
-    let currentPrice = product.price;
-    let originalPrice = null;
-    let promotionActive = false;
-
-    if (product.promotionPercentage && product.promotionPercentage > 0) {
-      if (product.promotionEndDate) {
-        const endDate = product.promotionEndDate instanceof Timestamp ? product.promotionEndDate.toDate().getTime() : new Date(product.promotionEndDate as any).getTime();
-        if (new Date().getTime() < endDate) {
-          originalPrice = product.price;
-          currentPrice = product.price * (1 - product.promotionPercentage / 100);
-          promotionActive = true;
-        }
-      } else {
-        originalPrice = product.price;
-        currentPrice = product.price * (1 - product.promotionPercentage / 100);
-        promotionActive = true;
-      }
-    }
-    return { currentPrice, originalPrice, promotionActive };
+    // If promotionPrice is set, use it. Otherwise, use the base price.
+    const currentPrice = product.promotionPrice || product.price;
+    const originalPrice = product.promotionPrice ? product.price : null;
+    return { currentPrice, originalPrice };
   };
 
   const { currentPrice, originalPrice } = getDisplayPrice();
@@ -85,6 +70,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           <div className="absolute top-2 left-2 flex flex-col gap-1">
              <Badge variant="secondary" className="text-xs bg-white text-black border border-gray-200">NEW</Badge>
              <Badge variant="secondary" className="text-xs bg-white text-cyan-600 border border-gray-200 flex items-center gap-1"><Truck className="h-3 w-3" /> 24h</Badge>
+             {originalPrice && <Badge variant="destructive">PROMO</Badge>}
           </div>
         </div>
         <CardContent className="p-3 text-center flex-grow flex flex-col justify-between">

@@ -14,9 +14,19 @@ export type Product = {
   sizes?: string[];
   featured?: boolean;
   imageAiHint?: string;
-  promotionPercentage?: number | null; // ex: 10, 20, 30
-  promotionEndDate?: Timestamp | null; // Firestore Timestamp
+  
+  // Promotion fields now managed by the separate Promotions feature
+  promotionPrice?: number | null; // The final price after promotion
+  originalPrice?: number | null; // The price before promotion
 };
+
+// This type represents a promotion campaign
+export interface Promotion {
+  id: string;
+  name: string;
+  category: string;
+  discountAmount: number; // e.g. 1000 FCFA
+}
 
 export type Review = {
   id: string; // Firestore document ID

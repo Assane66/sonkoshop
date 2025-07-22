@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { Loader2, X } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy, Timestamp, serverTimestamp, deleteField } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 
 // Cloudinary configuration
 const CLOUDINARY_CLOUD_NAME = 'dm6yuokre';
@@ -32,8 +32,8 @@ const productFormSchema = z.object({
   imageAiHint: z.string().optional().default(''),
   sizes: z.array(z.string()).optional(),
   featured: z.boolean().optional(),
-  promotionPercentage: z.coerce.number().min(0).max(100).optional().nullable().default(null),
-  isPromotion24h: z.boolean().optional().default(false),
+  // Promotion fields are now managed by the separate Promotions feature
+  // and will not be part of this form.
 });
 
 
@@ -41,17 +41,11 @@ type ProductFormValues = z.infer<typeof productFormSchema>;
 
 interface ProductFormProps {
   product?: Product | null;
-  onSubmit: (data: Omit<Product, 'id' | 'promotionEndDate'> & { promotionEndDate?: Date | null | typeof deleteField }) => Promise<void>;
+  onSubmit: (data: Omit<Product, 'id'>) => Promise<void>;
   onCancel: () => void;
 }
 
 const availableSizes = ['S', 'M', 'L', 'XL', 'XXL', '38', '39', '40', '41', '42', '43', '44', '45', 'Taille unique'];
-const promotionOptions = [
-  { label: "Aucune", value: 0 },
-  { label: "10%", value: 10 },
-  { label: "20%", value: 20 },
-  { label: "30%", value: 30 },
-];
 
 export default function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
   const [categories, setCategories] = useState<SiteCategory[]>([]);
@@ -73,12 +67,9 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
       imageAiHint: '',
       sizes: [],
       featured: false,
-      promotionPercentage: null,
-      isPromotion24h: false,
     },
   });
 
-  const promotionPercentageValue = watch('promotionPercentage');
 
   useEffect(() => {
     const categoriesCollection = collection(db, 'categories');
@@ -112,8 +103,6 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
         category: product.category || (categories.length > 0 ? categories[0].name : ''),
         imageUrls: product.imageUrls || [],
         imageAiHint: product.imageAiHint || '',
-        promotionPercentage: product.promotionPercentage || null,
-        isPromotion24h: !!(product.promotionPercentage && product.promotionEndDate),
       };
       reset(defaultValues);
       setImagePreviews(product.imageUrls || []);
@@ -123,7 +112,6 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
         name: '', description: '', price: 0,
         category: categories.length > 0 ? categories[0].name : '',
         stock: 0, imageUrls: [], imageAiHint: '', sizes: [], featured: false,
-        promotionPercentage: null, isPromotion24h: false,
       };
       reset(defaultValues);
       setImagePreviews([]);
@@ -195,30 +183,12 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
 
       const existingUrls = imagePreviews.filter(url => !url.startsWith('blob:'));
       const finalImageUrls = [...existingUrls, ...newImageUrls];
-  
-      const isEditing = !!product?.id;
-      let promotionEndDateValue: Date | null | typeof deleteField;
-  
-      if (data.promotionPercentage && data.promotionPercentage > 0) {
-          if (data.isPromotion24h) {
-              promotionEndDateValue = new Date(Date.now() + 24 * 60 * 60 * 1000);
-          } else {
-              promotionEndDateValue = null; // Infinite promotion
-          }
-      } else {
-          data.promotionPercentage = null; // Ensure percentage is nullified
-          promotionEndDateValue = isEditing ? deleteField() : null;
-      }
-  
+      
       const finalProductData = {
         ...data,
         imageUrls: finalImageUrls,
-        promotionPercentage: data.promotionPercentage || null,
-        promotionEndDate: promotionEndDateValue,
       };
       
-      delete (finalProductData as any).isPromotion24h;
-  
       if (product?.id) {
         (finalProductData as Product).id = product.id;
       }
@@ -289,54 +259,6 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
         />
         {errors.category && <p className="text-sm text-destructive mt-1">{errors.category.message}</p>}
       </div>
-      
-      <div className="border p-4 rounded-md space-y-4">
-        <h4 className="text-md font-medium">Promotion</h4>
-        <div>
-          <Label htmlFor="promotionPercentage">Pourcentage de Réduction</Label>
-          <Controller
-            name="promotionPercentage"
-            control={control}
-            render={({ field }) => (
-              <Select
-                onValueChange={(value) => field.onChange(parseInt(value, 10) === 0 ? null : parseInt(value, 10))}
-                value={field.value === null || field.value === undefined ? "0" : String(field.value)}
-                disabled={isUploading || isLoadingCategories}
-              >
-                <SelectTrigger id="promotionPercentage" className="mt-1">
-                  <SelectValue placeholder="Aucune promotion" />
-                </SelectTrigger>
-                <SelectContent>
-                  {promotionOptions.map(option => (
-                    <SelectItem key={option.value} value={String(option.value)}>{option.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-          {errors.promotionPercentage && <p className="text-sm text-destructive mt-1">{errors.promotionPercentage.message}</p>}
-        </div>
-        {(promotionPercentageValue && promotionPercentageValue > 0) && (
-           <div className="flex items-center space-x-2">
-            <Controller
-              name="isPromotion24h"
-              control={control}
-              render={({ field }) => (
-                <Checkbox
-                  id="isPromotion24h"
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                  disabled={isUploading || isLoadingCategories}
-                />
-              )}
-            />
-            <Label htmlFor="isPromotion24h" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-              Promotion pour 24 heures
-            </Label>
-          </div>
-        )}
-      </div>
-
 
       <div>
         <Label htmlFor="imageFile">Images du Produit</Label>

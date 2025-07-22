@@ -27,21 +27,8 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const calculateDiscountedPrice = (product: Product): number => {
-  let finalPrice = product.price;
-  if (product.promotionPercentage && product.promotionPercentage > 0) {
-    let promotionIsValid = true;
-    if (product.promotionEndDate) {
-      const endDate = product.promotionEndDate instanceof Timestamp ? product.promotionEndDate.toDate().getTime() : new Date(product.promotionEndDate as any).getTime();
-      if (new Date().getTime() >= endDate) {
-        promotionIsValid = false;
-      }
-    }
-    if (promotionIsValid) {
-      finalPrice = product.price * (1 - product.promotionPercentage / 100);
-    }
-  }
-  return finalPrice;
+const calculateCurrentPrice = (product: Product): number => {
+  return product.promotionPrice || product.price;
 };
 
 const SHIPPING_COST_THRESHOLD = 25000;
@@ -73,7 +60,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   }, [cartItems]);
 
   const addToCart = (product: Product, quantity: number, size?: string) => {
-    const priceInCart = calculateDiscountedPrice(product);
+    const priceInCart = calculateCurrentPrice(product);
 
     setCartItems(prevItems => {
       const existingItemIndex = prevItems.findIndex(
