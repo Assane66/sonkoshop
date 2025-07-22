@@ -116,7 +116,6 @@ export default function AdminPromotionsPage() {
   };
 
   const handleDeletePromotion = async (promotionId: string, promotionName: string) => {
-    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer la promotion "${promotionName}" ? Cette action est irréversible et retirera la réduction de tous les produits concernés.`)) return;
     try {
       // NOTE: Here you would trigger the logic to remove the promotion from products.
       // For now, we only delete the promotion document itself.
@@ -181,7 +180,7 @@ export default function AdminPromotionsPage() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
             <div>
               <Label htmlFor="name">Nom de la promotion</Label>
-              <Input id="name" {...form.register('name')} className="mt-1" placeholder="Ex: Soldes d'hiver" />
+              <Input id="name" {...form.register('name')} className="mt-1" placeholder="Ex: Soldes d'hiver" disabled={form.formState.isSubmitting} />
               {form.formState.errors.name && <p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>}
             </div>
              <div>
@@ -190,7 +189,7 @@ export default function AdminPromotionsPage() {
                   name="category"
                   control={form.control}
                   render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value} disabled={categories.length === 0}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={categories.length === 0 || form.formState.isSubmitting}>
                       <SelectTrigger id="category" className="mt-1">
                         <SelectValue placeholder="Choisir une catégorie" />
                       </SelectTrigger>
@@ -206,12 +205,13 @@ export default function AdminPromotionsPage() {
             </div>
             <div>
               <Label htmlFor="discountPercentage">Pourcentage de Réduction (%)</Label>
-              <Input id="discountPercentage" type="number" {...form.register('discountPercentage')} className="mt-1" placeholder="Ex: 15" />
+              <Input id="discountPercentage" type="number" {...form.register('discountPercentage')} className="mt-1" placeholder="Ex: 15" disabled={form.formState.isSubmitting}/>
               {form.formState.errors.discountPercentage && <p className="text-sm text-destructive mt-1">{form.formState.errors.discountPercentage.message}</p>}
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Annuler</Button>
-              <Button type="submit" className="bg-primary hover:bg-primary/90">
+              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={form.formState.isSubmitting}>Annuler</Button>
+              <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {editingPromotion ? 'Sauvegarder' : 'Créer la Promotion'}
               </Button>
             </DialogFooter>
@@ -257,9 +257,11 @@ export default function AdminPromotionsPage() {
                               <DialogClose asChild>
                                   <Button variant="outline">Annuler</Button>
                               </DialogClose>
-                              <Button variant="destructive" onClick={() => handleDeletePromotion(promo.id, promo.name)}>
-                                  Supprimer
-                              </Button>
+                              <DialogClose asChild>
+                                  <Button variant="destructive" onClick={() => handleDeletePromotion(promo.id, promo.name)}>
+                                      Supprimer
+                                  </Button>
+                              </DialogClose>
                           </DialogFooter>
                       </DialogContent>
                     </Dialog>
