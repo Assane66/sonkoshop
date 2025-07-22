@@ -26,7 +26,6 @@ import type { SiteCategory, Promotion } from '@/types';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy, doc, addDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { applyPromotionToCategory, removePromotionFromCategory } from '@/lib/promotions';
 
 const promotionFormSchema = z.object({
   name: z.string().min(3, { message: "Le nom doit contenir au moins 3 caractères." }),
@@ -111,9 +110,8 @@ export default function AdminPromotionsPage() {
 
   const handleDeletePromotion = async (promotion: Promotion) => {
     try {
-      await removePromotionFromCategory(promotion.category);
       await deleteDoc(doc(db, 'promotions', promotion.id));
-      toast({ title: "Promotion supprimée", description: `La promotion "${promotion.name}" et les réductions associées ont été supprimées.` });
+      toast({ title: "Promotion supprimée", description: `La promotion "${promotion.name}" a été supprimée. La mise à jour des produits peut prendre quelques instants.` });
     } catch (error) {
       console.error("Error deleting promotion:", error);
       toast({ variant: "destructive", title: "Erreur", description: "Impossible de supprimer la promotion." });
@@ -123,17 +121,12 @@ export default function AdminPromotionsPage() {
   const onSubmit: SubmitHandler<PromotionFormValues> = async (data) => {
     try {
       if (editingPromotion) {
-        if (editingPromotion.category !== data.category) {
-          await removePromotionFromCategory(editingPromotion.category);
-        }
         const promotionRef = doc(db, 'promotions', editingPromotion.id);
         await updateDoc(promotionRef, { ...data });
-        await applyPromotionToCategory(data.category, data.discountAmount);
-        toast({ title: "Promotion modifiée", description: `La promotion a été mise à jour pour la catégorie ${data.category}.` });
+        toast({ title: "Promotion modifiée", description: `La promotion a été mise à jour. L'application aux produits peut prendre quelques instants.` });
       } else {
         await addDoc(collection(db, 'promotions'), { ...data });
-        await applyPromotionToCategory(data.category, data.discountAmount);
-        toast({ title: "Promotion ajoutée", description: `La promotion a été appliquée à la catégorie ${data.category}.` });
+        toast({ title: "Promotion ajoutée", description: `La promotion a été créée. L'application aux produits peut prendre quelques instants.` });
       }
       setIsFormOpen(false);
       setEditingPromotion(null);
@@ -165,7 +158,7 @@ export default function AdminPromotionsPage() {
         <CardHeader>
           <CardTitle>Comment ça marche ?</CardTitle>
           <CardDescription>
-            Créez une campagne de promotion qui s'appliquera à tous les produits d'une catégorie. La réduction sera automatiquement calculée et affichée sur le site.
+            Créez une campagne de promotion qui s'appliquera à tous les produits d'une catégorie. La réduction sera automatiquement calculée et affichée sur le site. Les changements peuvent prendre quelques instants pour être visibles.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -210,7 +203,7 @@ export default function AdminPromotionsPage() {
               <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isSubmitting}>Annuler</Button>
               <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={isSubmitting}>
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {editingPromotion ? 'Sauvegarder' : 'Appliquer la Promotion'}
+                {editingPromotion ? 'Sauvegarder' : 'Créer la Promotion'}
               </Button>
             </DialogFooter>
           </form>
@@ -282,5 +275,3 @@ export default function AdminPromotionsPage() {
     </div>
   );
 }
-
-    
