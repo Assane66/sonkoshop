@@ -14,6 +14,7 @@ import {
   DialogFooter,
   DialogClose,
   DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -120,6 +121,7 @@ export default function AdminPromotionsPage() {
   };
 
   const onSubmit: SubmitHandler<PromotionFormValues> = async (data) => {
+    form.formState.isSubmitting = true;
     try {
       if (editingPromotion) {
         // If category changes, first remove promo from old category
@@ -140,6 +142,8 @@ export default function AdminPromotionsPage() {
     } catch (error) {
        console.error("Error saving promotion:", error);
        toast({ variant: "destructive", title: "Erreur", description: "Impossible de sauvegarder la promotion." });
+    } finally {
+        form.formState.isSubmitting = false;
     }
   };
 
@@ -278,3 +282,5 @@ export default function AdminPromotionsPage() {
     </div>
   );
 }
+
+    
