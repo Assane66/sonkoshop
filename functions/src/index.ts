@@ -28,6 +28,7 @@ async function applyPromotionToCategory(
     const product = doc.data();
     const productRef = db.collection("products").doc(doc.id);
 
+    // Use existing originalPrice if available, otherwise use current price as base
     const originalPrice = product.originalPrice || product.price;
     const newPrice = originalPrice - discountAmount;
     const finalPromoPrice = newPrice > 0 ? newPrice : 1;
