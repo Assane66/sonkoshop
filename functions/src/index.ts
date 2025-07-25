@@ -28,9 +28,12 @@ async function applyPromotionToCategory(
     const product = doc.data();
     const productRef = db.collection("products").doc(doc.id);
 
-    // Use existing originalPrice if available, otherwise use current price as base
+    // Use existing originalPrice if it's already there (from a previous promotion),
+    // otherwise use the current base price as the original price.
     const originalPrice = product.originalPrice || product.price;
     const newPrice = originalPrice - discountAmount;
+    
+    // Ensure the price doesn't drop to 0 or below.
     const finalPromoPrice = newPrice > 0 ? newPrice : 1;
 
     batch.update(productRef, {
@@ -40,6 +43,7 @@ async function applyPromotionToCategory(
   });
 
   await batch.commit();
+  console.log(`Applied promotion to ${querySnapshot.size} products in category "${categoryName}".`);
 }
 
 /**
@@ -62,37 +66,54 @@ async function removePromotionFromCategory(categoryName: string): Promise<void> 
   querySnapshot.forEach((doc) => {
     const productRef = db.collection("products").doc(doc.id);
     batch.update(productRef, {
+      // Use FieldValue.delete() to completely remove the fields
       originalPrice: admin.firestore.FieldValue.delete(),
       promotionPrice: admin.firestore.FieldValue.delete(),
     });
   });
 
   await batch.commit();
+  console.log(`Removed promotion from ${querySnapshot.size} products in category "${categoryName}".`);
 }
 
 exports.handlePromotionChange = onDocumentWritten(
   "promotions/{promotionId}",
   async (event) => {
-    // On document creation or update
-    if (event.data?.after.exists) {
-      const promotionData = event.data.after.data();
-      const category = promotionData.category;
-      const discountAmount = promotionData.discountAmount;
+    const beforeData = event.data?.before.data();
+    const afterData = event.data?.after.data();
 
-      // Handle category change if applicable
-      if (
-        event.data.before.exists &&
-        event.data.before.data().category !== category
-      ) {
-        await removePromotionFromCategory(event.data.before.data().category);
-      }
+    // On document creation
+    if (!event.data?.before.exists && event.data?.after.exists) {
+      console.log("Promotion created, applying to category:", afterData.category);
+      await applyPromotionToCategory(afterData.category, afterData.discountAmount);
+      return;
+    }
 
-      await applyPromotionToCategory(category, discountAmount);
-    } else if (event.data?.before.exists && !event.data?.after.exists) {
-      // On document deletion
-      const promotionData = event.data.before.data();
-      const category = promotionData.category;
-      await removePromotionFromCategory(category);
+    // On document deletion
+    if (event.data?.before.exists && !event.data?.after.exists) {
+        console.log("Promotion deleted, removing from category:", beforeData.category);
+        await removePromotionFromCategory(beforeData.category);
+        return;
+    }
+
+    // On document update
+    if (event.data?.before.exists && event.data?.after.exists) {
+        const hasCategoryChanged = beforeData.category !== afterData.category;
+        const hasDiscountChanged = beforeData.discountAmount !== afterData.discountAmount;
+
+        if (hasCategoryChanged) {
+            console.log(`Promotion category changed from "${beforeData.category}" to "${afterData.category}".`);
+            // Remove promotion from the old category
+            await removePromotionFromCategory(beforeData.category);
+            // Apply promotion to the new category
+            await applyPromotionToCategory(afterData.category, afterData.discountAmount);
+        } else if (hasDiscountChanged) {
+            console.log(`Promotion discount changed for category "${afterData.category}".`);
+            // Just re-apply the promotion with the new discount amount
+            await applyPromotionToCategory(afterData.category, afterData.discountAmount);
+        } else {
+             console.log("Promotion updated, but category and discount are the same. No product changes needed.");
+        }
     }
   }
 );
