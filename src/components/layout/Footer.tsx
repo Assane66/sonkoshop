@@ -1,8 +1,24 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Facebook, Twitter, Instagram, Truck, CreditCard, ShieldCheck } from "lucide-react";
+import { Facebook, Instagram, Truck, CreditCard, ShieldCheck } from "lucide-react";
 import Link from 'next/link';
+
+const TikTokIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-2.43.03-4.83-.95-6.43-2.98-1.59-2.02-2.18-4.72-1.6-7.25.5-2.12 2.03-3.84 3.91-4.96.86-.51 1.76-.84 2.68-1.02.01-1.32-.01-2.65.02-3.97.02-.31.06-.62.12-.92.09-.45.24-.89.43-1.3.18-.4.4-.78.68-1.14.3-.37.64-.72.99-1.03.35-.31.72-.6 1.1-.85.38-.25.78-.47 1.19-.66z" />
+  </svg>
+);
+
 
 export default function Footer() {
   return (
@@ -60,7 +76,7 @@ export default function Footer() {
                 <h3 className="font-bold mb-4">RESTONS CONNECTÉS</h3>
                 <div className="flex space-x-4">
                     <Link href="#" className="text-gray-400 hover:text-white"><Facebook className="h-6 w-6" /></Link>
-                    <Link href="#" className="text-gray-400 hover:text-white"><Twitter className="h-6 w-6" /></Link>
+                    <Link href="https://www.tiktok.com/@sonkoshop24" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white"><TikTokIcon className="h-6 w-6" /></Link>
                     <Link href="https://www.instagram.com/sonko24shop/#" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white"><Instagram className="h-6 w-6" /></Link>
                 </div>
             </div>
