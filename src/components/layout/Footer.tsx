@@ -61,7 +61,7 @@ export default function Footer() {
                 <div className="flex space-x-4">
                     <Link href="#" className="text-gray-400 hover:text-white"><Facebook className="h-6 w-6" /></Link>
                     <Link href="#" className="text-gray-400 hover:text-white"><Twitter className="h-6 w-6" /></Link>
-                    <Link href="#" className="text-gray-400 hover:text-white"><Instagram className="h-6 w-6" /></Link>
+                    <Link href="https://www.instagram.com/sonko24shop/#" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white"><Instagram className="h-6 w-6" /></Link>
                 </div>
             </div>
           </div>
