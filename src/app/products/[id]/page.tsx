@@ -129,13 +129,16 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   }, [product, selectedSize]);
   
   const getDisplayPrice = () => {
-    if (!product) return { currentPrice: 0, originalPrice: null };
-    const currentPrice = product.promotionPrice || product.price;
-    const originalPrice = product.promotionPrice ? product.price : null;
-    return { currentPrice, originalPrice };
+    if (!product) return { currentPrice: 0, originalPrice: null, isPromo: false };
+
+    const isPromo = typeof product.promotionPrice === 'number' && typeof product.originalPrice === 'number';
+    const currentPrice = isPromo ? product.promotionPrice : product.price;
+    const originalPrice = isPromo ? product.originalPrice : null;
+
+    return { currentPrice, originalPrice, isPromo };
   };
 
-  const { currentPrice, originalPrice } = getDisplayPrice();
+  const { currentPrice, originalPrice, isPromo } = getDisplayPrice();
 
   const handleAddToCart = () => {
     if (!product) return;
@@ -176,7 +179,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   
   const displayImageAiHint = product.imageAiHint || 'product image detail';
   const CategoryIconComponent = categoryIcons[product.category as keyof typeof categoryIcons] || categoryIcons["Default"];
-  const promotionActive = !!originalPrice;
+  const promotionActive = isPromo;
   const discountAmount = originalPrice && currentPrice ? originalPrice - currentPrice : 0;
 
 
@@ -189,7 +192,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         <Card className="shadow-xl rounded-lg group">
           <div className="relative w-full aspect-square overflow-hidden rounded-t-lg">
             <Image src={mainImageUrl} alt={product.name} fill priority sizes="(max-width: 768px) 100vw, 50vw" className="object-cover transition-transform duration-300 group-hover:scale-105" data-ai-hint={displayImageAiHint} onError={(e) => e.currentTarget.src = 'https://placehold.co/600x600.png'} />
-            {promotionActive && <Badge className="absolute top-2 left-2 bg-red-600 text-white text-base px-3 py-1" variant="destructive">-{discountAmount.toLocaleString('fr-FR')} FCFA</Badge>}
+            {promotionActive && discountAmount > 0 && <Badge className="absolute top-2 left-2 bg-red-600 text-white text-base px-3 py-1" variant="destructive">-{discountAmount.toLocaleString('fr-FR')} FCFA</Badge>}
             {product.stock === 0 && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><Badge variant="destructive" className="text-lg px-4 py-2">ÉPUISÉ</Badge></div>}
           </div>
           {product.imageUrls && product.imageUrls.length > 1 && (

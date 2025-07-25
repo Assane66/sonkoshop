@@ -22,10 +22,14 @@ export default function ProductCard({ product }: ProductCardProps) {
   const { toast } = useToast();
 
   const getDisplayPrice = () => {
-    // If promotionPrice is set, use it. Otherwise, use the base price.
+    // If a promotion is active, originalPrice will hold the base price.
+    // If not, the base price is just product.price.
+    const originalPrice = product.originalPrice || product.price;
+    // The current price is the promotionPrice if it exists, otherwise it's the base price.
     const currentPrice = product.promotionPrice || product.price;
-    const originalPrice = product.promotionPrice ? product.price : null;
-    return { currentPrice, originalPrice };
+    const isPromo = !!product.promotionPrice;
+
+    return { currentPrice, originalPrice: isPromo ? originalPrice : null };
   };
 
   const { currentPrice, originalPrice } = getDisplayPrice();
