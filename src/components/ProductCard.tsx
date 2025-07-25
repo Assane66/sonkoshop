@@ -22,17 +22,14 @@ export default function ProductCard({ product }: ProductCardProps) {
   const { toast } = useToast();
 
   const getDisplayPrice = () => {
-    // If a promotion is active, originalPrice will hold the base price.
-    // If not, the base price is just product.price.
-    const originalPrice = product.originalPrice || product.price;
-    // The current price is the promotionPrice if it exists, otherwise it's the base price.
-    const currentPrice = product.promotionPrice || product.price;
-    const isPromo = !!product.promotionPrice;
+    const isPromo = typeof product.promotionPrice === 'number' && product.promotionPrice > 0;
+    const currentPrice = isPromo ? product.promotionPrice : product.price;
+    const originalPrice = isPromo ? product.price : null;
 
-    return { currentPrice, originalPrice: isPromo ? originalPrice : null };
+    return { currentPrice, originalPrice, isPromo };
   };
 
-  const { currentPrice, originalPrice } = getDisplayPrice();
+  const { currentPrice, originalPrice, isPromo } = getDisplayPrice();
 
   const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -74,7 +71,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           <div className="absolute top-2 left-2 flex flex-col gap-1">
              <Badge variant="secondary" className="text-xs bg-white text-black border border-gray-200">NEW</Badge>
              <Badge variant="secondary" className="text-xs bg-white text-cyan-600 border border-gray-200 flex items-center gap-1"><Truck className="h-3 w-3" /> 24h</Badge>
-             {originalPrice && <Badge variant="destructive">PROMO</Badge>}
+             {isPromo && <Badge variant="destructive">PROMO</Badge>}
           </div>
         </div>
         <CardContent className="p-3 text-center flex-grow flex flex-col justify-between">

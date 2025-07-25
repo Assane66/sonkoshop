@@ -28,7 +28,8 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 const calculateCurrentPrice = (product: Product): number => {
-  return product.promotionPrice || product.price;
+  const isPromo = typeof product.promotionPrice === 'number' && product.promotionPrice > 0;
+  return isPromo ? product.promotionPrice : product.price;
 };
 
 const SHIPPING_COST_THRESHOLD = 25000;

@@ -130,10 +130,9 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   
   const getDisplayPrice = () => {
     if (!product) return { currentPrice: 0, originalPrice: null, isPromo: false };
-
-    const isPromo = typeof product.promotionPrice === 'number' && typeof product.originalPrice === 'number';
+    const isPromo = typeof product.promotionPrice === 'number' && product.promotionPrice > 0;
     const currentPrice = isPromo ? product.promotionPrice : product.price;
-    const originalPrice = isPromo ? product.originalPrice : null;
+    const originalPrice = isPromo ? product.price : null;
 
     return { currentPrice, originalPrice, isPromo };
   };
@@ -179,7 +178,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   
   const displayImageAiHint = product.imageAiHint || 'product image detail';
   const CategoryIconComponent = categoryIcons[product.category as keyof typeof categoryIcons] || categoryIcons["Default"];
-  const promotionActive = isPromo;
   const discountAmount = originalPrice && currentPrice ? originalPrice - currentPrice : 0;
 
 
@@ -192,7 +190,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         <Card className="shadow-xl rounded-lg group">
           <div className="relative w-full aspect-square overflow-hidden rounded-t-lg">
             <Image src={mainImageUrl} alt={product.name} fill priority sizes="(max-width: 768px) 100vw, 50vw" className="object-cover transition-transform duration-300 group-hover:scale-105" data-ai-hint={displayImageAiHint} onError={(e) => e.currentTarget.src = 'https://placehold.co/600x600.png'} />
-            {promotionActive && discountAmount > 0 && <Badge className="absolute top-2 left-2 bg-red-600 text-white text-base px-3 py-1" variant="destructive">-{discountAmount.toLocaleString('fr-FR')} FCFA</Badge>}
+            {isPromo && discountAmount > 0 && <Badge className="absolute top-2 left-2 bg-red-600 text-white text-base px-3 py-1" variant="destructive">-{discountAmount.toLocaleString('fr-FR')} FCFA</Badge>}
             {product.stock === 0 && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><Badge variant="destructive" className="text-lg px-4 py-2">ÉPUISÉ</Badge></div>}
           </div>
           {product.imageUrls && product.imageUrls.length > 1 && (
@@ -226,7 +224,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             <CardContent>
               <div className="mb-4">
                 {originalPrice && <p className="text-xl lg:text-2xl text-muted-foreground line-through">{originalPrice.toLocaleString('fr-FR')} FCFA</p>}
-                <p className={`text-2xl lg:text-3xl font-semibold ${promotionActive ? 'text-red-600' : 'text-primary'}`}>{currentPrice.toLocaleString('fr-FR')} FCFA {promotionActive && <Badge variant="destructive" className="ml-2 text-sm">PROMO</Badge>}</p>
+                <p className={`text-2xl lg:text-3xl font-semibold ${isPromo ? 'text-red-600' : 'text-primary'}`}>{currentPrice.toLocaleString('fr-FR')} FCFA {isPromo && <Badge variant="destructive" className="ml-2 text-sm">PROMO</Badge>}</p>
               </div>
               <CardDescription className="text-base text-foreground/80 leading-relaxed">{product.description}</CardDescription>
               <Separator className="my-6" />
