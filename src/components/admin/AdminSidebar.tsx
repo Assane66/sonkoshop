@@ -15,7 +15,6 @@ const sidebarNavItems = [
   { href: '/admin/categories', label: 'Catégories', icon: LayoutGrid },
   { href: '/admin/banners', label: 'Bannières', icon: ImageIcon },
   { href: '/admin/orders', label: 'Commandes', icon: ShoppingCart },
-  { href: '/admin/promotions', label: 'Promotions', icon: Megaphone },
   { href: '/admin/settings', label: 'Paramètres', icon: Settings },
 ];
 
@@ -74,3 +73,5 @@ export default function AdminSidebar() {
     </aside>
   );
 }
+
+    

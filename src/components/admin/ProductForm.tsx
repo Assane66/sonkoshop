@@ -14,7 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import type { Product, SiteCategory } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
-import { Loader2, X } from 'lucide-react';
+import { Loader2, X, Tag } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 
@@ -26,14 +26,22 @@ const productFormSchema = z.object({
   name: z.string().min(3, "Le nom doit contenir au moins 3 caractères."),
   description: z.string().min(10, "La description doit contenir au moins 10 caractères."),
   price: z.coerce.number().min(0, "Le prix doit être positif."),
+  promotionPrice: z.coerce.number().optional().nullable(),
   category: z.string().min(1, "Une catégorie est requise."),
   stock: z.coerce.number().min(0, "Le stock doit être positif ou nul."),
   imageUrls: z.array(z.string()).min(1, "Au moins une image est requise."),
   imageAiHint: z.string().optional().default(''),
   sizes: z.array(z.string()).optional(),
   featured: z.boolean().optional(),
-  // Promotion fields are now managed by the separate Promotions feature
-  // and will not be part of this form.
+  originalPrice: z.coerce.number().optional().nullable(),
+}).refine(data => {
+    if (data.promotionPrice && data.promotionPrice >= data.price) {
+        return false;
+    }
+    return true;
+}, {
+    message: "Le prix promotionnel doit être inférieur au prix d'origine.",
+    path: ["promotionPrice"],
 });
 
 
@@ -61,6 +69,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
       name: '',
       description: '',
       price: 0,
+      promotionPrice: null,
       category: '',
       stock: 0,
       imageUrls: [],
@@ -97,6 +106,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
       const defaultValues = {
         ...product,
         price: product.price || 0,
+        promotionPrice: product.promotionPrice || null,
         stock: product.stock || 0,
         sizes: product.sizes || [],
         featured: product.featured || false,
@@ -109,7 +119,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
       setValue('imageUrls', product.imageUrls || [], { shouldValidate: true });
     } else {
        const defaultValues = {
-        name: '', description: '', price: 0,
+        name: '', description: '', price: 0, promotionPrice: null,
         category: categories.length > 0 ? categories[0].name : '',
         stock: 0, imageUrls: [], imageAiHint: '', sizes: [], featured: false,
       };
@@ -215,49 +225,59 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
         <Textarea id="description" {...register('description')} className="mt-1" disabled={isUploading || isLoadingCategories} />
         {errors.description && <p className="text-sm text-destructive mt-1">{errors.description.message}</p>}
       </div>
+      
+       <div className="p-4 border border-blue-200 rounded-lg bg-blue-50/50 space-y-4">
+            <h4 className="text-md font-semibold text-blue-800 flex items-center"><Tag className="mr-2 h-5 w-5"/>Prix et Promotion</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                <Label htmlFor="price">Prix d'origine (FCFA)</Label>
+                <Input id="price" type="number" {...register('price')} className="mt-1" disabled={isUploading || isLoadingCategories} />
+                {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}
+                </div>
+                <div>
+                <Label htmlFor="promotionPrice">Prix Promotionnel (Optionnel)</Label>
+                <Input id="promotionPrice" type="number" {...register('promotionPrice')} className="mt-1" placeholder="Laisser vide si pas de promo" disabled={isUploading || isLoadingCategories} />
+                {errors.promotionPrice && <p className="text-sm text-destructive mt-1">{errors.promotionPrice.message}</p>}
+                </div>
+            </div>
+       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <Label htmlFor="price">Prix (FCFA)</Label>
-          <Input id="price" type="number" {...register('price')} className="mt-1" disabled={isUploading || isLoadingCategories} />
-          {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}
+          <Label htmlFor="category">Catégorie</Label>
+          <Controller
+            name="category"
+            control={control}
+            render={({ field }) => (
+              <Select
+                onValueChange={field.onChange}
+                value={field.value}
+                disabled={isLoadingCategories || categories.length === 0 || isUploading}
+              >
+                <SelectTrigger id="category" className="mt-1">
+                  <SelectValue placeholder={isLoadingCategories ? "Chargement..." : (categories.length === 0 ? "Aucune catégorie" : "Sélectionner une catégorie")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {isLoadingCategories ? (
+                    <SelectItem value="loading" disabled>Chargement...</SelectItem>
+                  ) : categories.length > 0 ? (
+                    categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-cat" disabled>Aucune catégorie disponible</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {errors.category && <p className="text-sm text-destructive mt-1">{errors.category.message}</p>}
         </div>
         <div>
           <Label htmlFor="stock">Stock</Label>
           <Input id="stock" type="number" {...register('stock')} className="mt-1" disabled={isUploading || isLoadingCategories} />
           {errors.stock && <p className="text-sm text-destructive mt-1">{errors.stock.message}</p>}
         </div>
-      </div>
-
-      <div>
-        <Label htmlFor="category">Catégorie</Label>
-        <Controller
-          name="category"
-          control={control}
-          render={({ field }) => (
-            <Select
-              onValueChange={field.onChange}
-              value={field.value}
-              disabled={isLoadingCategories || categories.length === 0 || isUploading}
-            >
-              <SelectTrigger id="category" className="mt-1">
-                <SelectValue placeholder={isLoadingCategories ? "Chargement..." : (categories.length === 0 ? "Aucune catégorie" : "Sélectionner une catégorie")} />
-              </SelectTrigger>
-              <SelectContent>
-                {isLoadingCategories ? (
-                   <SelectItem value="loading" disabled>Chargement...</SelectItem>
-                ) : categories.length > 0 ? (
-                  categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="no-cat" disabled>Aucune catégorie disponible</SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          )}
-        />
-        {errors.category && <p className="text-sm text-destructive mt-1">{errors.category.message}</p>}
       </div>
 
       <div>
@@ -354,3 +374,5 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
     </form>
   );
 }
+
+    

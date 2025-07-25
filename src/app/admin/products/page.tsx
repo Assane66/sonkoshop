@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Edit3, Trash2, Search, Eye, Package, Loader2 } from 'lucide-react';
+import { PlusCircle, Edit3, Trash2, Search, Eye, Package, Loader2, Tag } from 'lucide-react';
 import Image from 'next/image';
 import type { Product, SiteCategory } from '@/types'; 
 import { categoryIcons } from '@/types';
@@ -82,16 +82,24 @@ export default function AdminProductsPage() {
 
   const handleFormSubmit = async (productData: Omit<Product, 'id'> | Product) => {
     try {
+      // Clean up empty promotion fields to avoid storing nulls in Firestore
+      if (productData.promotionPrice === null || productData.promotionPrice === undefined || productData.promotionPrice === 0) {
+        delete productData.promotionPrice;
+        delete productData.originalPrice;
+      } else if (productData.price) {
+        productData.originalPrice = productData.price;
+      }
+
       if (editingProduct && 'id' in productData && productData.id) {
         const productRef = doc(db, 'products', productData.id);
         const dataToUpdate = { ...productData };
         delete (dataToUpdate as any).id;
-        await updateDoc(productRef, { ...dataToUpdate /*, updatedAt: serverTimestamp() */});
+        await updateDoc(productRef, dataToUpdate);
         toast({ title: "Produit modifié", description: `${productData.name} a été mis à jour.` });
       } else {
         const dataToAdd = { ...productData };
         delete (dataToAdd as any).id;
-        await addDoc(collection(db, 'products'), { ...dataToAdd /*, createdAt: serverTimestamp() */ });
+        await addDoc(collection(db, 'products'), dataToAdd);
         toast({ title: "Produit ajouté", description: `${productData.name} a été ajouté.` });
       }
       setIsFormOpen(false);
@@ -189,7 +197,16 @@ export default function AdminProductsPage() {
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">{product.price.toLocaleString('fr-FR')}</TableCell>
+                    <TableCell className="text-right">
+                      {product.promotionPrice ? (
+                        <div className="flex flex-col items-end">
+                          <span className="text-destructive font-semibold">{product.promotionPrice.toLocaleString('fr-FR')}</span>
+                          <span className="text-xs text-muted-foreground line-through">{product.price.toLocaleString('fr-FR')}</span>
+                        </div>
+                      ) : (
+                        product.price.toLocaleString('fr-FR')
+                      )}
+                    </TableCell>
                     <TableCell className="text-center">
                       <Badge variant={product.stock > 0 ? 'default' : 'destructive'} className={product.stock > 0 && product.stock <= 10 ? 'bg-yellow-500 text-black' : ''}>
                         {product.stock > 0 ? product.stock : 'Épuisé'}
@@ -239,3 +256,5 @@ export default function AdminProductsPage() {
     </div>
   );
 }
+
+    

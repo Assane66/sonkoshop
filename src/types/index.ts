@@ -15,18 +15,10 @@ export type Product = {
   featured?: boolean;
   imageAiHint?: string;
   
-  // Promotion fields now managed by the separate Promotions feature
+  // Promotion fields now managed directly on the product
   promotionPrice?: number | null; // The final price after promotion
   originalPrice?: number | null; // The price before promotion
 };
-
-// This type represents a promotion campaign
-export interface Promotion {
-  id: string;
-  name: string;
-  category: string;
-  discountAmount: number; // e.g. 1000 FCFA
-}
 
 export type Review = {
   id: string; // Firestore document ID
@@ -158,3 +150,5 @@ export interface SiteSettings {
   wavePaymentUrl: string;
   pickupEnabled: boolean;
 }
+
+    
