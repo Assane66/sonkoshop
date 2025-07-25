@@ -223,7 +223,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             <CardContent>
               <div className="mb-4">
                 {originalPrice && <p className="text-xl lg:text-2xl text-muted-foreground line-through">{originalPrice.toLocaleString('fr-FR')} FCFA</p>}
-                <p className={`text-2xl lg:text-3xl font-semibold ${promotionActive ? 'text-red-600' : 'text-accent'}`}>{currentPrice.toLocaleString('fr-FR')} FCFA {promotionActive && <Badge variant="destructive" className="ml-2 text-sm">PROMO</Badge>}</p>
+                <p className={`text-2xl lg:text-3xl font-semibold ${promotionActive ? 'text-red-600' : 'text-primary'}`}>{currentPrice.toLocaleString('fr-FR')} FCFA {promotionActive && <Badge variant="destructive" className="ml-2 text-sm">PROMO</Badge>}</p>
               </div>
               <CardDescription className="text-base text-foreground/80 leading-relaxed">{product.description}</CardDescription>
               <Separator className="my-6" />
