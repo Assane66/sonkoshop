@@ -64,9 +64,12 @@ export default function ProductCard({ product }: ProductCardProps) {
             onError={(e) => e.currentTarget.src = 'https://placehold.co/600x400.png'}
           />
           <div className="absolute top-2 left-2 flex flex-col gap-1">
-             <Badge variant="secondary" className="text-xs bg-white text-black border border-gray-200">NEW</Badge>
+             {isPromo ? (
+                <Badge variant="destructive">PROMO</Badge>
+             ) : (
+                <Badge variant="secondary" className="text-xs bg-white text-black border border-gray-200">NEW</Badge>
+             )}
              <Badge variant="secondary" className="text-xs bg-white text-cyan-600 border border-gray-200 flex items-center gap-1"><Truck className="h-3 w-3" /> 24h</Badge>
-             {isPromo && <Badge variant="destructive">PROMO</Badge>}
           </div>
         </div>
         <CardContent className="p-3 text-center flex-grow flex flex-col justify-between">
