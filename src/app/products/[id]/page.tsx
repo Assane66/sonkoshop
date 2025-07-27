@@ -128,16 +128,11 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     }
   }, [product, selectedSize]);
   
-  const getDisplayPrice = () => {
-    if (!product) return { currentPrice: 0, originalPrice: null, isPromo: false };
-    const isPromo = typeof product.promotionPrice === 'number' && product.promotionPrice > 0;
-    const currentPrice = isPromo ? product.promotionPrice : product.price;
-    const originalPrice = isPromo ? product.price : null;
+  const isPromo = product && product.promotionPrice && product.promotionPrice > 0 && product.promotionPrice < product.price;
+  const currentPrice = isPromo && product ? product.promotionPrice : (product ? product.price : 0);
+  const originalPrice = isPromo && product ? product.price : null;
+  const discountAmount = originalPrice && currentPrice ? originalPrice - currentPrice : 0;
 
-    return { currentPrice, originalPrice, isPromo };
-  };
-
-  const { currentPrice, originalPrice, isPromo } = getDisplayPrice();
 
   const handleAddToCart = () => {
     if (!product) return;
@@ -178,8 +173,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   
   const displayImageAiHint = product.imageAiHint || 'product image detail';
   const CategoryIconComponent = categoryIcons[product.category as keyof typeof categoryIcons] || categoryIcons["Default"];
-  const discountAmount = originalPrice && currentPrice ? originalPrice - currentPrice : 0;
-
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">

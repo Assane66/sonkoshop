@@ -21,15 +21,10 @@ export default function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
   const { toast } = useToast();
 
-  const getDisplayPrice = () => {
-    const isPromo = typeof product.promotionPrice === 'number' && product.promotionPrice > 0;
-    const currentPrice = isPromo ? product.promotionPrice : product.price;
-    const originalPrice = isPromo ? product.price : null;
-
-    return { currentPrice, originalPrice, isPromo };
-  };
-
-  const { currentPrice, originalPrice, isPromo } = getDisplayPrice();
+  const isPromo = product.promotionPrice && product.promotionPrice > 0 && product.promotionPrice < product.price;
+  const displayPrice = isPromo ? product.promotionPrice : product.price;
+  const originalPrice = isPromo ? product.price : null;
+  
 
   const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -83,8 +78,8 @@ export default function ProductCard({ product }: ProductCardProps) {
             {originalPrice && (
               <p className="text-sm text-muted-foreground line-through">{originalPrice.toLocaleString('fr-FR')} FCFA</p>
             )}
-            <p className="text-md font-bold text-foreground">
-              {currentPrice.toLocaleString('fr-FR')} FCFA
+            <p className={`text-md font-bold ${isPromo ? 'text-destructive' : 'text-foreground'}`}>
+              {displayPrice.toLocaleString('fr-FR')} FCFA
             </p>
           </div>
         </CardContent>
