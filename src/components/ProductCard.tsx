@@ -21,10 +21,10 @@ export default function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
   const { toast } = useToast();
 
-  const isPromo = product.promotionPrice && product.promotionPrice > 0 && product.promotionPrice < product.price;
-  const displayPrice = isPromo ? product.promotionPrice : product.price;
+  // Définitive, clear promotion logic
+  const isPromo = product && typeof product.promotionPrice === 'number' && product.promotionPrice > 0 && product.promotionPrice < product.price;
+  const displayPrice = isPromo ? product.promotionPrice! : product.price;
   const originalPrice = isPromo ? product.price : null;
-  
 
   const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
