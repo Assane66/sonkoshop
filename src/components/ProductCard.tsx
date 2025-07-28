@@ -21,7 +21,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
   const { toast } = useToast();
 
-  const isPromo = product.promotionPrice && product.promotionPrice < product.price;
+  const isPromo = product.promotionPrice && product.promotionPrice > 0 && product.promotionPrice < product.price;
   const displayPrice = isPromo ? product.promotionPrice! : product.price;
   const originalPrice = isPromo ? product.price : null;
 
@@ -78,12 +78,18 @@ export default function ProductCard({ product }: ProductCardProps) {
             <h3 className="font-semibold text-sm leading-tight mt-1">{product.name}</h3>
           </div>
           <div className="mt-2">
-            {originalPrice && (
-              <p className="text-sm text-muted-foreground line-through">{originalPrice.toLocaleString('fr-FR')} FCFA</p>
+            {isPromo ? (
+              <>
+                <p className="text-sm text-muted-foreground line-through">{originalPrice?.toLocaleString('fr-FR')} FCFA</p>
+                <p className="text-md font-bold text-destructive">
+                  {displayPrice.toLocaleString('fr-FR')} FCFA
+                </p>
+              </>
+            ) : (
+              <p className="text-md font-bold text-foreground">
+                {displayPrice.toLocaleString('fr-FR')} FCFA
+              </p>
             )}
-            <p className={`text-md font-bold ${isPromo ? 'text-destructive' : 'text-foreground'}`}>
-              {displayPrice.toLocaleString('fr-FR')} FCFA
-            </p>
           </div>
         </CardContent>
       </Card>

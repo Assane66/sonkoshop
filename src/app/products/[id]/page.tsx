@@ -128,8 +128,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     }
   }, [product, selectedSize]);
   
-  // Definitive, clear promotion logic
-  const isPromo = product && typeof product.promotionPrice === 'number' && product.promotionPrice > 0 && product.promotionPrice < product.price;
+  const isPromo = product && product.promotionPrice && product.promotionPrice > 0 && product.promotionPrice < product.price;
   const currentPrice = isPromo ? product.promotionPrice! : (product ? product.price : 0);
   const originalPrice = isPromo ? product.price : null;
 
@@ -215,8 +214,14 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             </CardHeader>
             <CardContent>
               <div className="mb-4">
-                {originalPrice && <p className="text-xl lg:text-2xl text-muted-foreground line-through">{originalPrice.toLocaleString('fr-FR')} FCFA</p>}
-                <p className={`text-2xl lg:text-3xl font-semibold ${isPromo ? 'text-destructive' : 'text-primary'}`}>{currentPrice.toLocaleString('fr-FR')} FCFA {isPromo && <Badge variant="destructive" className="ml-2 text-sm">PROMO</Badge>}</p>
+                {isPromo ? (
+                  <>
+                    <p className="text-xl lg:text-2xl text-muted-foreground line-through">{originalPrice?.toLocaleString('fr-FR')} FCFA</p>
+                    <p className="text-2xl lg:text-3xl font-semibold text-destructive">{currentPrice.toLocaleString('fr-FR')} FCFA <Badge variant="destructive" className="ml-2 text-sm">PROMO</Badge></p>
+                  </>
+                ) : (
+                  <p className="text-2xl lg:text-3xl font-semibold text-primary">{currentPrice.toLocaleString('fr-FR')} FCFA</p>
+                )}
               </div>
               <CardDescription className="text-base text-foreground/80 leading-relaxed">{product.description}</CardDescription>
               <Separator className="my-6" />
