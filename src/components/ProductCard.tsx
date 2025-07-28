@@ -21,8 +21,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
   const { toast } = useToast();
 
-  // Définitive, clear promotion logic
-  const isPromo = product && typeof product.promotionPrice === 'number' && product.promotionPrice > 0 && product.promotionPrice < product.price;
+  const isPromo = product.promotionPrice && product.promotionPrice < product.price;
   const displayPrice = isPromo ? product.promotionPrice! : product.price;
   const originalPrice = isPromo ? product.price : null;
 
@@ -62,6 +61,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             className="object-contain transition-transform duration-300 group-hover:scale-105 p-4"
             data-ai-hint={displayImageAiHint}
             onError={(e) => e.currentTarget.src = 'https://placehold.co/600x400.png'}
+            loading="lazy"
           />
           <div className="absolute top-2 left-2 flex flex-col gap-1">
              {isPromo ? (

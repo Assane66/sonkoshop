@@ -10,9 +10,10 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface BannerCarouselProps {
   banners: Banner[];
+  priority?: boolean;
 }
 
-export default function BannerCarousel({ banners }: BannerCarouselProps) {
+export default function BannerCarousel({ banners, priority = false }: BannerCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const goToPrevious = useCallback(() => {
@@ -59,7 +60,7 @@ export default function BannerCarousel({ banners }: BannerCarouselProps) {
               src={banner.imageUrl}
               alt={banner.title}
               fill
-              priority={index === 0}
+              priority={priority && index === 0}
               sizes="100vw"
               className="object-cover"
               data-ai-hint={banner.imageAiHint || 'promotional banner'}
