@@ -77,7 +77,7 @@ export default function Footer() {
                 <div className="flex space-x-4">
                     <Link href="https://www.facebook.com/profile.php?id=61556322727649" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white"><Facebook className="h-6 w-6" /></Link>
                     <Link href="https://www.tiktok.com/@sonkoshop24" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white"><TikTokIcon className="h-6 w-6" /></Link>
-                    <Link href="https://www.instagram.com/sonko24shop/#" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white"><Instagram className="h-6 w-6" /></Link>
+                    <Link href="https://www.instagram.com/sonko24shop/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white"><Instagram className="h-6 w-6" /></Link>
                 </div>
             </div>
           </div>
