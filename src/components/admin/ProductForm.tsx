@@ -41,6 +41,7 @@ const productFormSchema = z.object({
   imageAiHint: z.string().optional().default(''),
   sizes: z.array(z.string()).optional(),
   featured: z.boolean().optional(),
+  isBonPlan: z.boolean().optional(),
   originalPrice: z.coerce.number().optional().nullable(),
 }).refine(data => {
     if (data.promotionPrice && data.promotionPrice >= data.price) {
@@ -85,6 +86,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
       imageAiHint: '',
       sizes: [],
       featured: false,
+      isBonPlan: false,
     },
   });
 
@@ -119,6 +121,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
         stock: product.stock || 0,
         sizes: product.sizes || [],
         featured: product.featured || false,
+        isBonPlan: product.isBonPlan || false,
         category: product.category || (categories.length > 0 ? categories[0].name : ''),
         imageUrls: product.imageUrls || [],
         imageAiHint: product.imageAiHint || '',
@@ -130,7 +133,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
        const defaultValues = {
         name: '', description: '', price: 0, promotionPrice: null,
         category: categories.length > 0 ? categories[0].name : '',
-        stock: 0, imageUrls: [], imageAiHint: '', sizes: [], featured: false,
+        stock: 0, imageUrls: [], imageAiHint: '', sizes: [], featured: false, isBonPlan: false,
       };
       reset(defaultValues);
       setImagePreviews([]);
@@ -350,23 +353,43 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
         {errors.sizes && <p className="text-sm text-destructive mt-1">{errors.sizes.message}</p>}
       </div>
 
-      <div className="flex items-center space-x-2">
-        <Controller
-          name="featured"
-          control={control}
-          render={({ field }) => (
-            <Checkbox
-              id="featured"
-              checked={field.value || false}
-              onCheckedChange={field.onChange}
-              disabled={isUploading || isLoadingCategories}
+      <div className="space-y-4">
+        <div className="flex items-center space-x-2">
+            <Controller
+            name="featured"
+            control={control}
+            render={({ field }) => (
+                <Checkbox
+                id="featured"
+                checked={field.value || false}
+                onCheckedChange={field.onChange}
+                disabled={isUploading || isLoadingCategories}
+                />
+            )}
             />
-          )}
-        />
-        <Label htmlFor="featured" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-          Mettre en vedette sur la page d'accueil
-        </Label>
+            <Label htmlFor="featured" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+            Afficher dans "TOP PRODUITS" sur l'accueil
+            </Label>
+        </div>
+        <div className="flex items-center space-x-2">
+            <Controller
+            name="isBonPlan"
+            control={control}
+            render={({ field }) => (
+                <Checkbox
+                id="isBonPlan"
+                checked={field.value || false}
+                onCheckedChange={field.onChange}
+                disabled={isUploading || isLoadingCategories}
+                />
+            )}
+            />
+            <Label htmlFor="isBonPlan" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+            Afficher dans "BONS PLANS" sur l'accueil
+            </Label>
+        </div>
       </div>
+
 
       <div className="flex justify-end space-x-3 pt-4">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isUploading || isLoadingCategories}>

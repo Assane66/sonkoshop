@@ -13,7 +13,8 @@ export type Product = {
   imageUrls: string[];
   stock: number;
   sizes?: string[];
-  featured?: boolean;
+  featured?: boolean; // Pour la section "TOP PRODUITS"
+  isBonPlan?: boolean; // Pour la section "BONS PLANS"
   imageAiHint?: string;
   
   // Promotion fields now managed directly on the product

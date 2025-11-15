@@ -51,7 +51,7 @@ export default function HomePage() {
     // Fetch Products
     const productsCollection = collection(db, 'products');
     const featuredQuery = query(productsCollection, where('featured', '==', true), limit(4));
-    const bonsPlansQuery = query(productsCollection, orderBy('price', 'asc'), limit(4));
+    const bonsPlansQuery = query(productsCollection, where('isBonPlan', '==', true), limit(4));
 
     const unsubFeatured = onSnapshot(featuredQuery, (snapshot) => {
       const fetchedProducts: Product[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
