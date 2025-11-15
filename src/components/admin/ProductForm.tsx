@@ -14,7 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import type { Product, SiteCategory } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
-import { Loader2, X, Tag } from 'lucide-react';
+import { Loader2, X, Tag, Star } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 
@@ -353,42 +353,43 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
         {errors.sizes && <p className="text-sm text-destructive mt-1">{errors.sizes.message}</p>}
       </div>
 
-      <div className="space-y-4">
-        <div className="flex items-center space-x-2">
-            <Controller
-            name="featured"
-            control={control}
-            render={({ field }) => (
-                <Checkbox
-                id="featured"
-                checked={field.value || false}
-                onCheckedChange={field.onChange}
-                disabled={isUploading || isLoadingCategories}
+      <div className="p-4 border border-green-200 rounded-lg bg-green-50/50 space-y-4">
+          <h4 className="text-md font-semibold text-green-800 flex items-center"><Star className="mr-2 h-5 w-5"/>Mise en avant sur l'accueil</h4>
+            <div className="flex items-center space-x-2">
+                <Controller
+                name="featured"
+                control={control}
+                render={({ field }) => (
+                    <Checkbox
+                    id="featured"
+                    checked={field.value || false}
+                    onCheckedChange={field.onChange}
+                    disabled={isUploading || isLoadingCategories}
+                    />
+                )}
                 />
-            )}
-            />
-            <Label htmlFor="featured" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-            Afficher dans "TOP PRODUITS" sur l'accueil
-            </Label>
-        </div>
-        <div className="flex items-center space-x-2">
-            <Controller
-            name="isBonPlan"
-            control={control}
-            render={({ field }) => (
-                <Checkbox
-                id="isBonPlan"
-                checked={field.value || false}
-                onCheckedChange={field.onChange}
-                disabled={isUploading || isLoadingCategories}
+                <Label htmlFor="featured" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Afficher dans "TOP PRODUITS"
+                </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+                <Controller
+                name="isBonPlan"
+                control={control}
+                render={({ field }) => (
+                    <Checkbox
+                    id="isBonPlan"
+                    checked={field.value || false}
+                    onCheckedChange={field.onChange}
+                    disabled={isUploading || isLoadingCategories}
+                    />
+                )}
                 />
-            )}
-            />
-            <Label htmlFor="isBonPlan" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-            Afficher dans "BONS PLANS" sur l'accueil
-            </Label>
-        </div>
-      </div>
+                <Label htmlFor="isBonPlan" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Afficher dans "BONS PLANS"
+                </Label>
+            </div>
+       </div>
 
 
       <div className="flex justify-end space-x-3 pt-4">
@@ -407,3 +408,4 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
     </form>
   );
 }
+
