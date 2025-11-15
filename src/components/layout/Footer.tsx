@@ -49,7 +49,7 @@ export default function Footer() {
         </div>
 
         {/* Main Footer Links */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pt-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-10">
           <div>
             <h3 className="font-bold mb-4">Aide</h3>
             <ul className="space-y-2 text-sm text-gray-400">
@@ -64,20 +64,12 @@ export default function Footer() {
               <li><Link href="https://maps.app.goo.gl/vb67yYM6BqKWq6jh7" target="_blank" rel="noopener noreferrer" className="hover:text-white">Tivaouane Peulh</Link></li>
             </ul>
           </div>
-          <div className="md:col-span-2">
-            <h3 className="font-bold mb-4">ABONNEZ-VOUS À LA NEWSLETTER</h3>
-            <p className="text-sm text-gray-400 mb-4">Profitez de -10% sur votre première commande.</p>
-            <form className="flex">
-              <Input type="email" placeholder="Votre adresse email" className="bg-gray-800 border-gray-700 rounded-r-none text-white" />
-              <Button type="submit" className="bg-white text-black rounded-l-none hover:bg-gray-200">S'INSCRIRE</Button>
-            </form>
-            <div className="mt-6">
-                <h3 className="font-bold mb-4">RESTONS CONNECTÉS</h3>
-                <div className="flex space-x-4">
-                    <Link href="https://www.facebook.com/profile.php?id=61556322727649" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white"><Facebook className="h-6 w-6" /></Link>
-                    <Link href="https://www.tiktok.com/@sonkoshop24" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white"><TikTokIcon className="h-6 w-6" /></Link>
-                    <Link href="https://www.instagram.com/sonko24shop/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white"><Instagram className="h-6 w-6" /></Link>
-                </div>
+          <div className="md:col-span-1">
+            <h3 className="font-bold mb-4">RESTONS CONNECTÉS</h3>
+            <div className="flex space-x-4">
+                <Link href="https://www.facebook.com/profile.php?id=61556322727649" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white"><Facebook className="h-6 w-6" /></Link>
+                <Link href="https://www.tiktok.com/@sonkoshop24" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white"><TikTokIcon className="h-6 w-6" /></Link>
+                <Link href="https://www.instagram.com/sonko24shop/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white"><Instagram className="h-6 w-6" /></Link>
             </div>
           </div>
         </div>
