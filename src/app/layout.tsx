@@ -27,7 +27,6 @@ export const metadata: Metadata = {
       { url: 'https://res.cloudinary.com/dm6yuokre/image/upload/v1763212330/favicon-16x16_eqxmlo.png', sizes: '16x16', type: 'image/png' },
       { url: 'https://res.cloudinary.com/dm6yuokre/image/upload/v1763212346/favicon-32x32_aqqk1y.png', sizes: '32x32', type: 'image/png' },
     ],
-    shortcut: 'https://res.cloudinary.com/dm6yuokre/image/upload/v1763212302/favicon_t8p7ny.ico',
     apple: 'https://res.cloudinary.com/dm6yuokre/image/upload/v1763212290/apple-touch-icon_in8brp.png',
   },
 };
