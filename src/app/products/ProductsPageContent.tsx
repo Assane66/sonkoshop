@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
@@ -82,11 +83,13 @@ export default function ProductsPageContent({ initialCategories }: { initialCate
 
     // Search term filter
     if (searchTerm) {
-      productsToFilter = productsToFilter.filter(p =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (p.category && p.category.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
+        const searchTermLower = searchTerm.toLowerCase();
+        productsToFilter = productsToFilter.filter(p =>
+            p.name.toLowerCase().includes(searchTermLower) ||
+            (p.description && p.description.toLowerCase().includes(searchTermLower)) ||
+            (p.category && p.category.toLowerCase().includes(searchTermLower)) ||
+            (p.imageAiHint && p.imageAiHint.toLowerCase().includes(searchTermLower))
+        );
     }
 
     // Category filter
