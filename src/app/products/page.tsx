@@ -8,9 +8,35 @@ import type { Product, SiteCategory } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Search, PackageOpen, Loader2 } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, getDoc, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useSearchParams } from 'next/navigation';
+import { Metadata, ResolvingMetadata } from 'next';
+
+
+type Props = {
+  searchParams: { [key: string]: string | string[] | undefined }
+}
+
+export async function generateMetadata(
+  { searchParams }: Props,
+  parent: ResolvingMetadata
+): Promise<Metadata> {
+  const categoryName = searchParams?.category as string | undefined;
+
+  if (categoryName) {
+     // Optional: Verify category exists in DB if needed
+    return {
+      title: `${decodeURIComponent(categoryName)} - Sonko Shop`,
+      description: `Découvrez notre sélection de ${decodeURIComponent(categoryName)} chez Sonko Shop. Qualité et meilleurs prix garantis.`,
+    }
+  }
+
+  return {
+    title: 'Tous nos produits - Sonko Shop',
+    description: 'Parcourez toute la collection de produits de Sonko Shop. Maillots, chaussures, équipements sportifs et bien plus encore.',
+  }
+}
 
 function ProductsPageContent() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -51,6 +77,7 @@ function ProductsPageContent() {
           sizes: data.sizes || [],
           featured: data.featured || false,
           imageAiHint: data.imageAiHint || '',
+          promotionPrice: data.promotionPrice || null,
         } as Product;
       });
       setAllProducts(fetchedProducts);
@@ -104,9 +131,10 @@ function ProductsPageContent() {
 
     // Price range filter
     if (activeFilters.priceRange) {
-      productsToFilter = productsToFilter.filter(p =>
-        p.price >= activeFilters.priceRange[0] && p.price <= activeFilters.priceRange[1]
-      );
+      productsToFilter = productsToFilter.filter(p => {
+         const currentPrice = (p.promotionPrice && p.promotionPrice > 0) ? p.promotionPrice : p.price;
+         return currentPrice >= activeFilters.priceRange[0] && currentPrice <= activeFilters.priceRange[1];
+      });
     }
 
     setFilteredProducts(productsToFilter);

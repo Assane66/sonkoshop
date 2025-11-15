@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,16 +9,83 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Input as ShadcnInput } from '@/components/ui/input';
 import { ShoppingCart, Zap, CheckCircle, ShieldCheck, Tag, Minus, Plus, ArrowLeft, Loader2 } from 'lucide-react';
-import type { Product } from '@/types';
+import type { Product, Review } from '@/types';
 import { categoryIcons } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/context/CartContext';
-import { doc, onSnapshot, Timestamp, collection, query, where, limit } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, Timestamp, collection, query, where, limit, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Metadata, ResolvingMetadata } from 'next';
+import ProductReviews from '@/components/ProductReviews';
+
+type Props = {
+  params: { id: string }
+}
+
+async function getProduct(id: string): Promise<Product | null> {
+    try {
+        const productDocRef = doc(db, 'products', id);
+        const docSnap = await getDoc(productDocRef);
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            let imageUrls: string[] = [];
+            if (data.imageUrls && Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
+                imageUrls = data.imageUrls;
+            } else if (data.imageUrl && typeof data.imageUrl === 'string') {
+                imageUrls = [data.imageUrl];
+            }
+            return { id: docSnap.id, ...data, imageUrls } as Product;
+        }
+        return null;
+    } catch (error) {
+        console.error("Error fetching product for metadata:", error);
+        return null;
+    }
+}
+
+async function getReviews(productId: string): Promise<Review[]> {
+    try {
+        const reviewsCollection = collection(db, 'reviews');
+        const q = query(reviewsCollection, where('productId', '==', productId), orderBy('createdAt', 'desc'));
+        const querySnapshot = await getDoc(q);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review));
+    } catch (error) {
+        console.error("Error fetching reviews:", error);
+        return [];
+    }
+}
+
+export async function generateMetadata(
+  { params }: Props,
+  parent: ResolvingMetadata
+): Promise<Metadata> {
+  const id = params.id;
+  const product = await getProduct(id);
+
+  if (!product) {
+    return {
+      title: 'Produit non trouvé - Sonko Shop',
+      description: 'Ce produit n\'est plus disponible ou le lien est incorrect.',
+    }
+  }
+
+  const previousImages = (await parent).openGraph?.images || []
+  const mainImageUrl = product.imageUrls?.[0] || 'https://res.cloudinary.com/dm6yuokre/image/upload/v1751804945/IMG-20250522-WA0007_2_dfvhk0.jpg';
+
+  return {
+    title: `${product.name} - Sonko Shop`,
+    description: product.description.substring(0, 155), // Truncate for meta description best practice
+    openGraph: {
+      title: `${product.name} | Sonko Shop`,
+      description: product.description,
+      images: [mainImageUrl, ...previousImages],
+    },
+  }
+}
 
 const Label = ({ htmlFor, children, className }: { htmlFor?: string; children: React.ReactNode; className?: string }) => (
   <label htmlFor={htmlFor} className={`block text-sm font-medium text-gray-700 dark:text-gray-300 ${className || ''}`}>
@@ -26,9 +93,11 @@ const Label = ({ htmlFor, children, className }: { htmlFor?: string; children: R
   </label>
 );
 
-export default function ProductDetailPage({ params }: { params: { id: string } }) {
+function ProductDetailContent({ params }: { params: { id: string } }) {
   const [product, setProduct] = useState<Product | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingReviews, setIsLoadingReviews] = useState(true);
   const [mainImageUrl, setMainImageUrl] = useState<string>('');
   const [selectedSize, setSelectedSize] = useState<string | undefined>(undefined);
   const [quantity, setQuantity] = useState(1);
@@ -73,8 +142,21 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       setIsLoading(false);
     });
 
+    setIsLoadingReviews(true);
+    const reviewsCollection = collection(db, 'reviews');
+    const qReviews = query(reviewsCollection, where('productId', '==', params.id), orderBy('createdAt', 'desc'));
+    const unsubscribeReviews = onSnapshot(qReviews, (snapshot) => {
+      setReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review)));
+      setIsLoadingReviews(false);
+    }, (error) => {
+       console.error("Error fetching reviews:", error);
+       setIsLoadingReviews(false);
+    });
+
+
     return () => {
       unsubscribeProduct();
+      unsubscribeReviews();
     };
   }, [params.id, toast]);
   
@@ -207,7 +289,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
               <div className="flex justify-between items-start">
                 <div>
                   {product.category && <Badge variant="secondary" className="mb-2 inline-flex items-center gap-1.5 py-1 px-2.5 text-xs"><CategoryIconComponent className="h-3.5 w-3.5" />{product.category}</Badge>}
-                  <CardTitle className="text-3xl lg:text-4xl font-bold text-primary">{product.name}</CardTitle>
+                  <h1 className="text-3xl lg:text-4xl font-bold text-primary">{product.name}</h1>
                 </div>
                 <Badge variant={product.stock > 0 ? "default" : "destructive"} className={`text-sm py-1 px-3 ${product.stock > 0 && product.stock <=10 ? 'bg-yellow-500 text-black' : ''}`}>{product.stock > 0 ? `En Stock (${product.stock})` : "Épuisé"}</Badge>
               </div>
@@ -257,6 +339,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         </div>
       </div>
       <Separator className="my-12" />
+      <ProductReviews reviews={reviews} isLoading={isLoadingReviews} />
+      <Separator className="my-12" />
       <section>
         <h2 className="text-3xl font-bold text-center mb-8 text-primary">Vous aimerez aussi</h2>
         {isLoadingSuggestions ? (
@@ -281,4 +365,20 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       </section>
     </div>
   );
+}
+
+// Main page component to handle Suspense boundary
+export default function ProductDetailPage({ params }: { params: { id: string } }) {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto px-4 py-12 text-center">
+          <div className="flex flex-col items-center justify-center h-64 space-y-3">
+            <Loader2 className="h-16 w-16 animate-spin text-primary" />
+            <p className="text-muted-foreground text-xl">Chargement...</p>
+          </div>
+      </div>
+    }>
+      <ProductDetailContent params={params} />
+    </Suspense>
+  )
 }
