@@ -2,7 +2,7 @@
 'use client'; 
 
 import Link from 'next/link';
-import { Search, MapPin, User, Heart, ShoppingBag, Menu } from 'lucide-react';
+import { MapPin, User, Heart, ShoppingBag, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
@@ -17,12 +17,12 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { Input } from '../ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '../ui/sheet';
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import type { SiteCategory } from '@/types';
+import SearchPopover from '@/components/SearchPopover';
 
 
 export default function Header() {
@@ -163,10 +163,7 @@ export default function Header() {
 
           {/* Search Bar */}
           <div className="hidden md:flex flex-1 mx-8 max-w-lg">
-             <div className="relative w-full">
-               <Input type="search" placeholder="Rechercher..." className="w-full rounded-full" />
-               <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-             </div>
+             <SearchPopover />
           </div>
 
           {/* Icons */}
