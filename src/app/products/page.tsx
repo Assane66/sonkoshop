@@ -1,6 +1,4 @@
 
-'use client';
-
 import { useState, useEffect, Suspense } from 'react';
 import ProductCard from '@/components/ProductCard';
 import ProductFilters from '@/components/ProductFilters';
@@ -32,6 +30,8 @@ import { Metadata } from 'next';
 // }
 
 function ProductsPageContent({ categories }: { categories: SiteCategory[] }) {
+  'use client';
+  
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
