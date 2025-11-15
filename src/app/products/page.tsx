@@ -13,28 +13,23 @@ import { useToast } from '@/hooks/use-toast';
 import { useSearchParams } from 'next/navigation';
 import { Metadata } from 'next';
 
-async function getCategories(): Promise<SiteCategory[]> {
-  const categoriesCollection = collection(db, 'categories');
-  const q = query(categoriesCollection, orderBy('name', 'asc'));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SiteCategory));
-}
 
-export async function generateMetadata({ searchParams }: { searchParams: { category?: string } }): Promise<Metadata> {
-  const categoryName = searchParams?.category;
+// This function CANNOT be in a 'use client' file. We will move it.
+// export async function generateMetadata({ searchParams }: { searchParams: { category?: string } }): Promise<Metadata> {
+//   const categoryName = searchParams?.category;
 
-  if (categoryName) {
-    return {
-      title: `${decodeURIComponent(categoryName)} - Sonko Shop`,
-      description: `Découvrez notre sélection de ${decodeURIComponent(categoryName)} chez Sonko Shop. Qualité et meilleurs prix garantis.`,
-    };
-  }
+//   if (categoryName) {
+//     return {
+//       title: `${decodeURIComponent(categoryName)} - Sonko Shop`,
+//       description: `Découvrez notre sélection de ${decodeURIComponent(categoryName)} chez Sonko Shop. Qualité et meilleurs prix garantis.`,
+//     };
+//   }
 
-  return {
-    title: 'Tous nos produits - Sonko Shop',
-    description: 'Parcourez toute la collection de produits de Sonko Shop. Maillots, chaussures, équipements sportifs et bien plus encore.',
-  };
-}
+//   return {
+//     title: 'Tous nos produits - Sonko Shop',
+//     description: 'Parcourez toute la collection de produits de Sonko Shop. Maillots, chaussures, équipements sportifs et bien plus encore.',
+//   };
+// }
 
 function ProductsPageContent({ categories }: { categories: SiteCategory[] }) {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -202,7 +197,8 @@ function ProductsPageContent({ categories }: { categories: SiteCategory[] }) {
 }
 
 
-export default function ProductsPageWrapper() {
+function ProductsPageWrapper() {
+  // This Suspense boundary wraps the client component that uses useSearchParams
   return (
     <Suspense fallback={
       <div className="container mx-auto px-4 py-12 text-center">
@@ -217,7 +213,42 @@ export default function ProductsPageWrapper() {
   );
 }
 
+
 async function ProductsPageLoader() {
     const categories = await getCategories();
     return <ProductsPageContent categories={categories} />;
+}
+
+// Re-enabling generateMetadata in a Server Component context at the page level
+export async function generateMetadata({ searchParams }: { searchParams: { category?: string } }): Promise<Metadata> {
+  const categoryName = searchParams?.category;
+
+  if (categoryName) {
+    return {
+      title: `${decodeURIComponent(categoryName)} - Sonko Shop`,
+      description: `Découvrez notre sélection de ${decodeURIComponent(categoryName)} chez Sonko Shop. Qualité et meilleurs prix garantis.`,
+    };
+  }
+
+  return {
+    title: 'Tous nos produits - Sonko Shop',
+    description: 'Parcourez toute la collection de produits de Sonko Shop. Maillots, chaussures, équipements sportifs et bien plus encore.',
+  };
+}
+
+async function getCategories(): Promise<SiteCategory[]> {
+  try {
+    const categoriesCollection = collection(db, 'categories');
+    const q = query(categoriesCollection, orderBy('name', 'asc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SiteCategory));
+  } catch (error) {
+    console.error("Error fetching categories for server component:", error);
+    return [];
+  }
+}
+
+// The main export is now a Server Component
+export default function ProductsPage() {
+    return <ProductsPageWrapper />;
 }
