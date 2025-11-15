@@ -47,6 +47,29 @@ const checkoutFormSchema = z.object({
 
 type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
 
+const WHATSAPP_NUMBER = "221784513633";
+
+const generateWhatsAppMessage = (order: Order) => {
+    const itemsText = order.items.map(item => 
+        `- ${item.productName} (x${item.quantity}) ${item.selectedSize ? `[${item.selectedSize}]` : ''}`
+    ).join('\n');
+
+    const message = `
+*Nouvelle Commande Sonko Shop !* ✅
+-----------------------------------
+*Commande ID:* ${order.id.substring(0, 8)}
+*Client:* ${order.customerInfo.fullName}
+*Téléphone:* ${order.customerInfo.phone}
+*Adresse:* ${order.shippingAddress}
+*Montant Total:* *${order.totalAmount.toLocaleString('fr-FR')} FCFA*
+*Paiement:* ${order.paymentMethod}
+-----------------------------------
+*Articles:*
+${itemsText}
+    `;
+    return encodeURIComponent(message.trim());
+};
+
 
 export default function CheckoutPage() {
   const { cartItems, getCartSubtotal, getShippingCost, getCartGrandTotal, clearCart } = useCart();
@@ -203,7 +226,7 @@ export default function CheckoutPage() {
     try {
       const docRef = await addDoc(collection(db, "orders"), orderDataPayload);
       
-      const orderDataForDisplay = {
+      const orderDataForDisplay: Order = {
         ...basePayload,
         id: docRef.id,
         orderDate: new Date().toISOString(),
@@ -211,13 +234,18 @@ export default function CheckoutPage() {
 
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('lastSuccessfulOrder', JSON.stringify(orderDataForDisplay));
+
+        // Open WhatsApp link automatically after saving the order
+        const message = generateWhatsAppMessage(orderDataForDisplay);
+        const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${message}`;
+        window.open(whatsappUrl, '_blank');
       }
 
       clearCart();
       
       toast({
         title: "Commande confirmée!",
-        description: "Votre commande a été enregistrée. Nous vous contacterons bientôt.",
+        description: "Votre commande a été enregistrée. Notification en cours...",
       });
       router.push(`/checkout/success`);
       
@@ -388,7 +416,7 @@ export default function CheckoutPage() {
                 disabled={isProcessing || cartItems.length === 0 || !form.formState.isValid || !hydrated || isSettingsLoading}
               >
                 {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : ''}
-                {isProcessing ? (isRedirectingToWave ? 'Redirection vers Wave...' : 'Traitement...') : 'Confirmer la Commande'}
+                {isProcessing ? (isRedirectingToWave ? 'Redirection vers Wave...' : 'Traitement...') : 'Confirmer la Commande & Notifier'}
               </Button>
             </form>
           </Form>

@@ -28,38 +28,6 @@ function SuccessPageContent() {
   const searchParams = useSearchParams();
   const { clearCart } = useCart();
 
-  // --- START WHATSAPP NOTIFICATION LOGIC ---
-  const WHATSAPP_NUMBER = "221784513633"; // Votre numéro WhatsApp ici
-
-  const generateWhatsAppMessage = (order: Order) => {
-      const itemsText = order.items.map(item => 
-          `- ${item.productName} (x${item.quantity}) ${item.selectedSize ? `[${item.selectedSize}]` : ''}`
-      ).join('\n');
-
-      const message = `
-*Nouvelle Commande Sonko Shop !* ✅
------------------------------------
-*Commande ID:* ${order.id.substring(0, 8)}
-*Client:* ${order.customerInfo.fullName}
-*Téléphone:* ${order.customerInfo.phone}
-*Adresse:* ${order.shippingAddress}
-*Montant Total:* *${order.totalAmount.toLocaleString('fr-FR')} FCFA*
-*Paiement:* ${order.paymentMethod}
------------------------------------
-*Articles:*
-${itemsText}
-      `;
-      return encodeURIComponent(message.trim());
-  };
-
-  const handleWhatsAppNotification = () => {
-    if (!order) return;
-    const message = generateWhatsAppMessage(order);
-    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${message}`;
-    window.open(whatsappUrl, '_blank');
-  };
-  // --- END WHATSAPP NOTIFICATION LOGIC ---
-
 
   useEffect(() => {
     const waveSessionId = searchParams.get('session_id');
@@ -100,6 +68,7 @@ ${itemsText}
             const parsedOrder = JSON.parse(storedOrder) as Order;
             setOrder(parsedOrder);
             setVerificationStatus('cod');
+             // The WhatsApp notification is now handled on the checkout page, so we don't need to do anything here.
           } else {
             console.warn("CheckoutSuccessPage: No order data found in sessionStorage for non-Wave payment.");
             setVerificationStatus('failed');
@@ -237,10 +206,6 @@ ${itemsText}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-            <Button onClick={handleWhatsAppNotification} className="w-full bg-green-500 hover:bg-green-600 text-white">
-                <MessageCircle className="mr-2 h-5 w-5" />
-                Notifier via WhatsApp
-            </Button>
             <Button onClick={handleDownloadPdf} disabled={isGeneratingPdf || !invoiceRef.current} className="w-full bg-primary hover:bg-primary/90">
               {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
               {isGeneratingPdf ? 'Génération...' : 'Télécharger la Facture (PDF)'}
