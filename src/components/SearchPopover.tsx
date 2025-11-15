@@ -1,18 +1,24 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from '@/components/ui/popover';
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, PackageOpen } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { collection, query, where, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, limit, onSnapshot, orderBy } from 'firebase/firestore';
 import type { Product } from '@/types';
 import { useDebounce } from '@/hooks/use-debounce';
 import Image from 'next/image';
 import Link from 'next/link';
+import { ScrollArea } from './ui/scroll-area';
 
-export default function SearchPopover() {
+interface SearchPopoverProps {
+  onResultClick: () => void;
+  isSheet?: boolean;
+}
+
+export default function SearchPopover({ onResultClick, isSheet = false }: SearchPopoverProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -23,59 +29,62 @@ export default function SearchPopover() {
   useEffect(() => {
     if (debouncedSearchTerm.length < 2) {
       setResults([]);
-      setIsPopoverOpen(false);
+      if (!isSheet) setIsPopoverOpen(false);
       return;
     }
 
     setIsLoading(true);
     const productsRef = collection(db, 'products');
     
-    // Simple prefix search on name. For more complex search, consider a third-party service like Algolia.
+    const searchTermLower = debouncedSearchTerm.toLowerCase();
+    
+    // This is a very basic search. For production, a dedicated search service (e.g., Algolia) is better.
     const q = query(
       productsRef,
-      where('name', '>=', debouncedSearchTerm),
-      where('name', '<=', debouncedSearchTerm + '\uf8ff'),
-      limit(5)
+      orderBy('name'),
+      limit(10)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const searchResults: Product[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+      const allProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+      
+      const searchResults = allProducts.filter(product => 
+        product.name.toLowerCase().includes(searchTermLower) || 
+        (product.category && product.category.toLowerCase().includes(searchTermLower))
+      ).slice(0, 5);
+
       setResults(searchResults);
       setIsLoading(false);
-      setIsPopoverOpen(searchResults.length > 0);
+      if (!isSheet) setIsPopoverOpen(searchResults.length > 0 || searchTerm.length > 1);
     }, (error) => {
       console.error("Search error:", error);
       setIsLoading(false);
     });
 
     return () => unsubscribe();
-  }, [debouncedSearchTerm]);
-  
-  const handleLinkClick = () => {
-    setIsPopoverOpen(false);
-    setSearchTerm('');
-  };
+  }, [debouncedSearchTerm, isSheet, searchTerm]);
 
-
-  return (
-    <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-      <PopoverAnchor asChild>
-        <div className="relative w-full">
-            <Input
-            type="search"
-            placeholder="Rechercher un produit..."
-            className="w-full rounded-full"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground">
-            {isLoading ? <Loader2 className="animate-spin" /> : <Search />}
-            </div>
+  const SearchInput = (
+    <div className="relative w-full">
+        <Input
+        type="search"
+        placeholder="Rechercher un produit, une catégorie..."
+        className="w-full rounded-full pl-10"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        autoFocus={isSheet}
+        />
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground">
+        {isLoading ? <Loader2 className="animate-spin" /> : <Search />}
         </div>
-      </PopoverAnchor>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-2">
-        <div className="space-y-2">
-          {results.map((product) => {
+    </div>
+  );
+
+  const SearchResults = (
+    <ScrollArea className="max-h-80">
+      <div className="space-y-2 mt-2">
+        {results.length > 0 ? (
+          results.map((product) => {
             const displayImageUrl = product.imageUrls?.[0] || 'https://placehold.co/100x100.png';
             const isPromo = product.promotionPrice && product.promotionPrice < product.price;
             const displayPrice = isPromo ? product.promotionPrice : product.price;
@@ -85,7 +94,7 @@ export default function SearchPopover() {
                 key={product.id}
                 href={`/products/${product.id}`}
                 className="flex items-center gap-4 p-2 rounded-md hover:bg-accent"
-                onClick={handleLinkClick}
+                onClick={onResultClick}
               >
                 <div className="relative h-12 w-12 flex-shrink-0">
                   <Image
@@ -96,7 +105,7 @@ export default function SearchPopover() {
                     className="object-cover rounded"
                   />
                 </div>
-                <div className="flex-grow">
+                <div className="flex-grow overflow-hidden">
                   <p className="text-sm font-medium truncate">{product.name}</p>
                   <p className="text-sm text-primary font-semibold">
                     {displayPrice?.toLocaleString('fr-FR')} FCFA
@@ -104,8 +113,35 @@ export default function SearchPopover() {
                 </div>
               </Link>
             );
-          })}
-        </div>
+          })
+        ) : (
+          !isLoading && debouncedSearchTerm.length > 1 && (
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              <PackageOpen className="mx-auto h-8 w-8 mb-2" />
+              Aucun résultat pour "{debouncedSearchTerm}"
+            </div>
+          )
+        )}
+      </div>
+    </ScrollArea>
+  );
+
+  if (isSheet) {
+    return (
+      <div>
+        {SearchInput}
+        {SearchResults}
+      </div>
+    );
+  }
+
+  return (
+    <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+      <PopoverAnchor asChild>
+        {SearchInput}
+      </PopoverAnchor>
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-2">
+        {SearchResults}
       </PopoverContent>
     </Popover>
   );

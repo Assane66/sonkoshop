@@ -2,7 +2,7 @@
 'use client'; 
 
 import Link from 'next/link';
-import { MapPin, User, Heart, ShoppingBag, Menu } from 'lucide-react';
+import { MapPin, User, Heart, ShoppingBag, Menu, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
@@ -17,7 +17,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { Sheet, SheetContent, SheetTrigger } from '../ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../ui/sheet';
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
@@ -32,7 +32,8 @@ export default function Header() {
   const { toast } = useToast();
   const router = useRouter();
   const [navCategories, setNavCategories] = useState<SiteCategory[]>([]);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isMenuSheetOpen, setIsMenuSheetOpen] = useState(false);
+  const [isSearchSheetOpen, setIsSearchSheetOpen] = useState(false);
 
   useEffect(() => {
     const categoriesCollection = collection(db, 'categories');
@@ -89,7 +90,11 @@ export default function Header() {
   };
   
   const handleMobileLinkClick = () => {
-    setIsSheetOpen(false);
+    setIsMenuSheetOpen(false);
+  };
+  
+  const onSearchResultClick = () => {
+    setIsSearchSheetOpen(false);
   };
 
   const UserMenu = () => (
@@ -130,9 +135,9 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4">
         {/* Top Bar */}
-        <div className="flex h-16 items-center justify-between">
+        <div className="flex h-16 items-center justify-between gap-2">
           {/* Mobile Menu */}
-           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+           <Sheet open={isMenuSheetOpen} onOpenChange={setIsMenuSheetOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden">
                 <Menu className="h-6 w-6" />
@@ -156,18 +161,35 @@ export default function Header() {
           </Sheet>
 
           {/* Logo */}
-          <Link href="/" className="mr-auto md:mr-0 md:flex-none">
-             <span className="text-2xl font-bold text-red-600">SONKO</span>
-             <span className="text-2xl font-bold text-gray-800">SHOP</span>
+          <Link href="/" className="flex-shrink-0">
+             <span className="text-xl md:text-2xl font-bold text-red-600">SONKO</span>
+             <span className="text-xl md:text-2xl font-bold text-gray-800">SHOP</span>
           </Link>
 
-          {/* Search Bar */}
+          {/* Search Bar - Desktop */}
           <div className="hidden md:flex flex-1 mx-8 max-w-lg">
-             <SearchPopover />
+             <SearchPopover onResultClick={() => {}} />
           </div>
 
           {/* Icons */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-0.5 sm:space-x-2">
+             <Sheet open={isSearchSheetOpen} onOpenChange={setIsSearchSheetOpen}>
+                <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon" className="md:hidden">
+                        <Search className="h-6 w-6" />
+                        <span className="sr-only">Rechercher</span>
+                    </Button>
+                </SheetTrigger>
+                <SheetContent side="top">
+                    <SheetHeader>
+                        <SheetTitle>Rechercher un produit</SheetTitle>
+                    </SheetHeader>
+                    <div className="mt-4">
+                        <SearchPopover onResultClick={onSearchResultClick} isSheet={true} />
+                    </div>
+                </SheetContent>
+            </Sheet>
+            
             <Button variant="ghost" size="icon" className="hidden md:inline-flex">
               <MapPin className="h-6 w-6" />
               <span className="sr-only">Trouver un magasin</span>
