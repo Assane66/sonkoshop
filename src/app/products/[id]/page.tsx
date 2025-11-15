@@ -1,6 +1,4 @@
 
-'use client';
-
 import React, { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -14,7 +12,7 @@ import { categoryIcons } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/context/CartContext';
-import { doc, onSnapshot, getDoc, Timestamp, collection, query, where, limit, orderBy } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, Timestamp, collection, query, where, limit, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
@@ -47,18 +45,6 @@ async function getProduct(id: string): Promise<Product | null> {
     }
 }
 
-async function getReviews(productId: string): Promise<Review[]> {
-    try {
-        const reviewsCollection = collection(db, 'reviews');
-        const q = query(reviewsCollection, where('productId', '==', productId), orderBy('createdAt', 'desc'));
-        const querySnapshot = await getDoc(q);
-        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review));
-    } catch (error) {
-        console.error("Error fetching reviews:", error);
-        return [];
-    }
-}
-
 export async function generateMetadata(
   { params }: Props,
   parent: ResolvingMetadata
@@ -87,13 +73,10 @@ export async function generateMetadata(
   }
 }
 
-const Label = ({ htmlFor, children, className }: { htmlFor?: string; children: React.ReactNode; className?: string }) => (
-  <label htmlFor={htmlFor} className={`block text-sm font-medium text-gray-700 dark:text-gray-300 ${className || ''}`}>
-    {children}
-  </label>
-);
-
+// Client component for all interactive logic
 function ProductDetailContent({ params }: { params: { id: string } }) {
+  'use client';
+
   const [product, setProduct] = useState<Product | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -153,7 +136,6 @@ function ProductDetailContent({ params }: { params: { id: string } }) {
        setIsLoadingReviews(false);
     });
 
-
     return () => {
       unsubscribeProduct();
       unsubscribeReviews();
@@ -198,7 +180,7 @@ function ProductDetailContent({ params }: { params: { id: string } }) {
     });
 
     return () => unsubscribe();
-}, [product]);
+  }, [product]);
 
   useEffect(() => {
     if (product && product.sizes && product.sizes.length > 0) {
@@ -253,6 +235,11 @@ function ProductDetailContent({ params }: { params: { id: string } }) {
   
   const displayImageAiHint = product.imageAiHint || 'product image detail';
   const CategoryIconComponent = categoryIcons[product.category as keyof typeof categoryIcons] || categoryIcons["Default"];
+  const Label = ({ htmlFor, children, className }: { htmlFor?: string; children: React.ReactNode; className?: string }) => (
+    <label htmlFor={htmlFor} className={`block text-sm font-medium text-gray-700 dark:text-gray-300 ${className || ''}`}>
+      {children}
+    </label>
+  );
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">
@@ -382,3 +369,5 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     </Suspense>
   )
 }
+
+    

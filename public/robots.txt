@@ -1,8 +1,8 @@
 # See https://www.robotstxt.org/robotstxt.html for documentation on how to use the robots.txt file
 #
-# Allow all crawling
+# Allow all web crawlers to crawl your site.
 User-agent: *
 Allow: /
 
-# Sitemap location
+# Sitemap file
 Sitemap: https://sonko-shop.com/sitemap.xml
