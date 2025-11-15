@@ -48,9 +48,10 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   const displayImageUrl = product.imageUrls?.[0] || 'https://placehold.co/600x400.png';
   const displayImageAiHint = product.imageAiHint || 'product image';
+  const productLink = `/products/${product.slug || product.id}`;
 
   return (
-    <Link href={`/products/${product.id}`} className="block group">
+    <Link href={productLink} className="block group">
       <Card className="overflow-hidden border-none shadow-none rounded-lg h-full flex flex-col bg-secondary">
         <div className="relative w-full aspect-[4/5] bg-white">
           <Image

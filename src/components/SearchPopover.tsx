@@ -88,11 +88,12 @@ export default function SearchPopover({ onResultClick, isSheet = false }: Search
             const displayImageUrl = product.imageUrls?.[0] || 'https://placehold.co/100x100.png';
             const isPromo = product.promotionPrice && product.promotionPrice < product.price;
             const displayPrice = isPromo ? product.promotionPrice : product.price;
+            const productLink = `/products/${product.slug || product.id}`;
 
             return (
               <Link
                 key={product.id}
-                href={`/products/${product.id}`}
+                href={productLink}
                 className="flex items-center gap-4 p-2 rounded-md hover:bg-accent"
                 onClick={onResultClick}
               >

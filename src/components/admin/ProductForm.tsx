@@ -22,8 +22,16 @@ import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 const CLOUDINARY_CLOUD_NAME = 'dm6yuokre';
 const CLOUDINARY_UPLOAD_PRESET = 'sonko_shop';
 
+const generateSlug = (name: string) => {
+  return name
+    .toLowerCase()
+    .replace(/ /g, '-')
+    .replace(/[^\w-]+/g, '');
+};
+
 const productFormSchema = z.object({
   name: z.string().min(3, "Le nom doit contenir au moins 3 caractères."),
+  slug: z.string().optional(),
   description: z.string().min(10, "La description doit contenir au moins 10 caractères."),
   price: z.coerce.number().min(0, "Le prix doit être positif."),
   promotionPrice: z.coerce.number().optional().nullable(),
@@ -67,6 +75,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
     resolver: zodResolver(productFormSchema),
     defaultValues: {
       name: '',
+      slug: '',
       description: '',
       price: 0,
       promotionPrice: null,
@@ -196,6 +205,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
       
       const finalProductData = {
         ...data,
+        slug: data.slug ? data.slug : generateSlug(data.name),
         imageUrls: finalImageUrls,
       };
       
@@ -374,5 +384,3 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
     </form>
   );
 }
-
-    

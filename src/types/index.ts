@@ -5,6 +5,7 @@ import type { Timestamp } from 'firebase/firestore';
 
 export type Product = {
   id: string; // Firestore document ID
+  slug: string; // URL-friendly version of the name
   name: string;
   description: string;
   price: number;
@@ -150,5 +151,3 @@ export interface SiteSettings {
   wavePaymentUrl: string;
   pickupEnabled: boolean;
 }
-
-    

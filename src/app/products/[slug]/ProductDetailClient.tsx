@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect, Suspense } from 'react';
+'use client';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,69 +18,12 @@ import { db } from '@/lib/firebase';
 import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Metadata, ResolvingMetadata } from 'next';
 import ProductReviews from '@/components/ProductReviews';
 
-type Props = {
-  params: { id: string }
-}
-
-async function getProduct(id: string): Promise<Product | null> {
-    try {
-        const productDocRef = doc(db, 'products', id);
-        const docSnap = await getDoc(productDocRef);
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            let imageUrls: string[] = [];
-            if (data.imageUrls && Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
-                imageUrls = data.imageUrls;
-            } else if (data.imageUrl && typeof data.imageUrl === 'string') {
-                imageUrls = [data.imageUrl];
-            }
-            return { id: docSnap.id, ...data, imageUrls } as Product;
-        }
-        return null;
-    } catch (error) {
-        console.error("Error fetching product for metadata:", error);
-        return null;
-    }
-}
-
-export async function generateMetadata(
-  { params }: Props,
-  parent: ResolvingMetadata
-): Promise<Metadata> {
-  const id = params.id;
-  const product = await getProduct(id);
-
-  if (!product) {
-    return {
-      title: 'Produit non trouvé - Sonko Shop',
-      description: 'Ce produit n\'est plus disponible ou le lien est incorrect.',
-    }
-  }
-
-  const previousImages = (await parent).openGraph?.images || []
-  const mainImageUrl = product.imageUrls?.[0] || 'https://res.cloudinary.com/dm6yuokre/image/upload/v1751804945/IMG-20250522-WA0007_2_dfvhk0.jpg';
-
-  return {
-    title: `${product.name} - Sonko Shop`,
-    description: product.description.substring(0, 155), // Truncate for meta description best practice
-    openGraph: {
-      title: `${product.name} | Sonko Shop`,
-      description: product.description,
-      images: [mainImageUrl, ...previousImages],
-    },
-  }
-}
-
 // Client component for all interactive logic
-function ProductDetailContent({ params }: { params: { id: string } }) {
-  'use client';
-
-  const [product, setProduct] = useState<Product | null>(null);
+export default function ProductDetailClient({ initialProduct }: { initialProduct: Product }) {
+  const [product, setProduct] = useState<Product>(initialProduct);
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isLoadingReviews, setIsLoadingReviews] = useState(true);
   const [mainImageUrl, setMainImageUrl] = useState<string>('');
   const [selectedSize, setSelectedSize] = useState<string | undefined>(undefined);
@@ -90,44 +34,32 @@ function ProductDetailContent({ params }: { params: { id: string } }) {
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(true);
 
   useEffect(() => {
-    if (!params.id) {
-      toast({ variant: "destructive", title: "Erreur", description: "ID de produit manquant." });
-      setIsLoading(false);
-      return;
-    }
+    setMainImageUrl(product.imageUrls?.[0] || 'https://placehold.co/600x600.png');
+  }, [product.imageUrls]);
 
-    setIsLoading(true);
-    const productDocRef = doc(db, 'products', params.id);
+  useEffect(() => {
+    if (!product.id) return;
+
+    // Real-time listener for product updates
+    const productDocRef = doc(db, 'products', product.id);
     const unsubscribeProduct = onSnapshot(productDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        let imageUrls: string[] = [];
+         let imageUrls: string[] = [];
         if (data.imageUrls && Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
             imageUrls = data.imageUrls;
         } else if (data.imageUrl && typeof data.imageUrl === 'string') {
             imageUrls = [data.imageUrl];
         }
-        
-        const productData = { id: docSnap.id, ...data, imageUrls: imageUrls } as Product;
-        setProduct(productData);
-        if (productData.imageUrls && productData.imageUrls.length > 0) {
-          setMainImageUrl(productData.imageUrls[0]);
-        } else {
-          setMainImageUrl('https://placehold.co/600x600.png');
-        }
-      } else {
-        setProduct(null);
-        toast({ variant: "destructive", title: "Produit non trouvé" });
+        const updatedProduct = { id: docSnap.id, ...data, imageUrls: imageUrls } as Product;
+        setProduct(updatedProduct);
       }
-      setIsLoading(false);
-    }, (error) => {
-      toast({ variant: "destructive", title: "Erreur", description: `Impossible de charger le produit: ${error.message}` });
-      setIsLoading(false);
     });
 
+    // Fetch reviews
     setIsLoadingReviews(true);
     const reviewsCollection = collection(db, 'reviews');
-    const qReviews = query(reviewsCollection, where('productId', '==', params.id), orderBy('createdAt', 'desc'));
+    const qReviews = query(reviewsCollection, where('productId', '==', product.id), orderBy('createdAt', 'desc'));
     const unsubscribeReviews = onSnapshot(qReviews, (snapshot) => {
       setReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review)));
       setIsLoadingReviews(false);
@@ -140,7 +72,7 @@ function ProductDetailContent({ params }: { params: { id: string } }) {
       unsubscribeProduct();
       unsubscribeReviews();
     };
-  }, [params.id, toast]);
+  }, [product.id]);
   
   useEffect(() => {
     if (!product || !product.category) return;
@@ -209,29 +141,6 @@ function ProductDetailContent({ params }: { params: { id: string } }) {
     cart.addToCart(product, quantity, selectedSize);
     toast({ title: "Produit ajouté au panier!", action: <CheckCircle className="text-green-500" /> });
   };
-  
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-12 text-center">
-        <div className="flex flex-col items-center justify-center h-64 space-y-3">
-          <Loader2 className="h-16 w-16 animate-spin text-primary" />
-          <p className="text-muted-foreground text-xl">Chargement du produit...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!product) {
-    return (
-      <div className="container mx-auto px-4 py-12 text-center">
-        <Zap className="mx-auto h-24 w-24 text-destructive mb-4" />
-        <h1 className="text-2xl font-semibold text-destructive">Produit Non Trouvé</h1>
-        <Button asChild className="mt-6 bg-primary hover:bg-primary/90">
-          <Link href="/products" className="flex items-center"><ArrowLeft className="mr-2 h-4 w-4" />Retour aux produits</Link>
-        </Button>
-      </div>
-    );
-  }
   
   const displayImageAiHint = product.imageAiHint || 'product image detail';
   const CategoryIconComponent = categoryIcons[product.category as keyof typeof categoryIcons] || categoryIcons["Default"];
@@ -353,21 +262,3 @@ function ProductDetailContent({ params }: { params: { id: string } }) {
     </div>
   );
 }
-
-// Main page component to handle Suspense boundary
-export default function ProductDetailPage({ params }: { params: { id: string } }) {
-  return (
-    <Suspense fallback={
-      <div className="container mx-auto px-4 py-12 text-center">
-          <div className="flex flex-col items-center justify-center h-64 space-y-3">
-            <Loader2 className="h-16 w-16 animate-spin text-primary" />
-            <p className="text-muted-foreground text-xl">Chargement...</p>
-          </div>
-      </div>
-    }>
-      <ProductDetailContent params={params} />
-    </Suspense>
-  )
-}
-
-    

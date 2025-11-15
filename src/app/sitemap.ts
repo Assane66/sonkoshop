@@ -1,6 +1,8 @@
+
 import { MetadataRoute } from 'next';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import type { Product } from '@/types';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002';
 
@@ -25,12 +27,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Dynamic product pages
   const productsCollectionRef = collection(db, 'products');
   const productsSnapshot = await getDocs(productsCollectionRef);
-  const productRoutes = productsSnapshot.docs.map((doc) => ({
-    url: `${BASE_URL}/products/${doc.id}`,
-    lastModified: new Date().toISOString(),
-    changeFrequency: 'weekly' as const,
-    priority: 0.7,
-  }));
+  const productRoutes = productsSnapshot.docs.map((doc) => {
+    const product = doc.data() as Product;
+    const slug = product.slug || doc.id;
+    return {
+      url: `${BASE_URL}/products/${slug}`,
+      lastModified: new Date().toISOString(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.7,
+    };
+  });
   
   // Dynamic category pages
   const categoriesCollectionRef = collection(db, 'categories');

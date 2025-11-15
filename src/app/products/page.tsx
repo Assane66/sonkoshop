@@ -78,6 +78,7 @@ function ProductsPageContent() {
           featured: data.featured || false,
           imageAiHint: data.imageAiHint || '',
           promotionPrice: data.promotionPrice || null,
+          slug: data.slug || '',
         } as Product;
       });
       setAllProducts(fetchedProducts);

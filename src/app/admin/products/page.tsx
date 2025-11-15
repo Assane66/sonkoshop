@@ -26,6 +26,13 @@ import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 
+const generateSlug = (name: string) => {
+  return name
+    .toLowerCase()
+    .replace(/ /g, '-')
+    .replace(/[^\w-]+/g, '');
+};
+
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -82,6 +89,11 @@ export default function AdminProductsPage() {
 
   const handleFormSubmit = async (productData: Omit<Product, 'id'> | Product) => {
     try {
+      // Ensure slug exists, generate if it doesn't
+      if (!productData.slug) {
+        productData.slug = generateSlug(productData.name);
+      }
+      
       // Clean up empty promotion fields to avoid storing nulls in Firestore
       if (productData.promotionPrice === null || productData.promotionPrice === undefined || productData.promotionPrice === 0) {
         delete productData.promotionPrice;
@@ -185,7 +197,7 @@ export default function AdminProductsPage() {
                       </div>
                     </TableCell>
                     <TableCell className="font-medium">
-                      <Link href={`/products/${product.id}`} target="_blank" className="hover:text-primary transition-colors flex items-center gap-1">
+                      <Link href={`/products/${product.slug}`} target="_blank" className="hover:text-primary transition-colors flex items-center gap-1">
                         {product.name} <Eye className="h-4 w-4 opacity-50"/>
                       </Link>
                     </TableCell>
