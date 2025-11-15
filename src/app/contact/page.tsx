@@ -28,20 +28,20 @@ export default function ContactPage() {
                 {/* Contact Form */}
                 <div className="space-y-6">
                     <h2 className="text-2xl font-semibold text-foreground">Envoyez-nous un message</h2>
-                    <form className="space-y-4">
+                    <form action={whatsappUrl} target="_blank" className="space-y-4">
                         <div>
                             <Label htmlFor="name">Nom complet</Label>
-                            <Input id="name" placeholder="Votre nom complet" />
+                            <Input id="name" placeholder="Votre nom complet" name="name" />
                         </div>
                          <div>
                             <Label htmlFor="phone">Téléphone</Label>
-                            <Input id="phone" type="tel" placeholder="Votre numéro de téléphone" />
+                            <Input id="phone" type="tel" placeholder="Votre numéro de téléphone" name="phone" />
                         </div>
                         <div>
                             <Label htmlFor="message">Message</Label>
-                            <Textarea id="message" placeholder="Écrivez votre message ici..." rows={5}/>
+                            <Textarea id="message" placeholder="Écrivez votre message ici..." rows={5} name="message"/>
                         </div>
-                        <Button type="submit" className="w-full bg-primary hover:bg-primary/90">Envoyer le message</Button>
+                        <Button type="submit" className="w-full bg-primary hover:bg-primary/90">Envoyer via WhatsApp</Button>
                     </form>
                 </div>
                 {/* Contact Info */}

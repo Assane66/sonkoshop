@@ -17,14 +17,13 @@ import { debounce } from 'lodash';
 interface ProductFiltersProps {
   onFilterChange: (filters: any) => void;
   initialCategory?: string | null;
+  initialCategories: SiteCategory[];
 }
 
 const SIZES = ['S', 'M', 'L', 'XL', 'XXL', '38', '39', '40', '41', '42', '43', '44', '45'];
 const MAX_PRICE = 100000; 
 
-export default function ProductFilters({ onFilterChange, initialCategory }: ProductFiltersProps) {
-  const [availableCategories, setAvailableCategories] = useState<SiteCategory[]>([]);
-  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+export default function ProductFilters({ onFilterChange, initialCategory, initialCategories = [] }: ProductFiltersProps) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, MAX_PRICE]);
@@ -37,26 +36,6 @@ export default function ProductFilters({ onFilterChange, initialCategory }: Prod
     }
   }, [initialCategory]);
 
-  useEffect(() => {
-    setIsLoadingCategories(true);
-    const categoriesCollection = collection(db, 'categories');
-    const q = query(categoriesCollection, orderBy('name', 'asc'));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedCategories: SiteCategory[] = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as SiteCategory));
-      setAvailableCategories(fetchedCategories);
-      setIsLoadingCategories(false);
-    }, (error) => {
-      console.error("Error fetching categories for filters:", error);
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les filtres de catégories." });
-      setIsLoadingCategories(false);
-    });
-
-    return () => unsubscribe();
-  }, [toast]);
 
   // Debounced version of onFilterChange to avoid too many re-renders with the slider
   const debouncedFilterChange = useCallback(debounce(onFilterChange, 300), [onFilterChange]);
@@ -97,13 +76,8 @@ export default function ProductFilters({ onFilterChange, initialCategory }: Prod
         <AccordionItem value="categories">
           <AccordionTrigger className="text-base font-medium">Catégories</AccordionTrigger>
           <AccordionContent className="space-y-2 pt-2">
-            {isLoadingCategories ? (
-              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Chargement...</span>
-              </div>
-            ) : availableCategories.length > 0 ? (
-              availableCategories.map(category => {
+            {initialCategories.length > 0 ? (
+              initialCategories.map(category => {
                 const IconComponent = category.iconName ? categoryIcons[category.iconName] : categoryIcons["Default"];
                 return (
                   <div key={category.id} className="flex items-center space-x-2">

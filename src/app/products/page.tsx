@@ -8,37 +8,35 @@ import type { Product, SiteCategory } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Search, PackageOpen, Loader2 } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy, getDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, getDocs } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useSearchParams } from 'next/navigation';
-import { Metadata, ResolvingMetadata } from 'next';
+import { Metadata } from 'next';
 
-
-type Props = {
-  searchParams: { [key: string]: string | string[] | undefined }
+async function getCategories(): Promise<SiteCategory[]> {
+  const categoriesCollection = collection(db, 'categories');
+  const q = query(categoriesCollection, orderBy('name', 'asc'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SiteCategory));
 }
 
-export async function generateMetadata(
-  { searchParams }: Props,
-  parent: ResolvingMetadata
-): Promise<Metadata> {
-  const categoryName = searchParams?.category as string | undefined;
+export async function generateMetadata({ searchParams }: { searchParams: { category?: string } }): Promise<Metadata> {
+  const categoryName = searchParams?.category;
 
   if (categoryName) {
-     // Optional: Verify category exists in DB if needed
     return {
       title: `${decodeURIComponent(categoryName)} - Sonko Shop`,
       description: `Découvrez notre sélection de ${decodeURIComponent(categoryName)} chez Sonko Shop. Qualité et meilleurs prix garantis.`,
-    }
+    };
   }
 
   return {
     title: 'Tous nos produits - Sonko Shop',
     description: 'Parcourez toute la collection de produits de Sonko Shop. Maillots, chaussures, équipements sportifs et bien plus encore.',
-  }
+  };
 }
 
-function ProductsPageContent() {
+function ProductsPageContent({ categories }: { categories: SiteCategory[] }) {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -175,6 +173,7 @@ function ProductsPageContent() {
           <ProductFilters
             onFilterChange={handleFilterChange}
             initialCategory={searchParams.get('category')}
+            initialCategories={categories}
           />
         </aside>
         <main className="w-full md:w-3/4 lg:w-4/5">
@@ -202,7 +201,8 @@ function ProductsPageContent() {
   );
 }
 
-export default function ProductsPage() {
+
+export default function ProductsPageWrapper() {
   return (
     <Suspense fallback={
       <div className="container mx-auto px-4 py-12 text-center">
@@ -212,7 +212,12 @@ export default function ProductsPage() {
         </div>
       </div>
     }>
-      <ProductsPageContent />
+      <ProductsPageLoader />
     </Suspense>
   );
+}
+
+async function ProductsPageLoader() {
+    const categories = await getCategories();
+    return <ProductsPageContent categories={categories} />;
 }
