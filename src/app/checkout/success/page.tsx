@@ -8,8 +8,6 @@ import { CheckCircle, Package, Download, Loader2, Hourglass, XCircle, MessageCir
 import Link from 'next/link';
 import type { Order, OrderItem } from '@/types';
 import Image from 'next/image';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
 import { useSearchParams } from 'next/navigation';
 import { verifyWavePayment } from '@/lib/wave';
@@ -93,6 +91,9 @@ function SuccessPageContent() {
     }
     setIsGeneratingPdf(true);
     try {
+      const { default: jsPDF } = await import('jspdf');
+      const { default: html2canvas } = await import('html2canvas');
+
       const canvas = await html2canvas(invoiceRef.current, {
         scale: 2,
         useCORS: true,
