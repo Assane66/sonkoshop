@@ -195,10 +195,6 @@ export default function Header() {
               <span className="sr-only">Trouver un magasin</span>
             </Button>
             <UserMenu />
-             <Button variant="ghost" size="icon" className="hidden md:inline-flex">
-              <Heart className="h-6 w-6" />
-              <span className="sr-only">Favoris</span>
-            </Button>
             <Button variant="ghost" size="icon" asChild className="relative">
               <Link href="/cart">
                 <ShoppingBag className="h-6 w-6" />

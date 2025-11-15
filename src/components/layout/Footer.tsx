@@ -53,7 +53,6 @@ export default function Footer() {
           <div>
             <h3 className="font-bold mb-4">Aide</h3>
             <ul className="space-y-2 text-sm text-gray-400">
-              <li><Link href="/account" className="hover:text-white">Suivre ma commande</Link></li>
               <li><Link href="/contact" className="hover:text-white">Contactez-nous</Link></li>
               <li><Link href="/politique-de-retour" className="hover:text-white">Retours et échanges</Link></li>
               <li><Link href="/termes-et-conditions" className="hover:text-white">Modes de paiement</Link></li>

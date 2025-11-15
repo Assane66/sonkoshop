@@ -62,18 +62,6 @@ export default function AccountPage() {
                 </Button>
             </CardContent>
         </Card>
-        {/* Placeholder for future features */}
-        <Card className="hover:bg-muted/50 transition-colors">
-            <CardHeader>
-                <CardTitle>Mes Favoris</CardTitle>
-                <CardDescription>
-                    Accédez à la liste des produits que vous avez aimés. (Bientôt disponible)
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Button disabled>Voir mes favoris</Button>
-            </CardContent>
-        </Card>
        </div>
     </div>
   );
