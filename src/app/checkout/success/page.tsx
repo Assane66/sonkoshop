@@ -29,7 +29,7 @@ function SuccessPageContent() {
   const { clearCart } = useCart();
 
   // --- START WHATSAPP NOTIFICATION LOGIC ---
-  const WHATSAPP_NUMBER = "221781395893"; // REMPLACEZ PAR VOTRE NUMÉRO
+  const WHATSAPP_NUMBER = "221784513633"; // Votre numéro WhatsApp ici
 
   const generateWhatsAppMessage = (order: Order) => {
       const itemsText = order.items.map(item => 
@@ -350,5 +350,3 @@ export default function CheckoutSuccessPage() {
     </div>
   );
 }
-
-    
