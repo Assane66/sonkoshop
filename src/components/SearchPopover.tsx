@@ -38,11 +38,12 @@ export default function SearchPopover({ onResultClick, isSheet = false }: Search
     
     const searchTermLower = debouncedSearchTerm.toLowerCase();
     
-    // This is a very basic search. For production, a dedicated search service (e.g., Algolia) is better.
+    // We fetch a broader set of products and filter client-side.
+    // For a large number of products, a dedicated search service like Algolia or Typesense is recommended.
     const q = query(
       productsRef,
       orderBy('name'),
-      limit(10)
+      limit(50) // Fetch more documents to increase the chance of finding a match
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -50,8 +51,9 @@ export default function SearchPopover({ onResultClick, isSheet = false }: Search
       
       const searchResults = allProducts.filter(product => 
         product.name.toLowerCase().includes(searchTermLower) || 
-        (product.category && product.category.toLowerCase().includes(searchTermLower))
-      ).slice(0, 5);
+        (product.category && product.category.toLowerCase().includes(searchTermLower)) ||
+        (product.description && product.description.toLowerCase().includes(searchTermLower)) // <-- Added description to search
+      ).slice(0, 5); // Limit results to 5 for display
 
       setResults(searchResults);
       setIsLoading(false);
