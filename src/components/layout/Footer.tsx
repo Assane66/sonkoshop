@@ -75,7 +75,7 @@ export default function Footer() {
             <div className="mt-6">
                 <h3 className="font-bold mb-4">RESTONS CONNECTÉS</h3>
                 <div className="flex space-x-4">
-                    <Link href="#" className="text-gray-400 hover:text-white"><Facebook className="h-6 w-6" /></Link>
+                    <Link href="https://www.facebook.com/profile.php?id=61556322727649" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white"><Facebook className="h-6 w-6" /></Link>
                     <Link href="https://www.tiktok.com/@sonkoshop24" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white"><TikTokIcon className="h-6 w-6" /></Link>
                     <Link href="https://www.instagram.com/sonko24shop/#" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white"><Instagram className="h-6 w-6" /></Link>
                 </div>
