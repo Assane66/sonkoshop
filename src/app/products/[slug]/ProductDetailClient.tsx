@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
@@ -7,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Input as ShadcnInput } from '@/components/ui/input';
+import { Label as ShadcnLabel } from '@/components/ui/label';
 import { ShoppingCart, Zap, CheckCircle, ShieldCheck, Tag, Minus, Plus, ArrowLeft, Loader2, Edit } from 'lucide-react';
 import type { Product, Review, CustomizationData } from '@/types';
 import { categoryIcons } from '@/types';
@@ -20,7 +20,6 @@ import ProductCard from '@/components/ProductCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import ProductReviews from '@/components/ProductReviews';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Label as ShadcnLabel } from '@/components/ui/label';
 
 const CUSTOMIZATION_COST = 2000;
 
@@ -45,58 +44,43 @@ export default function ProductDetailClient({ initialProduct }: { initialProduct
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(true);
 
   useEffect(() => {
-    setMainImageUrl(product.imageUrls?.[0] || 'https://placehold.co/600x600.png');
-  }, [product.imageUrls]);
+    setProduct(initialProduct);
+    setMainImageUrl(initialProduct.imageUrls?.[0] || 'https://placehold.co/600x600.png');
+  }, [initialProduct]);
 
   useEffect(() => {
     if (!product.id) return;
 
-    // Real-time listener for product updates
-    const productDocRef = doc(db, 'products', product.id);
-    const unsubscribeProduct = onSnapshot(productDocRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-         let imageUrls: string[] = [];
-        if (data.imageUrls && Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
-            imageUrls = data.imageUrls;
-        } else if (data.imageUrl && typeof data.imageUrl === 'string') {
-            imageUrls = [data.imageUrl];
-        }
-        const updatedProduct = { id: docSnap.id, ...data, imageUrls: imageUrls } as Product;
-        setProduct(updatedProduct);
+    // Fetch reviews (one-time fetch is often enough)
+    const fetchReviews = async () => {
+      setIsLoadingReviews(true);
+      const reviewsCollection = collection(db, 'reviews');
+      const qReviews = query(reviewsCollection, where('productId', '==', product.id), orderBy('createdAt', 'desc'));
+      try {
+        const snapshot = await getDocs(qReviews);
+        setReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review)));
+      } catch (error) {
+        console.error("Error fetching reviews:", error);
+      } finally {
+        setIsLoadingReviews(false);
       }
-    });
-
-    // Fetch reviews
-    setIsLoadingReviews(true);
-    const reviewsCollection = collection(db, 'reviews');
-    const qReviews = query(reviewsCollection, where('productId', '==', product.id), orderBy('createdAt', 'desc'));
-    const unsubscribeReviews = onSnapshot(qReviews, (snapshot) => {
-      setReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review)));
-      setIsLoadingReviews(false);
-    }, (error) => {
-       console.error("Error fetching reviews:", error);
-       setIsLoadingReviews(false);
-    });
-
-    return () => {
-      unsubscribeProduct();
-      unsubscribeReviews();
     };
-  }, [product.id]);
-  
-  useEffect(() => {
-    if (!product || !product.category) return;
-
-    setIsLoadingSuggestions(true);
-    const productsCollection = collection(db, 'products');
-    const q = query(
-        productsCollection,
-        where('category', '==', product.category),
-        limit(5)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    
+    // Fetch suggestions (one-time fetch)
+    const fetchSuggestions = async () => {
+      if (!product.category) {
+        setIsLoadingSuggestions(false);
+        return;
+      };
+      setIsLoadingSuggestions(true);
+      const productsCollection = collection(db, 'products');
+      const q = query(
+          productsCollection,
+          where('category', '==', product.category),
+          limit(5)
+      );
+      try {
+        const snapshot = await getDocs(q);
         const fetchedProducts: Product[] = snapshot.docs
             .map(doc => {
               const data = doc.data();
@@ -106,24 +90,22 @@ export default function ProductDetailClient({ initialProduct }: { initialProduct
               } else if (data.imageUrl && typeof data.imageUrl === 'string') {
                   imageUrls = [data.imageUrl];
               }
-              return {
-                id: doc.id,
-                ...data,
-                imageUrls
-              } as Product;
+              return { id: doc.id, ...data, imageUrls } as Product;
             })
             .filter(p => p.id !== product.id)
             .slice(0, 4);
-
         setSuggestedProducts(fetchedProducts);
-        setIsLoadingSuggestions(false);
-    }, (error) => {
+      } catch (error) {
         console.error("Error fetching suggested products:", error);
+      } finally {
         setIsLoadingSuggestions(false);
-    });
+      }
+    };
 
-    return () => unsubscribe();
-  }, [product]);
+    fetchReviews();
+    fetchSuggestions();
+  }, [product.id, product.category]);
+
 
   useEffect(() => {
     if (product && product.sizes && product.sizes.length > 0) {
