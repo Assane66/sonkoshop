@@ -51,9 +51,14 @@ type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
 const WHATSAPP_NUMBER = "221784513633";
 
 const generateWhatsAppMessage = (order: Order) => {
-    const itemsText = order.items.map(item =>
-        `- ${item.productName} (x${item.quantity}) ${item.selectedSize ? `[${item.selectedSize}]` : ''}`
-    ).join('\n');
+    const itemsText = order.items.map(item => {
+        let itemText = `- ${item.productName} (x${item.quantity}) ${item.selectedSize ? `[${item.selectedSize}]` : ''}`;
+        if (item.customization) {
+            itemText += `\n  FLOCAGE: Nom: ${item.customization.name}, Num: ${item.customization.number}`;
+            if(item.customization.bottomText) itemText += `, Bas: ${item.customization.bottomText}`;
+        }
+        return itemText;
+    }).join('\n');
 
     const message = `
 *Nouvelle Commande Sonko Shop !* ✅
@@ -170,6 +175,8 @@ export default function CheckoutPage() {
       price: item.priceInCart,
       selectedSize: item.selectedSize || '',
       imageUrl: item.imageUrls?.[0] || '',
+      customization: item.customization,
+      customizationCost: item.customizationCost,
     }));
 
     const customerInfo: CustomerInfo = {
@@ -430,12 +437,17 @@ export default function CheckoutPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {cartItems.map((item, index) => (
-                <div key={`${item.id}-${item.selectedSize || 'default'}-${index}`} className="flex justify-between items-center text-sm">
-                  <div>
+                <div key={`${item.id}-${item.selectedSize || 'default'}-${index}`} className="flex justify-between items-start text-sm">
+                  <div className="flex-grow">
                     <p className="font-medium">{item.name} (x{item.quantity})</p>
                     {item.selectedSize && <p className="text-xs text-muted-foreground">Taille: {item.selectedSize}</p>}
+                     {item.customization && (
+                        <p className="text-xs text-blue-600">
+                            Flocage: {item.customization.name}, {item.customization.number}
+                        </p>
+                    )}
                   </div>
-                  <p>{(item.priceInCart * item.quantity).toLocaleString('fr-FR')} FCFA</p>
+                  <p className="flex-shrink-0 ml-4">{((item.priceInCart + (item.customizationCost || 0)) * item.quantity).toLocaleString('fr-FR')} FCFA</p>
                 </div>
               ))}
               <Separator />

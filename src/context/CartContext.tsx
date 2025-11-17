@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { Product } from '@/types';
+import type { Product, CustomizationData } from '@/types';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Timestamp } from 'firebase/firestore';
@@ -11,11 +11,13 @@ export interface CartItem extends Product {
   quantity: number;
   selectedSize?: string;
   priceInCart: number; // Prix au moment de l'ajout, incluant la promotion
+  customization?: CustomizationData;
+  customizationCost?: number;
 }
 
 interface CartContextType {
   cartItems: CartItem[];
-  addToCart: (product: Product, quantity: number, size?: string) => void;
+  addToCart: (product: Product, quantity: number, size?: string, customization?: CustomizationData, customizationCost?: number) => void;
   removeFromCart: (productId: string, size?: string) => void;
   updateQuantity: (productId: string, quantity: number, size?: string) => void;
   clearCart: () => void;
@@ -61,12 +63,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [cartItems]);
 
-  const addToCart = (product: Product, quantity: number, size?: string) => {
+  const addToCart = (product: Product, quantity: number, size?: string, customization?: CustomizationData, customizationCost?: number) => {
     const priceInCart = calculateCurrentPrice(product);
 
     setCartItems(prevItems => {
-      const existingItemIndex = prevItems.findIndex(
-        item => item.id === product.id && item.selectedSize === size
+      // For customized items, always add as a new line item to avoid merging issues.
+      const isCustomized = !!customization;
+      const existingItemIndex = isCustomized ? -1 : prevItems.findIndex(
+        item => item.id === product.id && item.selectedSize === size && !item.customization
       );
 
       let newQuantity = quantity;
@@ -96,7 +100,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                 description: `Seulement ${product.stock} unités disponibles. Ajout de ${newQuantity} au panier.`,
             });
         }
-        return [...prevItems, { ...product, quantity: newQuantity, selectedSize: size, priceInCart }];
+        return [...prevItems, { ...product, quantity: newQuantity, selectedSize: size, priceInCart, customization, customizationCost }];
       }
     });
   };
@@ -141,7 +145,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const getCartSubtotal = () => {
-    return cartItems.reduce((total, item) => total + (item.priceInCart * item.quantity), 0);
+    return cartItems.reduce((total, item) => {
+        const itemTotal = item.priceInCart * item.quantity;
+        const customizationTotal = (item.customizationCost || 0) * item.quantity;
+        return total + itemTotal + customizationTotal;
+    }, 0);
   };
 
   const getShippingCost = (subtotal: number): number => {

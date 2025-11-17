@@ -4,7 +4,7 @@
 import { useCart, type CartItem } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import { Trash2, Plus, Minus, ShoppingCart, XCircle, CreditCard, Edit } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingCart, XCircle, CreditCard, Edit, Tag } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -94,8 +94,16 @@ export default function CartPage() {
               <div className="flex-grow text-center sm:text-left">
                 <h2 className="text-lg font-semibold">{item.name}</h2>
                 {item.selectedSize && <p className="text-sm text-muted-foreground">Taille: {item.selectedSize}</p>}
+                {item.customization && (
+                    <div className="text-xs text-muted-foreground mt-1 bg-muted/50 p-2 rounded-md">
+                        <p className="font-semibold text-primary/80 flex items-center gap-1"><Tag className="h-3 w-3"/> Personnalisation (+{((item.customizationCost || 0) * item.quantity).toLocaleString('fr-FR')} FCFA)</p>
+                        <p>Nom: <span className="font-medium">{item.customization.name}</span></p>
+                        <p>Numéro: <span className="font-medium">{item.customization.number}</span></p>
+                        {item.customization.bottomText && <p>Texte bas: <span className="font-medium">{item.customization.bottomText}</span></p>}
+                    </div>
+                )}
                 <p className="text-md font-semibold mt-1">
-                  Total Article: {(item.priceInCart * item.quantity).toLocaleString('fr-FR')} FCFA
+                  Total Article: {((item.priceInCart + (item.customizationCost || 0)) * item.quantity).toLocaleString('fr-FR')} FCFA
                  </p>
               </div>
               <div className="flex items-center space-x-2 my-2 sm:my-0">

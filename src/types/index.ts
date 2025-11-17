@@ -108,6 +108,12 @@ export enum OrderStatus {
 
 export const orderStatusList = Object.values(OrderStatus);
 
+export interface CustomizationData {
+    name: string;
+    number: string;
+    bottomText?: string;
+}
+
 export interface OrderItem {
   productId: string;
   productName: string;
@@ -115,6 +121,8 @@ export interface OrderItem {
   price: number; 
   selectedSize?: string;
   imageUrl?: string;
+  customization?: CustomizationData;
+  customizationCost?: number;
 }
 
 export interface CustomerInfo {

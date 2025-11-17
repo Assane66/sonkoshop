@@ -7,17 +7,22 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ShoppingCart, Minus, Plus, Edit, CheckCircle } from 'lucide-react';
-import type { Product } from '@/types';
+import type { Product, CustomizationData } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/context/CartContext';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { cn } from '@/lib/utils';
+import { Textarea } from '@/components/ui/textarea';
 
 interface ProductInteractionProps {
   product: Product;
 }
+
+const CUSTOMIZATION_COST = 2000;
 
 export default function ProductInteraction({ product }: ProductInteractionProps) {
   const { toast } = useToast();
@@ -26,11 +31,19 @@ export default function ProductInteraction({ product }: ProductInteractionProps)
   const [mainImageUrl, setMainImageUrl] = useState(product.imageUrls?.[0] || 'https://placehold.co/600x600.png');
   const [selectedSize, setSelectedSize] = useState<string | undefined>(product.sizes?.[0]);
   const [quantity, setQuantity] = useState(1);
+  
+  // State for customization
+  const [customizationEnabled, setCustomizationEnabled] = useState(false);
+  const [customizationName, setCustomizationName] = useState('');
+  const [customizationNumber, setCustomizationNumber] = useState('');
+  const [customizationBottomText, setCustomizationBottomText] = useState('');
 
   const isPromo = product.promotionPrice && product.promotionPrice > 0 && product.promotionPrice < product.price;
   const basePrice = isPromo ? product.promotionPrice! : product.price;
-  const totalCartPrice = basePrice * quantity;
   const originalPrice = isPromo ? product.price : null;
+  
+  const customizationCost = customizationEnabled ? CUSTOMIZATION_COST : 0;
+  const totalCartPrice = (basePrice * quantity) + (customizationCost * quantity);
 
   const handleAddToCart = () => {
     if (product.stock === 0) {
@@ -42,7 +55,20 @@ export default function ProductInteraction({ product }: ProductInteractionProps)
       return;
     }
     
-    addToCart(product, quantity, selectedSize);
+    let customizationData: CustomizationData | undefined = undefined;
+    if (customizationEnabled) {
+      if (!customizationName || !customizationNumber) {
+        toast({ variant: "destructive", title: "Champs de flocage requis", description: "Veuillez entrer un nom et un numéro pour la personnalisation." });
+        return;
+      }
+      customizationData = {
+        name: customizationName,
+        number: customizationNumber,
+        bottomText: customizationBottomText,
+      };
+    }
+    
+    addToCart(product, quantity, selectedSize, customizationData, customizationCost);
     toast({ title: "Produit ajouté au panier!", action: <CheckCircle className="text-green-500" /> });
   };
 
@@ -98,6 +124,42 @@ export default function ProductInteraction({ product }: ProductInteractionProps)
                 <Button variant="outline" size="icon" onClick={() => setQuantity(q => Math.min(product.stock, q + 1))} disabled={quantity >= product.stock || product.stock === 0}><Plus className="h-4 w-4" /></Button>
                 </div>
             </div>
+
+            {/* --- Customization Section --- */}
+            {product.category === 'Maillots' && (
+              <div className="space-y-4 pt-4 border-t">
+                <h3 className="text-base font-medium">Flocage</h3>
+                <RadioGroup value={customizationEnabled ? "avec" : "sans"} onValueChange={(value) => setCustomizationEnabled(value === "avec")}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="sans" id="sans-flocage" />
+                    <Label htmlFor="sans-flocage">Sans flocage</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="avec" id="avec-flocage" />
+                    <Label htmlFor="avec-flocage">Avec flocage (+{CUSTOMIZATION_COST.toLocaleString('fr-FR')} FCFA)</Label>
+                  </div>
+                </RadioGroup>
+
+                {customizationEnabled && (
+                  <div className="p-4 bg-muted/50 rounded-lg space-y-4 animate-accordion-down">
+                    <div>
+                      <Label htmlFor="flocage-nom">Nom (haut du maillot)</Label>
+                      <Input id="flocage-nom" value={customizationName} onChange={(e) => setCustomizationName(e.target.value)} placeholder="Ex: GASSAMA" required/>
+                    </div>
+                     <div>
+                      <Label htmlFor="flocage-numero">Numéro (centre)</Label>
+                      <Input id="flocage-numero" type="number" value={customizationNumber} onChange={(e) => setCustomizationNumber(e.target.value)} placeholder="Ex: 10" required />
+                    </div>
+                     <div>
+                      <Label htmlFor="flocage-bas">Texte en bas (optionnel)</Label>
+                      <Input id="flocage-bas" value={customizationBottomText} onChange={(e) => setCustomizationBottomText(e.target.value)} placeholder="Ex: El Hadj"/>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            <Separator />
 
             <div className='text-2xl font-bold mt-4'>Total: {totalCartPrice.toLocaleString('fr-FR')} FCFA</div>
 

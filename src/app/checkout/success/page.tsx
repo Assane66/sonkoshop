@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { CheckCircle, Package, Download, Loader2, Hourglass, XCircle, MessageCircle } from 'lucide-react';
+import { CheckCircle, Package, Download, Loader2, Hourglass, XCircle, MessageCircle, Tag } from 'lucide-react';
 import Link from 'next/link';
 import type { Order, OrderItem } from '@/types';
 import Image from 'next/image';
@@ -265,11 +265,18 @@ function SuccessPageContent() {
                     <tbody>
                         {order.items.map((item: OrderItem, index: number) => (
                             <tr key={index} className="border-b border-gray-200">
-                                <td className="py-2 px-3">{item.productName}</td>
+                                <td className="py-2 px-3">
+                                    <p>{item.productName}</p>
+                                    {item.customization && (
+                                        <div className="text-xs text-blue-600 pl-2">
+                                            <p>Flocage: {item.customization.name}, {item.customization.number}</p>
+                                        </div>
+                                    )}
+                                </td>
                                 <td className="py-2 px-3 text-center">{item.selectedSize || '-'}</td>
                                 <td className="py-2 px-3 text-center">{item.quantity}</td>
-                                <td className="py-2 px-3 text-right">{(item.price).toLocaleString('fr-FR')} FCFA</td>
-                                <td className="py-2 px-3 text-right">{(item.price * item.quantity).toLocaleString('fr-FR')} FCFA</td>
+                                <td className="py-2 px-3 text-right">{(item.price + (item.customizationCost || 0)).toLocaleString('fr-FR')} FCFA</td>
+                                <td className="py-2 px-3 text-right">{((item.price + (item.customizationCost || 0)) * item.quantity).toLocaleString('fr-FR')} FCFA</td>
                             </tr>
                         ))}
                     </tbody>

@@ -122,7 +122,7 @@ export async function verifyWavePayment(waveSessionId: string): Promise<{ succes
         return { success: false, error: `Commande ${orderId} non trouvée dans notre système.` };
     }
 
-    const orderData = orderSnap.data() as Order;
+    const orderData = orderSnap.data() as Omit<Order, 'id'>;
 
     // Check if the payment was successful according to Wave
     if (sessionData.payment_status === 'succeeded') {
