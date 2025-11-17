@@ -268,8 +268,8 @@ function SuccessPageContent() {
                                 <td className="py-2 px-3">{item.productName}</td>
                                 <td className="py-2 px-3 text-center">{item.selectedSize || '-'}</td>
                                 <td className="py-2 px-3 text-center">{item.quantity}</td>
-                                <td className="py-2 px-3 text-right">{item.price.toLocaleString('fr-FR')} FCFA</td>
-                                <td className="py-2 px-3 text-right">{(item.price * item.quantity).toLocaleString('fr-FR')} FCFA</td>
+                                <td className="py-2 px-3 text-right">{(item.price + (item.customizationCost || 0)).toLocaleString('fr-FR')} FCFA</td>
+                                <td className="py-2 px-3 text-right">{((item.price + (item.customizationCost || 0)) * item.quantity).toLocaleString('fr-FR')} FCFA</td>
                             </tr>
                         ))}
                     </tbody>
