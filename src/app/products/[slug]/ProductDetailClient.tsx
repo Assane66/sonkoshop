@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Input as ShadcnInput } from '@/components/ui/input';
 import { ShoppingCart, Zap, CheckCircle, ShieldCheck, Tag, Minus, Plus, ArrowLeft, Loader2, Edit } from 'lucide-react';
@@ -144,7 +144,7 @@ export default function ProductDetailClient({ initialProduct }: { initialProduct
   const isPromo = product && product.promotionPrice && product.promotionPrice > 0 && product.promotionPrice < product.price;
   const basePrice = isPromo ? product.promotionPrice! : (product ? product.price : 0);
   const customizationCost = isCustomizationActive ? CUSTOMIZATION_COST : 0;
-  const currentPrice = basePrice + customizationCost;
+  const currentPrice = (basePrice * quantity) + (customizationCost * quantity);
   const originalPrice = isPromo ? product.price : null;
 
   const handleAddToCart = () => {
@@ -261,18 +261,18 @@ export default function ProductDetailClient({ initialProduct }: { initialProduct
                       <ShadcnLabel htmlFor="customization-toggle" className="text-base font-semibold text-primary flex items-center gap-2 cursor-pointer"><Edit className="h-5 w-5" /> Personnaliser mon maillot (+{CUSTOMIZATION_COST.toLocaleString('fr-FR')} FCFA)</ShadcnLabel>
                     </div>
                     {isCustomizationActive && (
-                       <div className="space-y-4 pt-2 animate-accordion-down">
+                       <div className="space-y-4 pt-2 animate-in fade-in-50">
                           <div>
-                            <ShadcnLabel htmlFor="custom-name">Nom (max 12 caractères)</ShadcnLabel>
+                            <ShadcnLabel htmlFor="custom-name">Nom en haut du maillot (max 12 caractères)</ShadcnLabel>
                             <ShadcnInput id="custom-name" placeholder="Ex: MANÉ" maxLength={12} value={customization.name} onChange={(e) => handleCustomizationInputChange('name', e.target.value.toUpperCase())} />
                           </div>
                           <div>
-                            <ShadcnLabel htmlFor="custom-number-top">Numéro milieu (max 2 chiffres)</ShadcnLabel>
+                            <ShadcnLabel htmlFor="custom-number-top">Numéro au centre (max 2 chiffres)</ShadcnLabel>
                             <ShadcnInput id="custom-number-top" type="text" placeholder="Ex: 10" maxLength={2} value={customization.numberTop} onChange={(e) => handleCustomizationInputChange('numberTop', e.target.value.replace(/[^0-9]/g, ''))} />
                           </div>
                           <div>
-                            <ShadcnLabel htmlFor="custom-number-bottom">Numéro bas (max 2 chiffres, optionnel)</ShadcnLabel>
-                            <ShadcnInput id="custom-number-bottom" type="text" placeholder="Ex: 10" maxLength={2} value={customization.numberBottom} onChange={(e) => handleCustomizationInputChange('numberBottom', e.target.value.replace(/[^0-9]/g, ''))} />
+                            <ShadcnLabel htmlFor="custom-number-bottom">Texte supplémentaire en bas (facultatif)</ShadcnLabel>
+                            <ShadcnInput id="custom-number-bottom" type="text" placeholder="Ex: BARÇA" maxLength={12} value={customization.numberBottom} onChange={(e) => handleCustomizationInputChange('numberBottom', e.target.value.toUpperCase())} />
                           </div>
                        </div>
                     )}

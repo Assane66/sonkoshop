@@ -20,7 +20,8 @@ export default function CartPage() {
     getCartSubtotal, 
     clearCart,
     getShippingCost,
-    getCartGrandTotal 
+    getCartGrandTotal,
+    getCartTotalItems,
   } = useCart();
   const { toast } = useToast();
 
@@ -50,9 +51,6 @@ export default function CartPage() {
   const subtotal = getCartSubtotal();
   const shippingCost = getShippingCost(subtotal);
   const grandTotal = getCartGrandTotal();
-
-  console.log("CartPage: cartItems.length =", cartItems.length, "subtotal =", subtotal, "shippingCost =", shippingCost, "grandTotal =", grandTotal);
-
 
   if (cartItems.length === 0) {
     return (
@@ -107,14 +105,14 @@ export default function CartPage() {
                   </div>
                 )}
                 <p className="text-sm text-primary font-medium mt-2">
-                  {(item.priceInCart + (item.customizationCost || 0)).toLocaleString('fr-FR')} FCFA l'unité
+                  {(item.priceInCart).toLocaleString('fr-FR')} FCFA l'unité
                 </p>
                  <p className="text-md font-semibold mt-1">
                   Total Article: {((item.priceInCart + (item.customizationCost || 0)) * item.quantity).toLocaleString('fr-FR')} FCFA
                  </p>
               </div>
               <div className="flex items-center space-x-2 my-2 sm:my-0">
-                <Button variant="outline" size="icon" onClick={() => handleUpdateQuantity(item, item.quantity - 1)} disabled={item.quantity <= 1 && item.stock === 0}>
+                <Button variant="outline" size="icon" onClick={() => handleUpdateQuantity(item, item.quantity - 1)} disabled={item.quantity <= 1}>
                   <Minus className="h-4 w-4" />
                 </Button>
                 <Input
@@ -160,7 +158,7 @@ export default function CartPage() {
             </CardContent>
             <CardFooter className="flex flex-col space-y-3">
               <Button size="lg" className="w-full bg-primary hover:bg-primary/90" asChild>
-                <Link href="/checkout" onClick={() => console.log("CartPage: 'Passer à la caisse' link clicked.")}>
+                <Link href="/checkout">
                     <CreditCard className="mr-2 h-5 w-5" />
                     Passer à la caisse
                 </Link>
