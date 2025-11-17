@@ -13,7 +13,7 @@ import { categoryIcons } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/context/CartContext';
-import { doc, onSnapshot, getDoc, Timestamp, collection, query, where, limit, orderBy, getDocs } from 'firebase/firestore';
+import { doc, getDocs, Timestamp, collection, query, where, limit, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
@@ -217,7 +217,7 @@ export default function ProductDetailClient({ initialProduct }: { initialProduct
               <div className="space-y-4">
                 {product.sizes && product.sizes.length > 0 && (
                   <div className="grid grid-cols-3 items-center gap-4">
-                    <Label htmlFor="size" className="text-base font-medium">Taille:</Label>
+                    <ShadcnLabel htmlFor="size" className="text-base font-medium">Taille:</ShadcnLabel>
                     <Select value={selectedSize} onValueChange={setSelectedSize} disabled={product.stock === 0}>
                       <SelectTrigger id="size" className="col-span-2 text-base"><SelectValue placeholder="Choisir une taille" /></SelectTrigger>
                       <SelectContent>{product.sizes.map(size => <SelectItem key={size} value={size} className="text-base">{size}</SelectItem>)}</SelectContent>
@@ -225,7 +225,7 @@ export default function ProductDetailClient({ initialProduct }: { initialProduct
                   </div>
                 )}
                 <div className="grid grid-cols-3 items-center gap-4">
-                  <Label htmlFor="quantity" className="text-base font-medium">Quantité:</Label>
+                  <ShadcnLabel htmlFor="quantity" className="text-base font-medium">Quantité:</ShadcnLabel>
                   <div className="flex items-center space-x-1 col-span-2">
                     <Button variant="outline" size="icon" onClick={() => setQuantity(q => Math.max(1, q - 1))} disabled={quantity <= 1 || product.stock === 0}><Minus className="h-4 w-4" /></Button>
                     <ShadcnInput id="quantity" type="number" value={quantity} onChange={(e) => setQuantity(Math.max(1, Math.min(product.stock, parseInt(e.target.value) || 1)))} className="w-16 text-center text-base h-9" min="1" max={product.stock} disabled={product.stock === 0} />
