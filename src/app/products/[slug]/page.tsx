@@ -1,7 +1,7 @@
 
 import React, { Suspense } from 'react';
 import type { Product, Review } from '@/types';
-import { collection, query, where, limit, getDocs } from 'firebase/firestore';
+import { collection, query, where, limit, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
 import { Metadata, ResolvingMetadata } from 'next';
@@ -11,11 +11,10 @@ import ProductInteraction from './ProductInteraction';
 import ProductReviews from '@/components/ProductReviews';
 import ProductCard from '@/components/ProductCard';
 import { Separator } from '@/components/ui/separator';
-import Image from 'next/image';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle, ShieldCheck, Tag } from 'lucide-react';
 import { categoryIcons } from '@/types';
+import { Badge } from '@/components/ui/badge';
 
 
 type Props = {
@@ -139,9 +138,7 @@ export default async function ProductDetailPage({ params }: Props) {
   const reviews = await getReviewsForProduct(product.id);
   const suggestedProducts = await getSuggestedProducts(product);
 
-  const isPromo = product.promotionPrice && product.promotionPrice > 0 && product.promotionPrice < product.price;
   const CategoryIconComponent = categoryIcons[product.category as keyof typeof categoryIcons] || categoryIcons["Default"];
-  const displayImageAiHint = product.imageAiHint || 'product image detail';
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">
@@ -150,7 +147,6 @@ export default async function ProductDetailPage({ params }: Props) {
         </Button>
         <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-start">
             
-            {/* All interactive elements are now in this one client component */}
             <ProductInteraction product={product} />
 
             <div className="space-y-6">
