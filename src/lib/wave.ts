@@ -26,7 +26,7 @@ export async function createWaveCheckoutSession(args: CreateWaveCheckoutArgs) {
     // This allows us to have a record before redirecting the user
     const tempOrderPayload = {
         customerInfo: args.customerInfo,
-        items: args.orderItems, // This now includes customization data
+        items: args.orderItems,
         totalAmount: args.amount,
         subtotal: args.subtotal,
         shippingCost: args.shippingCost,

@@ -22,12 +22,6 @@ export type Product = {
   originalPrice?: number | null; // The price before promotion
 };
 
-export type CustomizationData = {
-  name?: string;
-  numberTop?: string;
-  numberBottom?: string;
-};
-
 export type Review = {
   id: string; // Firestore document ID
   productId: string;
@@ -121,8 +115,6 @@ export interface OrderItem {
   price: number; 
   selectedSize?: string;
   imageUrl?: string;
-  customization?: CustomizationData;
-  customizationCost?: number;
 }
 
 export interface CustomerInfo {

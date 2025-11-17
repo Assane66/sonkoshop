@@ -51,18 +51,9 @@ type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
 const WHATSAPP_NUMBER = "221784513633";
 
 const generateWhatsAppMessage = (order: Order) => {
-    const itemsText = order.items.map(item => {
-        let itemText = `- ${item.productName} (x${item.quantity}) ${item.selectedSize ? `[${item.selectedSize}]` : ''}`;
-        if(item.customization) {
-            const customDetails = [
-                item.customization.name && `Nom: ${item.customization.name}`,
-                item.customization.numberTop && `N°: ${item.customization.numberTop}`,
-                item.customization.numberBottom && `N° bas: ${item.customization.numberBottom}`,
-            ].filter(Boolean).join(', ');
-            if (customDetails) itemText += `\n  _Flocage: ${customDetails}_`;
-        }
-        return itemText;
-    }).join('\n');
+    const itemsText = order.items.map(item =>
+        `- ${item.productName} (x${item.quantity}) ${item.selectedSize ? `[${item.selectedSize}]` : ''}`
+    ).join('\n');
 
     const message = `
 *Nouvelle Commande Sonko Shop !* ✅
@@ -179,8 +170,6 @@ export default function CheckoutPage() {
       price: item.priceInCart,
       selectedSize: item.selectedSize || '',
       imageUrl: item.imageUrls?.[0] || '',
-      customization: item.customization,
-      customizationCost: item.customizationCost,
     }));
 
     const customerInfo: CustomerInfo = {
@@ -445,13 +434,8 @@ export default function CheckoutPage() {
                   <div>
                     <p className="font-medium">{item.name} (x{item.quantity})</p>
                     {item.selectedSize && <p className="text-xs text-muted-foreground">Taille: {item.selectedSize}</p>}
-                    {item.customization && (
-                      <Badge variant="secondary" className="mt-1 text-xs font-normal">
-                        <Edit className="h-3 w-3 mr-1"/> Personnalisé
-                      </Badge>
-                    )}
                   </div>
-                  <p>{((item.priceInCart + (item.customizationCost || 0)) * item.quantity).toLocaleString('fr-FR')} FCFA</p>
+                  <p>{(item.priceInCart * item.quantity).toLocaleString('fr-FR')} FCFA</p>
                 </div>
               ))}
               <Separator />

@@ -7,15 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ShoppingCart, Minus, Plus, Edit, CheckCircle } from 'lucide-react';
-import type { Product, CustomizationData } from '@/types';
+import type { Product } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/context/CartContext';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
-
-const CUSTOMIZATION_COST = 2000;
 
 interface ProductInteractionProps {
   product: Product;
@@ -28,24 +26,10 @@ export default function ProductInteraction({ product }: ProductInteractionProps)
   const [mainImageUrl, setMainImageUrl] = useState(product.imageUrls?.[0] || 'https://placehold.co/600x600.png');
   const [selectedSize, setSelectedSize] = useState<string | undefined>(product.sizes?.[0]);
   const [quantity, setQuantity] = useState(1);
-  const [isCustomizationActive, setIsCustomizationActive] = useState(false);
-  const [customization, setCustomization] = useState<CustomizationData>({
-    name: '',
-    numberTop: '',
-    numberBottom: '',
-  });
-
-  useEffect(() => {
-    if (!isCustomizationActive) {
-      setCustomization({ name: '', numberTop: '', numberBottom: '' });
-    }
-  }, [isCustomizationActive]);
 
   const isPromo = product.promotionPrice && product.promotionPrice > 0 && product.promotionPrice < product.price;
   const basePrice = isPromo ? product.promotionPrice! : product.price;
-  const customizationCost = isCustomizationActive ? CUSTOMIZATION_COST : 0;
-  const totalItemPrice = (basePrice + customizationCost);
-  const totalCartPrice = totalItemPrice * quantity;
+  const totalCartPrice = basePrice * quantity;
   const originalPrice = isPromo ? product.price : null;
 
   const handleAddToCart = () => {
@@ -57,16 +41,11 @@ export default function ProductInteraction({ product }: ProductInteractionProps)
       toast({ variant: "destructive", title: "Veuillez sélectionner une taille" });
       return;
     }
-    const finalCustomization = isCustomizationActive ? customization : undefined;
-    const finalCustomizationCost = isCustomizationActive ? CUSTOMIZATION_COST : undefined;
-
-    addToCart(product, quantity, selectedSize, finalCustomization, finalCustomizationCost);
+    
+    addToCart(product, quantity, selectedSize);
     toast({ title: "Produit ajouté au panier!", action: <CheckCircle className="text-green-500" /> });
   };
 
-  const handleCustomizationInputChange = (field: keyof CustomizationData, value: string) => {
-    setCustomization(prev => ({ ...prev, [field]: value }));
-  };
 
   return (
     <div className="space-y-6">
@@ -100,9 +79,6 @@ export default function ProductInteraction({ product }: ProductInteractionProps)
                 ) : (
                     <p className="text-2xl lg:text-3xl font-semibold text-primary">{basePrice.toLocaleString('fr-FR')} FCFA</p>
                 )}
-                {isCustomizationActive && (
-                    <p className="text-sm text-green-600 font-medium">+ {CUSTOMIZATION_COST.toLocaleString('fr-FR')} FCFA (Flocage)</p>
-                )}
             </div>
 
             {product.sizes && product.sizes.length > 0 && (
@@ -122,34 +98,6 @@ export default function ProductInteraction({ product }: ProductInteractionProps)
                 <Button variant="outline" size="icon" onClick={() => setQuantity(q => Math.min(product.stock, q + 1))} disabled={quantity >= product.stock || product.stock === 0}><Plus className="h-4 w-4" /></Button>
                 </div>
             </div>
-
-            {product.category === 'Maillots' && (
-            <>
-                <Separator className="my-6" />
-                <div className="space-y-4 p-4 border-2 border-dashed rounded-lg">
-                <div className="flex items-center space-x-2">
-                    <Checkbox id="customization-toggle" checked={isCustomizationActive} onCheckedChange={(checked) => setIsCustomizationActive(checked as boolean)} />
-                    <Label htmlFor="customization-toggle" className="text-base font-semibold text-primary flex items-center gap-2 cursor-pointer"><Edit className="h-5 w-5" /> Personnaliser mon maillot (+{CUSTOMIZATION_COST.toLocaleString('fr-FR')} FCFA)</Label>
-                </div>
-                {isCustomizationActive && (
-                    <div className="space-y-4 pt-2 animate-in fade-in-50">
-                    <div>
-                        <Label htmlFor="custom-name">Nom en haut du maillot (max 12 caractères)</Label>
-                        <Input id="custom-name" placeholder="Ex: MANÉ" maxLength={12} value={customization.name} onChange={(e) => handleCustomizationInputChange('name', e.target.value.toUpperCase())} />
-                    </div>
-                    <div>
-                        <Label htmlFor="custom-number-top">Numéro au centre (max 2 chiffres)</Label>
-                        <Input id="custom-number-top" type="text" placeholder="Ex: 10" maxLength={2} value={customization.numberTop} onChange={(e) => handleCustomizationInputChange('numberTop', e.target.value.replace(/[^0-9]/g, ''))} />
-                    </div>
-                    <div>
-                        <Label htmlFor="custom-number-bottom">Texte supplémentaire en bas (facultatif)</Label>
-                        <Input id="custom-number-bottom" type="text" placeholder="Ex: BARÇA" maxLength={12} value={customization.numberBottom} onChange={(e) => handleCustomizationInputChange('numberBottom', e.target.value.toUpperCase())} />
-                    </div>
-                    </div>
-                )}
-                </div>
-            </>
-            )}
 
             <div className='text-2xl font-bold mt-4'>Total: {totalCartPrice.toLocaleString('fr-FR')} FCFA</div>
 
