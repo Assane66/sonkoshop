@@ -4,12 +4,13 @@
 import { useCart, type CartItem } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import { Trash2, Plus, Minus, ShoppingCart, XCircle, CreditCard } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingCart, XCircle, CreditCard, Edit } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input'; 
+import { Badge } from '@/components/ui/badge';
 
 export default function CartPage() {
   const { 
@@ -23,8 +24,8 @@ export default function CartPage() {
   } = useCart();
   const { toast } = useToast();
 
-  const handleRemoveItem = (productId: string, size?: string) => {
-    removeFromCart(productId, size);
+  const handleRemoveItem = (item: CartItem) => {
+    removeFromCart(item.id, item.selectedSize, item.customization);
     toast({ title: "Produit retiré", description: "Le produit a été retiré de votre panier." });
   };
 
@@ -32,17 +33,17 @@ export default function CartPage() {
     const quantityVal = Number(newQuantity);
     if (isNaN(quantityVal) || quantityVal < 1) {
       if (quantityVal < 1) {
-        handleRemoveItem(item.id, item.selectedSize);
+        handleRemoveItem(item);
         return;
       }
-      updateQuantity(item.id, 1, item.selectedSize);
+      updateQuantity(item.id, 1, item.selectedSize, item.customization);
 
     } else if (quantityVal > item.stock) {
-      updateQuantity(item.id, item.stock, item.selectedSize);
+      updateQuantity(item.id, item.stock, item.selectedSize, item.customization);
       toast({ variant: "destructive", title: "Stock insuffisant", description: `Seulement ${item.stock} unités disponibles.`});
     }
     else {
-      updateQuantity(item.id, quantityVal, item.selectedSize);
+      updateQuantity(item.id, quantityVal, item.selectedSize, item.customization);
     }
   };
   
@@ -80,8 +81,8 @@ export default function CartPage() {
       </div>
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-4">
-          {cartItems.map((item) => (
-            <Card key={`${item.id}-${item.selectedSize || 'default'}`} className="flex flex-col sm:flex-row items-center p-4 shadow-md gap-4">
+          {cartItems.map((item, index) => (
+            <Card key={`${item.id}-${item.selectedSize || 'default'}-${index}`} className="flex flex-col sm:flex-row items-center p-4 shadow-md gap-4">
               <div className="relative w-24 h-24 sm:w-20 sm:h-20 flex-shrink-0">
                 <Image
                   src={item.imageUrls?.[0] || 'https://placehold.co/100x100.png'}
@@ -95,8 +96,22 @@ export default function CartPage() {
               <div className="flex-grow text-center sm:text-left">
                 <h2 className="text-lg font-semibold">{item.name}</h2>
                 {item.selectedSize && <p className="text-sm text-muted-foreground">Taille: {item.selectedSize}</p>}
-                <p className="text-sm text-primary font-medium">{item.priceInCart.toLocaleString('fr-FR')} FCFA l'unité</p>
-                 <p className="text-md font-semibold mt-1">Total Article: {(item.priceInCart * item.quantity).toLocaleString('fr-FR')} FCFA</p>
+                 {item.customization && (
+                  <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                    <Badge variant="outline" className="flex items-center gap-1 w-fit mx-auto sm:mx-0">
+                      <Edit className="h-3 w-3" /> Flocage Personnalisé
+                    </Badge>
+                    {item.customization.name && <p>Nom: <span className="font-medium text-foreground">{item.customization.name}</span></p>}
+                    {item.customization.numberTop && <p>Numéro: <span className="font-medium text-foreground">{item.customization.numberTop}</span></p>}
+                    {item.customization.numberBottom && <p>Numéro (bas): <span className="font-medium text-foreground">{item.customization.numberBottom}</span></p>}
+                  </div>
+                )}
+                <p className="text-sm text-primary font-medium mt-2">
+                  {(item.priceInCart + (item.customizationCost || 0)).toLocaleString('fr-FR')} FCFA l'unité
+                </p>
+                 <p className="text-md font-semibold mt-1">
+                  Total Article: {((item.priceInCart + (item.customizationCost || 0)) * item.quantity).toLocaleString('fr-FR')} FCFA
+                 </p>
               </div>
               <div className="flex items-center space-x-2 my-2 sm:my-0">
                 <Button variant="outline" size="icon" onClick={() => handleUpdateQuantity(item, item.quantity - 1)} disabled={item.quantity <= 1 && item.stock === 0}>
@@ -114,7 +129,7 @@ export default function CartPage() {
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id, item.selectedSize)} className="text-destructive hover:text-destructive/80">
+              <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item)} className="text-destructive hover:text-destructive/80">
                 <Trash2 className="h-5 w-5" />
                 <span className="sr-only">Retirer</span>
               </Button>
@@ -128,7 +143,7 @@ export default function CartPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between">
-                <span>Sous-total ({cartItems.reduce((acc, item) => acc + item.quantity, 0)} articles)</span>
+                <span>Sous-total ({getCartTotalItems()} articles)</span>
                 <span>{subtotal.toLocaleString('fr-FR')} FCFA</span>
               </div>
               <div className="flex justify-between">

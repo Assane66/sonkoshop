@@ -15,13 +15,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Truck, Store } from 'lucide-react';
+import { Loader2, Truck, Store, Edit } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { OrderStatus, type Order, type CustomerInfo, type OrderItem, type SiteSettings } from '@/types';
 import { createWaveCheckoutSession } from '@/lib/wave';
+import { Badge } from '@/components/ui/badge';
 
 
 const checkoutFormSchema = z.object({
@@ -50,9 +51,18 @@ type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
 const WHATSAPP_NUMBER = "221784513633";
 
 const generateWhatsAppMessage = (order: Order) => {
-    const itemsText = order.items.map(item => 
-        `- ${item.productName} (x${item.quantity}) ${item.selectedSize ? `[${item.selectedSize}]` : ''}`
-    ).join('\n');
+    const itemsText = order.items.map(item => {
+        let itemText = `- ${item.productName} (x${item.quantity}) ${item.selectedSize ? `[${item.selectedSize}]` : ''}`;
+        if(item.customization) {
+            const customDetails = [
+                item.customization.name && `Nom: ${item.customization.name}`,
+                item.customization.numberTop && `N°: ${item.customization.numberTop}`,
+                item.customization.numberBottom && `N° bas: ${item.customization.numberBottom}`,
+            ].filter(Boolean).join(', ');
+            if (customDetails) itemText += `\n  _Flocage: ${customDetails}_`;
+        }
+        return itemText;
+    }).join('\n');
 
     const message = `
 *Nouvelle Commande Sonko Shop !* ✅
@@ -169,6 +179,8 @@ export default function CheckoutPage() {
       price: item.priceInCart,
       selectedSize: item.selectedSize || '',
       imageUrl: item.imageUrls?.[0] || '',
+      customization: item.customization,
+      customizationCost: item.customizationCost,
     }));
 
     const customerInfo: CustomerInfo = {
@@ -428,13 +440,18 @@ export default function CheckoutPage() {
               <CardTitle className="text-xl">Résumé de votre commande</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {cartItems.map(item => (
-                <div key={`${item.id}-${item.selectedSize || 'default'}`} className="flex justify-between items-center text-sm">
+              {cartItems.map((item, index) => (
+                <div key={`${item.id}-${item.selectedSize || 'default'}-${index}`} className="flex justify-between items-center text-sm">
                   <div>
                     <p className="font-medium">{item.name} (x{item.quantity})</p>
                     {item.selectedSize && <p className="text-xs text-muted-foreground">Taille: {item.selectedSize}</p>}
+                    {item.customization && (
+                      <Badge variant="secondary" className="mt-1 text-xs font-normal">
+                        <Edit className="h-3 w-3 mr-1"/> Personnalisé
+                      </Badge>
+                    )}
                   </div>
-                  <p>{(item.priceInCart * item.quantity).toLocaleString('fr-FR')} FCFA</p>
+                  <p>{((item.priceInCart + (item.customizationCost || 0)) * item.quantity).toLocaleString('fr-FR')} FCFA</p>
                 </div>
               ))}
               <Separator />

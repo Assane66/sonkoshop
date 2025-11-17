@@ -7,8 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Input as ShadcnInput } from '@/components/ui/input';
-import { ShoppingCart, Zap, CheckCircle, ShieldCheck, Tag, Minus, Plus, ArrowLeft, Loader2 } from 'lucide-react';
-import type { Product, Review } from '@/types';
+import { ShoppingCart, Zap, CheckCircle, ShieldCheck, Tag, Minus, Plus, ArrowLeft, Loader2, Edit } from 'lucide-react';
+import type { Product, Review, CustomizationData } from '@/types';
 import { categoryIcons } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
@@ -19,6 +19,10 @@ import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import ProductReviews from '@/components/ProductReviews';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label as ShadcnLabel } from '@/components/ui/label';
+
+const CUSTOMIZATION_COST = 2000;
 
 // Client component for all interactive logic
 export default function ProductDetailClient({ initialProduct }: { initialProduct: Product }) {
@@ -28,6 +32,13 @@ export default function ProductDetailClient({ initialProduct }: { initialProduct
   const [mainImageUrl, setMainImageUrl] = useState<string>('');
   const [selectedSize, setSelectedSize] = useState<string | undefined>(undefined);
   const [quantity, setQuantity] = useState(1);
+  const [isCustomizationActive, setIsCustomizationActive] = useState(false);
+  const [customization, setCustomization] = useState<CustomizationData>({
+    name: '',
+    numberTop: '',
+    numberBottom: '',
+  });
+
   const { toast } = useToast();
   const cart = useCart();
   const [suggestedProducts, setSuggestedProducts] = useState<Product[]>([]);
@@ -123,9 +134,17 @@ export default function ProductDetailClient({ initialProduct }: { initialProduct
         setSelectedSize(undefined);
     }
   }, [product, selectedSize]);
+
+  useEffect(() => {
+    if (!isCustomizationActive) {
+      setCustomization({ name: '', numberTop: '', numberBottom: '' });
+    }
+  }, [isCustomizationActive]);
   
   const isPromo = product && product.promotionPrice && product.promotionPrice > 0 && product.promotionPrice < product.price;
-  const currentPrice = isPromo ? product.promotionPrice! : (product ? product.price : 0);
+  const basePrice = isPromo ? product.promotionPrice! : (product ? product.price : 0);
+  const customizationCost = isCustomizationActive ? CUSTOMIZATION_COST : 0;
+  const currentPrice = basePrice + customizationCost;
   const originalPrice = isPromo ? product.price : null;
 
   const handleAddToCart = () => {
@@ -138,8 +157,15 @@ export default function ProductDetailClient({ initialProduct }: { initialProduct
       toast({ variant: "destructive", title: "Veuillez sélectionner une taille" });
       return;
     }
-    cart.addToCart(product, quantity, selectedSize);
+    const finalCustomization = isCustomizationActive ? customization : undefined;
+    const finalCustomizationCost = isCustomizationActive ? CUSTOMIZATION_COST : undefined;
+
+    cart.addToCart(product, quantity, selectedSize, finalCustomization, finalCustomizationCost);
     toast({ title: "Produit ajouté au panier!", action: <CheckCircle className="text-green-500" /> });
+  };
+
+  const handleCustomizationInputChange = (field: keyof CustomizationData, value: string) => {
+    setCustomization(prev => ({ ...prev, [field]: value }));
   };
   
   const displayImageAiHint = product.imageAiHint || 'product image detail';
@@ -195,10 +221,13 @@ export default function ProductDetailClient({ initialProduct }: { initialProduct
                 {isPromo ? (
                   <>
                     <p className="text-xl lg:text-2xl text-muted-foreground line-through">{originalPrice?.toLocaleString('fr-FR')} FCFA</p>
-                    <p className="text-2xl lg:text-3xl font-semibold text-destructive">{currentPrice.toLocaleString('fr-FR')} FCFA <Badge variant="destructive" className="ml-2 text-sm">PROMO</Badge></p>
+                    <p className="text-2xl lg:text-3xl font-semibold text-destructive">{basePrice.toLocaleString('fr-FR')} FCFA <Badge variant="destructive" className="ml-2 text-sm">PROMO</Badge></p>
                   </>
                 ) : (
-                  <p className="text-2xl lg:text-3xl font-semibold text-primary">{currentPrice.toLocaleString('fr-FR')} FCFA</p>
+                  <p className="text-2xl lg:text-3xl font-semibold text-primary">{basePrice.toLocaleString('fr-FR')} FCFA</p>
+                )}
+                 {isCustomizationActive && (
+                  <p className="text-sm text-green-600 font-medium">+ {CUSTOMIZATION_COST.toLocaleString('fr-FR')} FCFA (Flocage)</p>
                 )}
               </div>
               <CardDescription className="text-base text-foreground/80 leading-relaxed">{product.description}</CardDescription>
@@ -222,6 +251,38 @@ export default function ProductDetailClient({ initialProduct }: { initialProduct
                   </div>
                 </div>
               </div>
+              
+              {product.category === 'Maillots' && (
+                <>
+                  <Separator className="my-6" />
+                  <div className="space-y-4 p-4 border-2 border-dashed rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="customization-toggle" checked={isCustomizationActive} onCheckedChange={(checked) => setIsCustomizationActive(checked as boolean)} />
+                      <ShadcnLabel htmlFor="customization-toggle" className="text-base font-semibold text-primary flex items-center gap-2 cursor-pointer"><Edit className="h-5 w-5" /> Personnaliser mon maillot (+{CUSTOMIZATION_COST.toLocaleString('fr-FR')} FCFA)</ShadcnLabel>
+                    </div>
+                    {isCustomizationActive && (
+                       <div className="space-y-4 pt-2 animate-accordion-down">
+                          <div>
+                            <ShadcnLabel htmlFor="custom-name">Nom (max 12 caractères)</ShadcnLabel>
+                            <ShadcnInput id="custom-name" placeholder="Ex: MANÉ" maxLength={12} value={customization.name} onChange={(e) => handleCustomizationInputChange('name', e.target.value.toUpperCase())} />
+                          </div>
+                          <div>
+                            <ShadcnLabel htmlFor="custom-number-top">Numéro milieu (max 2 chiffres)</ShadcnLabel>
+                            <ShadcnInput id="custom-number-top" type="text" placeholder="Ex: 10" maxLength={2} value={customization.numberTop} onChange={(e) => handleCustomizationInputChange('numberTop', e.target.value.replace(/[^0-9]/g, ''))} />
+                          </div>
+                          <div>
+                            <ShadcnLabel htmlFor="custom-number-bottom">Numéro bas (max 2 chiffres, optionnel)</ShadcnLabel>
+                            <ShadcnInput id="custom-number-bottom" type="text" placeholder="Ex: 10" maxLength={2} value={customization.numberBottom} onChange={(e) => handleCustomizationInputChange('numberBottom', e.target.value.replace(/[^0-9]/g, ''))} />
+                          </div>
+                       </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              <div className='text-2xl font-bold mt-4'>Total: {currentPrice.toLocaleString('fr-FR')} FCFA</div>
+
+
               <Button size="lg" className="w-full mt-8 text-lg py-3 bg-primary hover:bg-primary/90" onClick={handleAddToCart} disabled={product.stock === 0}><ShoppingCart className="mr-2 h-5 w-5" />Ajouter au Panier</Button>
             </CardContent>
           </Card>

@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { Product } from '@/types';
+import type { Product, CustomizationData } from '@/types';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Timestamp } from 'firebase/firestore';
@@ -11,13 +11,15 @@ export interface CartItem extends Product {
   quantity: number;
   selectedSize?: string;
   priceInCart: number; // Prix au moment de l'ajout, incluant la promotion
+  customization?: CustomizationData;
+  customizationCost?: number;
 }
 
 interface CartContextType {
   cartItems: CartItem[];
-  addToCart: (product: Product, quantity: number, size?: string) => void;
-  removeFromCart: (productId: string, size?: string) => void;
-  updateQuantity: (productId: string, quantity: number, size?: string) => void;
+  addToCart: (product: Product, quantity: number, size?: string, customization?: CustomizationData, customizationCost?: number) => void;
+  removeFromCart: (productId: string, size?: string, customization?: CustomizationData) => void;
+  updateQuantity: (productId: string, quantity: number, size?: string, customization?: CustomizationData) => void;
   clearCart: () => void;
   getCartTotalItems: () => number;
   getCartSubtotal: () => number; // Renamed from getCartTotalPrice
@@ -34,6 +36,13 @@ const calculateCurrentPrice = (product: Product): number => {
 
 const SHIPPING_COST_THRESHOLD = 25000;
 const DEFAULT_SHIPPING_COST = 1000;
+
+const customizationsAreEqual = (c1?: CustomizationData, c2?: CustomizationData) => {
+  if (!c1 && !c2) return true;
+  if (!c1 || !c2) return false;
+  return c1.name === c2.name && c1.numberTop === c2.numberTop && c1.numberBottom === c2.numberBottom;
+};
+
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -60,12 +69,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [cartItems]);
 
-  const addToCart = (product: Product, quantity: number, size?: string) => {
+  const addToCart = (product: Product, quantity: number, size?: string, customization?: CustomizationData, customizationCost?: number) => {
     const priceInCart = calculateCurrentPrice(product);
 
     setCartItems(prevItems => {
       const existingItemIndex = prevItems.findIndex(
-        item => item.id === product.id && item.selectedSize === size
+        item => item.id === product.id && item.selectedSize === size && customizationsAreEqual(item.customization, customization)
       );
 
       let newQuantity = quantity;
@@ -95,21 +104,21 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                 description: `Seulement ${product.stock} unités disponibles. Ajout de ${newQuantity} au panier.`,
             });
         }
-        return [...prevItems, { ...product, quantity: newQuantity, selectedSize: size, priceInCart }];
+        return [...prevItems, { ...product, quantity: newQuantity, selectedSize: size, priceInCart, customization, customizationCost }];
       }
     });
   };
 
-  const removeFromCart = (productId: string, size?: string) => {
+  const removeFromCart = (productId: string, size?: string, customization?: CustomizationData) => {
     setCartItems(prevItems =>
-      prevItems.filter(item => !(item.id === productId && item.selectedSize === size))
+      prevItems.filter(item => !(item.id === productId && item.selectedSize === size && customizationsAreEqual(item.customization, customization)))
     );
   };
 
-  const updateQuantity = (productId: string, quantity: number, size?: string) => {
+  const updateQuantity = (productId: string, quantity: number, size?: string, customization?: CustomizationData) => {
     setCartItems(prevItems =>
       prevItems.map(item => {
-        if (item.id === productId && item.selectedSize === size) {
+        if (item.id === productId && item.selectedSize === size && customizationsAreEqual(item.customization, customization)) {
           const productStock = item.stock;
           let newQuantity = quantity;
 
@@ -140,7 +149,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const getCartSubtotal = () => {
-    return cartItems.reduce((total, item) => total + item.priceInCart * item.quantity, 0);
+    return cartItems.reduce((total, item) => {
+        const itemTotal = item.priceInCart * item.quantity;
+        const customizationTotal = (item.customizationCost || 0) * item.quantity;
+        return total + itemTotal + customizationTotal;
+    }, 0);
   };
 
   const getShippingCost = (subtotal: number): number => {
