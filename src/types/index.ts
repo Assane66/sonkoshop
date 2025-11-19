@@ -111,7 +111,7 @@ export const orderStatusList = Object.values(OrderStatus);
 export interface CustomizationData {
     name: string;
     number: string;
-    bottomText?: string;
+    bottomText?: string | null;
 }
 
 export interface OrderItem {
@@ -121,8 +121,8 @@ export interface OrderItem {
   price: number; 
   selectedSize?: string;
   imageUrl?: string;
-  customization?: CustomizationData;
-  customizationCost?: number;
+  customization?: CustomizationData | null;
+  customizationCost: number;
 }
 
 export interface CustomerInfo {

@@ -11,15 +11,15 @@ export interface CartItem extends Product {
   quantity: number;
   selectedSize?: string;
   priceInCart: number; // Prix au moment de l'ajout, incluant la promotion
-  customization?: CustomizationData;
-  customizationCost?: number;
+  customization?: CustomizationData | null;
+  customizationCost: number;
 }
 
 interface CartContextType {
   cartItems: CartItem[];
-  addToCart: (product: Product, quantity: number, size?: string, customization?: CustomizationData, customizationCost?: number) => void;
-  removeFromCart: (productId: string, size?: string, customization?: CustomizationData) => void;
-  updateQuantity: (productId: string, quantity: number, size?: string, customization?: CustomizationData) => void;
+  addToCart: (product: Product, quantity: number, size?: string, customization?: CustomizationData | null, customizationCost?: number) => void;
+  removeFromCart: (productId: string, size?: string, customization?: CustomizationData | null) => void;
+  updateQuantity: (productId: string, quantity: number, size?: string, customization?: CustomizationData | null) => void;
   clearCart: () => void;
   getCartTotalItems: () => number;
   getCartSubtotal: () => number; // Renamed from getCartTotalPrice
@@ -63,7 +63,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [cartItems]);
 
-  const addToCart = (product: Product, quantity: number, size?: string, customization?: CustomizationData, customizationCost?: number) => {
+  const addToCart = (product: Product, quantity: number, size?: string, customization?: CustomizationData | null, customizationCost: number = 0) => {
     const priceInCart = calculateCurrentPrice(product);
 
     setCartItems(prevItems => {
@@ -109,7 +109,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const removeFromCart = (productId: string, size?: string, customization?: CustomizationData) => {
+  const removeFromCart = (productId: string, size?: string, customization?: CustomizationData | null) => {
     setCartItems(prevItems =>
       prevItems.filter(item => {
         const isMatch = item.id === productId && item.selectedSize === size;
@@ -131,7 +131,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
-  const updateQuantity = (productId: string, quantity: number, size?: string, customization?: CustomizationData) => {
+  const updateQuantity = (productId: string, quantity: number, size?: string, customization?: CustomizationData | null) => {
     setCartItems(prevItems =>
       prevItems.map(item => {
         const isMatch = item.id === productId && item.selectedSize === size && JSON.stringify(item.customization) === JSON.stringify(customization);

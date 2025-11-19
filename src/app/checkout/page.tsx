@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -169,14 +168,18 @@ export default function CheckoutPage() {
     setIsProcessing(true);
 
     const orderItems: OrderItem[] = cartItems.map(item => ({
-      productId: item.id,
-      productName: item.name,
-      quantity: item.quantity,
-      price: item.priceInCart,
-      selectedSize: item.selectedSize || '',
-      imageUrl: item.imageUrls?.[0] || '',
-      customization: item.customization,
-      customizationCost: item.customizationCost,
+        productId: item.id,
+        productName: item.name,
+        quantity: item.quantity,
+        price: item.priceInCart,
+        selectedSize: item.selectedSize || '',
+        imageUrl: item.imageUrls?.[0] || '',
+        customization: item.customization ? {
+            name: item.customization.name,
+            number: item.customization.number,
+            bottomText: item.customization.bottomText || null,
+        } : null,
+        customizationCost: item.customizationCost || 0,
     }));
 
     const customerInfo: CustomerInfo = {
