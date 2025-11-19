@@ -8,7 +8,6 @@ import { Metadata, ResolvingMetadata } from 'next';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Loader2, Zap } from 'lucide-react';
 import ProductInteraction from './ProductInteraction';
-import ProductReviews from '@/components/ProductReviews';
 import ProductCard from '@/components/ProductCard';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
@@ -43,19 +42,6 @@ async function getProductBySlug(slug: string): Promise<Product | null> {
         console.error("Error fetching product by slug:", error);
         return null;
     }
-}
-
-async function getReviewsForProduct(productId: string): Promise<Review[]> {
-  if (!productId) return [];
-  try {
-    const reviewsCollection = collection(db, 'reviews');
-    const q = query(reviewsCollection, where('productId', '==', productId), orderBy('createdAt', 'desc'));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review));
-  } catch (error) {
-    console.error("Error fetching reviews:", error);
-    return [];
-  }
 }
 
 async function getSuggestedProducts(product: Product | null): Promise<Product[]> {
@@ -134,8 +120,6 @@ export default async function ProductDetailPage({ params }: Props) {
     );
   }
 
-  // Fetch reviews and suggestions on the server
-  const reviews = await getReviewsForProduct(product.id);
   const suggestedProducts = await getSuggestedProducts(product);
 
   const CategoryIconComponent = categoryIcons[product.category as keyof typeof categoryIcons] || categoryIcons["Default"];
@@ -167,9 +151,6 @@ export default async function ProductDetailPage({ params }: Props) {
                 </Card>
             </div>
         </div>
-
-        <Separator className="my-12" />
-        <ProductReviews reviews={reviews} isLoading={false} />
 
         <Separator className="my-12" />
         <section>
