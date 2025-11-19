@@ -269,7 +269,7 @@ function SuccessPageContent() {
                                     <p>{item.productName}</p>
                                     {item.customization && (
                                         <div className="text-xs text-blue-600 pl-2">
-                                            <p>Flocage: {item.customization.name}, {item.customization.number}</p>
+                                            <p className="flex items-center gap-1"><Tag className="h-3 w-3"/>Flocage: {item.customization.name}, {item.customization.number}</p>
                                         </div>
                                     )}
                                 </td>

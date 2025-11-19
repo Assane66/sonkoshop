@@ -26,7 +26,7 @@ export default function CartPage() {
   const { toast } = useToast();
 
   const handleRemoveItem = (item: CartItem) => {
-    removeFromCart(item.id, item.selectedSize);
+    removeFromCart(item.id, item.selectedSize, item.customization);
     toast({ title: "Produit retiré", description: "Le produit a été retiré de votre panier." });
   };
 
@@ -37,14 +37,14 @@ export default function CartPage() {
         handleRemoveItem(item);
         return;
       }
-      updateQuantity(item.id, 1, item.selectedSize);
+      updateQuantity(item.id, 1, item.selectedSize, item.customization);
 
     } else if (quantityVal > item.stock) {
-      updateQuantity(item.id, item.stock, item.selectedSize);
+      updateQuantity(item.id, item.stock, item.selectedSize, item.customization);
       toast({ variant: "destructive", title: "Stock insuffisant", description: `Seulement ${item.stock} unités disponibles.`});
     }
     else {
-      updateQuantity(item.id, quantityVal, item.selectedSize);
+      updateQuantity(item.id, quantityVal, item.selectedSize, item.customization);
     }
   };
   
@@ -80,7 +80,7 @@ export default function CartPage() {
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-4">
           {cartItems.map((item, index) => (
-            <Card key={`${item.id}-${item.selectedSize || 'default'}-${index}`} className="flex flex-col sm:flex-row items-center p-4 shadow-md gap-4">
+            <Card key={`${item.id}-${item.selectedSize || 'default'}-${JSON.stringify(item.customization)}-${index}`} className="flex flex-col sm:flex-row items-center p-4 shadow-md gap-4">
               <div className="relative w-24 h-24 sm:w-20 sm:h-20 flex-shrink-0">
                 <Image
                   src={item.imageUrls?.[0] || 'https://placehold.co/100x100.png'}

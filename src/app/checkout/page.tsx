@@ -15,7 +15,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Truck, Store, Edit } from 'lucide-react';
+import { Loader2, Truck, Store, Edit, Tag } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
@@ -437,13 +437,13 @@ export default function CheckoutPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {cartItems.map((item, index) => (
-                <div key={`${item.id}-${item.selectedSize || 'default'}-${index}`} className="flex justify-between items-start text-sm">
+                <div key={`${item.id}-${item.selectedSize || 'default'}-${JSON.stringify(item.customization)}-${index}`} className="flex justify-between items-start text-sm">
                   <div className="flex-grow">
                     <p className="font-medium">{item.name} (x{item.quantity})</p>
                     {item.selectedSize && <p className="text-xs text-muted-foreground">Taille: {item.selectedSize}</p>}
                      {item.customization && (
-                        <p className="text-xs text-blue-600">
-                            Flocage: {item.customization.name}, {item.customization.number}
+                        <p className="text-xs text-blue-600 flex items-center gap-1">
+                            <Tag className="h-3 w-3"/> Flocage: {item.customization.name}, {item.customization.number}
                         </p>
                     )}
                   </div>

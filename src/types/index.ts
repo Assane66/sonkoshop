@@ -84,7 +84,7 @@ export const categoryIcons: Record<string, LucideIcon> = {
   [ProductCategoryEnum.Enfants]: Baby,
   [ProductCategoryEnum.Modes]: Sparkles,
   [ProductCategoryEnum.Gardiens]: Shield,
-  [ProductCategoryEnum.EquipementsSportifs]: Dumbbell,
+  "Équipements Sportifs": Dumbbell,
   [ProductCategoryEnum.Chemise]: Shirt,
   [ProductCategoryEnum.Baskets]: Footprints,
   [ProductCategoryEnum.Accessoires]: LayoutGrid,

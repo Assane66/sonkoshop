@@ -18,8 +18,8 @@ export interface CartItem extends Product {
 interface CartContextType {
   cartItems: CartItem[];
   addToCart: (product: Product, quantity: number, size?: string, customization?: CustomizationData, customizationCost?: number) => void;
-  removeFromCart: (productId: string, size?: string) => void;
-  updateQuantity: (productId: string, quantity: number, size?: string) => void;
+  removeFromCart: (productId: string, size?: string, customization?: CustomizationData) => void;
+  updateQuantity: (productId: string, quantity: number, size?: string, customization?: CustomizationData) => void;
   clearCart: () => void;
   getCartTotalItems: () => number;
   getCartSubtotal: () => number; // Renamed from getCartTotalPrice
@@ -67,10 +67,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     const priceInCart = calculateCurrentPrice(product);
 
     setCartItems(prevItems => {
-      // For customized items, always add as a new line item to avoid merging issues.
+      // Customized items are always new line items to avoid merging issues.
       const isCustomized = !!customization;
-      const existingItemIndex = isCustomized ? -1 : prevItems.findIndex(
-        item => item.id === product.id && item.selectedSize === size && !item.customization
+      
+      const existingItemIndex = prevItems.findIndex(
+        item => item.id === product.id && 
+                item.selectedSize === size && 
+                // Only merge if both items are NOT customized.
+                !isCustomized && !item.customization 
       );
 
       let newQuantity = quantity;
@@ -105,16 +109,34 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const removeFromCart = (productId: string, size?: string) => {
+  const removeFromCart = (productId: string, size?: string, customization?: CustomizationData) => {
     setCartItems(prevItems =>
-      prevItems.filter(item => !(item.id === productId && item.selectedSize === size))
+      prevItems.filter(item => {
+        const isMatch = item.id === productId && item.selectedSize === size;
+        if (!isMatch) return true;
+        
+        // If customization is a factor, compare them.
+        const hasCustomization = !!customization;
+        const itemHasCustomization = !!item.customization;
+        if (hasCustomization !== itemHasCustomization) return true;
+
+        if (hasCustomization && item.customization) {
+            // This is a simple comparison, for complex objects you might need a deep equal function
+            return JSON.stringify(item.customization) !== JSON.stringify(customization);
+        }
+        
+        // If we reach here, it's a match, so we filter it out
+        return false;
+      })
     );
   };
 
-  const updateQuantity = (productId: string, quantity: number, size?: string) => {
+  const updateQuantity = (productId: string, quantity: number, size?: string, customization?: CustomizationData) => {
     setCartItems(prevItems =>
       prevItems.map(item => {
-        if (item.id === productId && item.selectedSize === size) {
+        const isMatch = item.id === productId && item.selectedSize === size && JSON.stringify(item.customization) === JSON.stringify(customization);
+
+        if (isMatch) {
           const productStock = item.stock;
           let newQuantity = quantity;
 

@@ -46,9 +46,6 @@ export default function ProductInteraction({ product }: ProductInteractionProps)
   const totalCartPrice = (basePrice * quantity) + (customizationCost * quantity);
 
   const handleAddToCart = () => {
-    // For now, this button will not be fully functional for customization
-    // as per the user's request to focus only on the UI first.
-    // We can add the full logic later.
     if (product.stock === 0) {
       toast({ variant: "destructive", title: "Produit épuisé" });
       return;
@@ -71,9 +68,7 @@ export default function ProductInteraction({ product }: ProductInteractionProps)
       };
     }
     
-    // We call the original addToCart but it won't handle the customization yet.
-    // This is fine for this step.
-    addToCart(product, quantity, selectedSize, customizationData, customizationCost);
+    addToCart(product, quantity, selectedSize, customizationData, customizationEnabled ? CUSTOMIZATION_COST : 0);
     toast({ title: "Produit ajouté au panier!", action: <CheckCircle className="text-green-500" /> });
   };
 
