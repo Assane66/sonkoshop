@@ -46,6 +46,9 @@ export default function ProductInteraction({ product }: ProductInteractionProps)
   const totalCartPrice = (basePrice * quantity) + (customizationCost * quantity);
 
   const handleAddToCart = () => {
+    // For now, this button will not be fully functional for customization
+    // as per the user's request to focus only on the UI first.
+    // We can add the full logic later.
     if (product.stock === 0) {
       toast({ variant: "destructive", title: "Produit épuisé" });
       return;
@@ -68,6 +71,8 @@ export default function ProductInteraction({ product }: ProductInteractionProps)
       };
     }
     
+    // We call the original addToCart but it won't handle the customization yet.
+    // This is fine for this step.
     addToCart(product, quantity, selectedSize, customizationData, customizationCost);
     toast({ title: "Produit ajouté au panier!", action: <CheckCircle className="text-green-500" /> });
   };
@@ -128,7 +133,7 @@ export default function ProductInteraction({ product }: ProductInteractionProps)
             {/* --- Customization Section --- */}
             {product.category === 'Maillots' && (
               <div className="space-y-4 pt-4 border-t">
-                <h3 className="text-base font-medium">Flocage</h3>
+                <h3 className="text-lg font-semibold">Flocage</h3>
                 <RadioGroup value={customizationEnabled ? "avec" : "sans"} onValueChange={(value) => setCustomizationEnabled(value === "avec")}>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="sans" id="sans-flocage" />
@@ -162,7 +167,6 @@ export default function ProductInteraction({ product }: ProductInteractionProps)
             <Separator />
 
             <div className='text-2xl font-bold mt-4'>Total: {totalCartPrice.toLocaleString('fr-FR')} FCFA</div>
-
 
             <Button size="lg" className="w-full mt-8 text-lg py-3 bg-primary hover:bg-primary/90" onClick={handleAddToCart} disabled={product.stock === 0}><ShoppingCart className="mr-2 h-5 w-5" />Ajouter au Panier</Button>
         </CardContent>

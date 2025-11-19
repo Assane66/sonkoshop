@@ -1,4 +1,3 @@
-
 import type { LucideIcon } from 'lucide-react';
 import { Shirt, Footprints, Layers, Baby, Sparkles, Shield, Dumbbell, LayoutGrid, Package, User, ShoppingCart, Star } from 'lucide-react';
 import type { Timestamp } from 'firebase/firestore';
@@ -84,7 +83,7 @@ export const categoryIcons: Record<string, LucideIcon> = {
   [ProductCategoryEnum.Enfants]: Baby,
   [ProductCategoryEnum.Modes]: Sparkles,
   [ProductCategoryEnum.Gardiens]: Shield,
-  [ProductCategoryEnum.EquipementsSportifs]: Dumbbell,
+  [Product-CategoryEnum.EquipementsSportifs]: Dumbbell,
   [ProductCategoryEnum.Chemise]: Shirt,
   [ProductCategoryEnum.Baskets]: Footprints,
   [ProductCategoryEnum.Accessoires]: LayoutGrid,
@@ -160,4 +159,3 @@ export interface SiteSettings {
   wavePaymentUrl: string;
   pickupEnabled: boolean;
 }
-
