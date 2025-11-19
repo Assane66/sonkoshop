@@ -117,7 +117,7 @@ export default function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {categoryPromoBanners.slice(0, 2).map(banner => (
                  <Link key={banner.id} href={banner.link} className="relative h-96 rounded-lg overflow-hidden group">
-                    <Image src={banner.imageUrl} alt={banner.title} layout="fill" objectFit="cover" className="transition-transform duration-300 group-hover:scale-105" data-ai-hint={banner.imageAiHint || 'category promotion'} loading="lazy" />
+                    <Image src={banner.imageUrl} alt={banner.title} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover transition-transform duration-300 group-hover:scale-105" data-ai-hint={banner.imageAiHint || 'category promotion'} loading="lazy" />
                     <div className="absolute inset-0 bg-black bg-opacity-40 flex items-end p-8">
                       <div>
                         <h3 className="text-4xl font-bold text-white">{banner.title}</h3>
@@ -135,7 +135,7 @@ export default function HomePage() {
         {/* Destockage Banner */}
         <section className="my-16">
           <Link href="/products?category=Promos" className="block relative h-80 flex items-center justify-center text-white rounded-lg overflow-hidden group">
-            <Image src="https://res.cloudinary.com/dm6yuokre/image/upload/v1753066980/sonko_shop_banner_1200x400_uo67kz.png" alt="Destockage" layout="fill" objectFit="cover" data-ai-hint="soccer jerseys sale" className="transition-transform duration-300 group-hover:scale-105" loading="lazy"/>
+            <Image src="https://res.cloudinary.com/dm6yuokre/image/upload/v1753066980/sonko_shop_banner_1200x400_uo67kz.png" alt="Destockage" fill sizes="100vw" data-ai-hint="soccer jerseys sale" className="object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy"/>
             <div className="absolute inset-0 bg-red-800 bg-opacity-30 group-hover:bg-opacity-20 transition-all" />
           </Link>
         </section>
