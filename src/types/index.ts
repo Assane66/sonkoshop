@@ -160,3 +160,4 @@ export interface SiteSettings {
   wavePaymentUrl: string;
   pickupEnabled: boolean;
 }
+
