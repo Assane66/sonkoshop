@@ -257,7 +257,7 @@ export default function AdminDashboardPage() {
                       <TableRow key={order.id}>
                         <TableCell className="font-medium">{order.id.substring(0, 7)}...</TableCell>
                         <TableCell>{order.customerInfo.fullName}</TableCell>
-                        <TableCell>{new Date(order.orderDate).toLocaleDateString('fr-FR')}</TableCell>
+                        <TableCell>{new Date(typeof order.orderDate === 'string' ? order.orderDate : order.orderDate.toDate()).toLocaleDateString('fr-FR')}</TableCell>
                         <TableCell>
                           <Badge
                             className={cn(

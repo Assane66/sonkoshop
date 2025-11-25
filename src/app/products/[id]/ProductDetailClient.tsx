@@ -132,8 +132,8 @@ export default function ProductDetailClient({ initialProduct }: { initialProduct
     // set default size only when product changes (id)
     setSelectedSize(prev => {
       // keep existing if still valid
-      if (prev && product.sizes.includes(prev)) return prev;
-      return product.sizes[0];
+      if (prev && product.sizes?.includes(prev)) return prev;
+      return product.sizes?.[0];
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product.id]);

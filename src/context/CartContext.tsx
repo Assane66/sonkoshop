@@ -31,7 +31,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 const calculateCurrentPrice = (product: Product): number => {
   const isPromo = typeof product.promotionPrice === 'number' && product.promotionPrice > 0;
-  return isPromo ? product.promotionPrice : product.price;
+  return isPromo ? product.promotionPrice! : product.price;
 };
 
 const SHIPPING_COST_THRESHOLD = 25000;
@@ -49,8 +49,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         setCartItems(JSON.parse(storedCart));
       }
     } catch (error) {
-        console.error("Failed to parse cart from localStorage", error);
-        setCartItems([]);
+      console.error("Failed to parse cart from localStorage", error);
+      setCartItems([]);
     }
   }, []);
 
@@ -59,7 +59,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     const newCartJson = JSON.stringify(cartItems);
 
     if (newCartJson !== currentStoredCart) {
-        localStorage.setItem('sonkoShopCart', newCartJson);
+      localStorage.setItem('sonkoShopCart', newCartJson);
     }
   }, [cartItems]);
 
@@ -69,12 +69,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setCartItems(prevItems => {
       // Customized items are always new line items to avoid merging issues.
       const isCustomized = !!customization;
-      
+
       const existingItemIndex = prevItems.findIndex(
-        item => item.id === product.id && 
-                item.selectedSize === size && 
-                // Only merge if both items are NOT customized.
-                !isCustomized && !item.customization 
+        item => item.id === product.id &&
+          item.selectedSize === size &&
+          // Only merge if both items are NOT customized.
+          !isCustomized && !item.customization
       );
 
       let newQuantity = quantity;
@@ -84,12 +84,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         newQuantity = updatedItems[existingItemIndex].quantity + quantity;
 
         if (newQuantity > product.stock) {
-            newQuantity = product.stock;
-            toast({
-                variant: "destructive",
-                title: "Quantité maximale atteinte",
-                description: `Vous ne pouvez pas ajouter plus de ${product.stock} unités de ce produit (stock disponible).`,
-            });
+          newQuantity = product.stock;
+          toast({
+            variant: "destructive",
+            title: "Quantité maximale atteinte",
+            description: `Vous ne pouvez pas ajouter plus de ${product.stock} unités de ce produit (stock disponible).`,
+          });
         }
         updatedItems[existingItemIndex].quantity = newQuantity;
         updatedItems[existingItemIndex].priceInCart = priceInCart;
@@ -97,12 +97,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         return updatedItems;
       } else {
         if (newQuantity > product.stock) {
-            newQuantity = product.stock;
-             toast({
-                variant: "destructive",
-                title: "Quantité limitée par le stock",
-                description: `Seulement ${product.stock} unités disponibles. Ajout de ${newQuantity} au panier.`,
-            });
+          newQuantity = product.stock;
+          toast({
+            variant: "destructive",
+            title: "Quantité limitée par le stock",
+            description: `Seulement ${product.stock} unités disponibles. Ajout de ${newQuantity} au panier.`,
+          });
         }
         return [...prevItems, { ...product, quantity: newQuantity, selectedSize: size, priceInCart, customization, customizationCost }];
       }
@@ -114,17 +114,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       prevItems.filter(item => {
         const isMatch = item.id === productId && item.selectedSize === size;
         if (!isMatch) return true;
-        
+
         // If customization is a factor, compare them.
         const hasCustomization = !!customization;
         const itemHasCustomization = !!item.customization;
         if (hasCustomization !== itemHasCustomization) return true;
 
         if (hasCustomization && item.customization) {
-            // This is a simple comparison, for complex objects you might need a deep equal function
-            return JSON.stringify(item.customization) !== JSON.stringify(customization);
+          // This is a simple comparison, for complex objects you might need a deep equal function
+          return JSON.stringify(item.customization) !== JSON.stringify(customization);
         }
-        
+
         // If we reach here, it's a match, so we filter it out
         return false;
       })
@@ -146,15 +146,15 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           if (newQuantity > productStock) {
             newQuantity = productStock;
             toast({
-                variant: "destructive",
-                title: "Stock insuffisant",
-                description: `Seulement ${productStock} unités de ce produit sont disponibles.`,
+              variant: "destructive",
+              title: "Stock insuffisant",
+              description: `Seulement ${productStock} unités de ce produit sont disponibles.`,
             });
           }
           return { ...item, quantity: newQuantity };
         }
         return item;
-      }).filter(item => item.quantity > 0) 
+      }).filter(item => item.quantity > 0)
     );
   };
 
@@ -168,9 +168,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const getCartSubtotal = () => {
     return cartItems.reduce((total, item) => {
-        const itemTotal = item.priceInCart * item.quantity;
-        const customizationTotal = (item.customizationCost || 0) * item.quantity;
-        return total + itemTotal + customizationTotal;
+      const itemTotal = item.priceInCart * item.quantity;
+      const customizationTotal = (item.customizationCost || 0) * item.quantity;
+      return total + itemTotal + customizationTotal;
     }, 0);
   };
 

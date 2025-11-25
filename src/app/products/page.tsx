@@ -7,8 +7,9 @@ import ProductsPageContent from './ProductsPageContent';
 import { Loader2 } from 'lucide-react';
 
 // Re-enabling generateMetadata in a Server Component context at the page level
-export async function generateMetadata({ searchParams }: { searchParams: { category?: string } }): Promise<Metadata> {
-  const categoryName = searchParams?.category;
+export async function generateMetadata({ searchParams }: { searchParams: Promise<{ category?: string }> }): Promise<Metadata> {
+  const params = await searchParams;
+  const categoryName = params?.category;
 
   if (categoryName) {
     return {
@@ -37,18 +38,18 @@ async function getCategories(): Promise<SiteCategory[]> {
 
 // The main export is now a Server Component
 export default async function ProductsPage() {
-    const categories = await getCategories();
+  const categories = await getCategories();
 
-    return (
-        <Suspense fallback={
-        <div className="container mx-auto px-4 py-12 text-center">
-            <div className="flex flex-col items-center">
-            <Loader2 className="h-16 w-16 text-primary animate-spin mb-4" />
-            <p className="text-xl text-muted-foreground">Chargement...</p>
-            </div>
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto px-4 py-12 text-center">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-16 w-16 text-primary animate-spin mb-4" />
+          <p className="text-xl text-muted-foreground">Chargement...</p>
         </div>
-        }>
-            <ProductsPageContent initialCategories={categories} />
-        </Suspense>
-    );
+      </div>
+    }>
+      <ProductsPageContent initialCategories={categories} />
+    </Suspense>
+  );
 }

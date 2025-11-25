@@ -207,7 +207,7 @@ export default function CheckoutPage() {
           // Redirect to Wave for payment
           window.location.href = waveData.checkout_url;
         } else {
-          throw new Error(waveData.error || "Impossible de générer le lien de paiement Wave.");
+          throw new Error("Impossible de générer le lien de paiement Wave.");
         }
       } catch (error: any) {
         console.error("Erreur lors de la création de la session Wave:", error);
