@@ -16,7 +16,7 @@ export type Product = {
   featured?: boolean; // Pour la section "TOP PRODUITS"
   isBonPlan?: boolean; // Pour la section "BONS PLANS"
   imageAiHint?: string;
-  
+
   // Promotion fields now managed directly on the product
   promotionPrice?: number | null; // The final price after promotion
   originalPrice?: number | null; // The price before promotion
@@ -109,16 +109,15 @@ export enum OrderStatus {
 export const orderStatusList = Object.values(OrderStatus);
 
 export interface CustomizationData {
-    name: string;
-    number: string;
-    bottomText?: string | null;
+  name: string;
+  number: string;
 }
 
 export interface OrderItem {
   productId: string;
   productName: string;
   quantity: number;
-  price: number; 
+  price: number;
   selectedSize?: string;
   imageUrl?: string;
   customization?: CustomizationData | null;
@@ -129,7 +128,7 @@ export interface CustomerInfo {
   fullName: string;
   address: string;
   phone: string;
-  email?: string; 
+  email?: string;
 }
 
 export interface Order {
@@ -140,7 +139,7 @@ export interface Order {
   totalAmount: number; // Grand total (subtotal + shipping)
   status: OrderStatus;
   orderDate: Timestamp | string;
-  paymentMethod: 'cod' | 'wave' | 'pickup' | string; 
+  paymentMethod: 'cod' | 'wave' | 'pickup' | string;
   shippingAddress: string;
   shippingCost?: number;
   subtotal?: number;

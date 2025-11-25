@@ -32,16 +32,16 @@ const checkoutFormSchema = z.object({
   }),
   address: z.string().optional(),
 }).refine(data => {
-    if (data.paymentMethod === 'cod' || data.paymentMethod === 'wave') {
-        return !!data.fullName && data.fullName.trim().length >= 3 && !!data.phone && data.phone.trim().length >= 9 && !!data.address && data.address.trim().length >= 1;
-    }
-     if (data.paymentMethod === 'pickup') {
-        return !!data.fullName && data.fullName.trim().length >= 3 && !!data.phone && data.phone.trim().length >= 9;
-    }
-    return true;
+  if (data.paymentMethod === 'cod' || data.paymentMethod === 'wave') {
+    return !!data.fullName && data.fullName.trim().length >= 3 && !!data.phone && data.phone.trim().length >= 9 && !!data.address && data.address.trim().length >= 1;
+  }
+  if (data.paymentMethod === 'pickup') {
+    return !!data.fullName && data.fullName.trim().length >= 3 && !!data.phone && data.phone.trim().length >= 9;
+  }
+  return true;
 }, {
-    message: "Veuillez remplir tous les champs requis pour la méthode sélectionnée.",
-    path: ["fullName"], // This path is somewhat arbitrary, but a path is required.
+  message: "Veuillez remplir tous les champs requis pour la méthode sélectionnée.",
+  path: ["fullName"], // This path is somewhat arbitrary, but a path is required.
 });
 
 
@@ -50,16 +50,16 @@ type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
 const WHATSAPP_NUMBER = "221784513633";
 
 const generateWhatsAppMessage = (order: Order) => {
-    const itemsText = order.items.map(item => {
-        let itemText = `- ${item.productName} (x${item.quantity}) ${item.selectedSize ? `[${item.selectedSize}]` : ''}`;
-        if (item.customization) {
-            itemText += `\n  FLOCAGE: Nom: ${item.customization.name}, Num: ${item.customization.number}`;
-            if(item.customization.bottomText) itemText += `, Bas: ${item.customization.bottomText}`;
-        }
-        return itemText;
-    }).join('\n');
+  const itemsText = order.items.map(item => {
+    let itemText = `- ${item.productName} (x${item.quantity}) ${item.selectedSize ? `[${item.selectedSize}]` : ''}`;
+    if (item.customization) {
+      itemText += `\n  FLOCAGE: Nom: ${item.customization.name}, Num: ${item.customization.number}`;
+      if (item.customization.bottomText) itemText += `, Bas: ${item.customization.bottomText}`;
+    }
+    return itemText;
+  }).join('\n');
 
-    const message = `
+  const message = `
 *Nouvelle Commande Sonko Shop !* ✅
 -----------------------------------
 *Commande ID:* ${order.id.substring(0, 8)}
@@ -72,7 +72,7 @@ const generateWhatsAppMessage = (order: Order) => {
 *Articles:*
 ${itemsText}
     `;
-    return encodeURIComponent(message.trim());
+  return encodeURIComponent(message.trim());
 };
 
 
@@ -129,22 +129,22 @@ export default function CheckoutPage() {
         if (docSnap.exists()) {
           setSettings(docSnap.data() as SiteSettings);
         } else {
-           console.error("Site settings document not found. Using default values with Wave disabled.");
-           toast({
-             variant: "destructive",
-             title: "Configuration manquante",
-             description: "Les paramètres du site sont introuvables. Paiement Wave désactivé.",
-           });
-          setSettings({ waveEnabled: false, pickupEnabled: true, wavePaymentUrl: '', codEnabled: true, siteName: 'Sonko Shop', siteDescription:'', contactEmail:'', contactPhone:'' });
+          console.error("Site settings document not found. Using default values with Wave disabled.");
+          toast({
+            variant: "destructive",
+            title: "Configuration manquante",
+            description: "Les paramètres du site sont introuvables. Paiement Wave désactivé.",
+          });
+          setSettings({ waveEnabled: false, pickupEnabled: true, wavePaymentUrl: '', codEnabled: true, siteName: 'Sonko Shop', siteDescription: '', contactEmail: '', contactPhone: '' });
         }
       } catch (error) {
         console.error("Error fetching site settings:", error);
         toast({
-            variant: "destructive",
-            title: "Erreur de configuration",
-            description: "Impossible de charger les options de paiement. Seuls les paiements par défaut sont disponibles.",
+          variant: "destructive",
+          title: "Erreur de configuration",
+          description: "Impossible de charger les options de paiement. Seuls les paiements par défaut sont disponibles.",
         });
-        setSettings({ waveEnabled: false, pickupEnabled: true, wavePaymentUrl: '', codEnabled: true, siteName: 'Sonko Shop', siteDescription:'', contactEmail:'', contactPhone:'' });
+        setSettings({ waveEnabled: false, pickupEnabled: true, wavePaymentUrl: '', codEnabled: true, siteName: 'Sonko Shop', siteDescription: '', contactEmail: '', contactPhone: '' });
       } finally {
         setIsSettingsLoading(false);
       }
@@ -154,7 +154,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (!hydrated) return;
-    
+
     if (cartItems.length === 0 && grandTotal === 0 && !isProcessing && !isRedirectingToWave) {
       if (typeof window !== 'undefined' && !window.location.pathname.includes('/checkout/success')) {
         router.push('/cart');
@@ -168,18 +168,18 @@ export default function CheckoutPage() {
     setIsProcessing(true);
 
     const orderItems: OrderItem[] = cartItems.map(item => ({
-        productId: item.id,
-        productName: item.name,
-        quantity: item.quantity,
-        price: item.priceInCart,
-        selectedSize: item.selectedSize || '',
-        imageUrl: item.imageUrls?.[0] || '',
-        customization: item.customization ? {
-            name: item.customization.name,
-            number: item.customization.number,
-            bottomText: item.customization.bottomText || null,
-        } : null,
-        customizationCost: item.customizationCost || 0,
+      productId: item.id,
+      productName: item.name,
+      quantity: item.quantity,
+      price: item.priceInCart,
+      selectedSize: item.selectedSize || '',
+      imageUrl: item.imageUrls?.[0] || '',
+      customization: item.customization ? {
+        name: item.customization.name,
+        number: item.customization.number,
+        bottomText: item.customization.bottomText || null,
+      } : null,
+      customizationCost: item.customizationCost || 0,
     }));
 
     const customerInfo: CustomerInfo = {
@@ -195,19 +195,19 @@ export default function CheckoutPage() {
       setIsRedirectingToWave(true);
       try {
         const waveData = await createWaveCheckoutSession({
-            amount: grandTotal,
-            customerInfo,
-            orderItems,
-            shippingCost,
-            subtotal,
-            shippingAddress
+          amount: grandTotal,
+          customerInfo,
+          orderItems,
+          shippingCost,
+          subtotal,
+          shippingAddress
         });
 
         if (waveData.checkout_url) {
-            // Redirect to Wave for payment
-            window.location.href = waveData.checkout_url;
+          // Redirect to Wave for payment
+          window.location.href = waveData.checkout_url;
         } else {
-            throw new Error(waveData.error || "Impossible de générer le lien de paiement Wave.");
+          throw new Error(waveData.error || "Impossible de générer le lien de paiement Wave.");
         }
       } catch (error: any) {
         console.error("Erreur lors de la création de la session Wave:", error);
@@ -220,7 +220,7 @@ export default function CheckoutPage() {
 
     // --- COD and Pickup Flow ---
     const orderStatus = OrderStatus.Pending;
-    
+
     const basePayload: Omit<Order, 'id' | 'orderDate'> = {
       customerInfo,
       items: orderItems,
@@ -231,12 +231,12 @@ export default function CheckoutPage() {
       paymentMethod: data.paymentMethod,
       shippingAddress: shippingAddress,
     };
-    
+
     const orderDataPayload = user ? { ...basePayload, userId: user.uid, orderDate: serverTimestamp() } : { ...basePayload, orderDate: serverTimestamp() };
 
     try {
       const docRef = await addDoc(collection(db, "orders"), orderDataPayload);
-      
+
       const orderDataForDisplay: Order = {
         ...basePayload,
         id: docRef.id,
@@ -246,25 +246,35 @@ export default function CheckoutPage() {
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('lastSuccessfulOrder', JSON.stringify(orderDataForDisplay));
 
-        // Open WhatsApp link automatically after saving the order
+        // Open WhatsApp - using location.href for better iOS compatibility
         const message = generateWhatsAppMessage(orderDataForDisplay);
         const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${message}`;
-        window.open(whatsappUrl, '_blank');
+
+        // Try to open in new tab first (works on desktop and some mobile browsers)
+        const whatsappWindow = window.open(whatsappUrl, '_blank');
+
+        // If popup was blocked or on iOS, use direct navigation after a delay
+        if (!whatsappWindow || whatsappWindow.closed || typeof whatsappWindow.closed === 'undefined') {
+          // Save current page to return to
+          setTimeout(() => {
+            window.location.href = whatsappUrl;
+          }, 100);
+        }
       }
 
       clearCart();
-      
+
       toast({
         title: "Commande confirmée!",
         description: "Votre commande a été enregistrée. Notification en cours...",
       });
       router.push(`/checkout/success`);
-      
+
     } catch (error: any) {
       console.error("Error during order processing:", error);
       let errorMessage = "Impossible d'enregistrer votre commande. Veuillez réessayer.";
       if (error.code) {
-          errorMessage = `Erreur Firestore (${error.code}): ${error.message}. Veuillez contacter le support.`;
+        errorMessage = `Erreur Firestore (${error.code}): ${error.message}. Veuillez contacter le support.`;
       }
       toast({ variant: "destructive", title: "Échec de la commande", description: errorMessage });
       setIsProcessing(false);
@@ -275,21 +285,21 @@ export default function CheckoutPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
       </div>
     );
   }
-  
+
   if (cartItems.length === 0 && grandTotal === 0 && !isProcessing) {
-     return (
-       <div className="container mx-auto px-4 py-8">
-         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
-           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-           <p className="text-muted-foreground">Votre panier est vide. Redirection...</p>
-         </div>
-       </div>
-     );
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+          <p className="text-muted-foreground">Votre panier est vide. Redirection...</p>
+        </div>
+      </div>
+    );
   }
 
 
@@ -328,7 +338,7 @@ export default function CheckoutPage() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="phone"
@@ -378,38 +388,38 @@ export default function CheckoutPage() {
                             className="flex flex-col space-y-2"
                             disabled={isProcessing}
                           >
-                           {settings?.codEnabled && (
-                            <FormItem className="flex items-center space-x-3 space-y-0 p-4 border rounded-md has-[:checked]:border-primary">
-                              <FormControl>
-                                <RadioGroupItem value="cod" disabled={isProcessing} />
-                              </FormControl>
-                              <FormLabel className="font-normal flex items-center text-base cursor-pointer">
-                                <Truck className="mr-3 h-6 w-6 text-primary" />
-                                Payer à la livraison
-                              </FormLabel>
-                            </FormItem>
-                           )}
-                           {settings?.pickupEnabled && (
-                               <FormItem className="flex items-center space-x-3 space-y-0 p-4 border rounded-md has-[:checked]:border-primary">
-                                   <FormControl>
-                                       <RadioGroupItem value="pickup" disabled={isProcessing} />
-                                   </FormControl>
-                                   <FormLabel className="font-normal flex items-center text-base cursor-pointer">
-                                       <Store className="mr-3 h-6 w-6 text-primary" />
-                                       Récupérer en boutique (Paiement sur place)
-                                   </FormLabel>
-                               </FormItem>
-                           )}
-                           {settings?.waveEnabled && (
-                            <FormItem className="flex items-center space-x-3 space-y-0 p-4 border rounded-md has-[:checked]:border-primary">
+                            {settings?.codEnabled && (
+                              <FormItem className="flex items-center space-x-3 space-y-0 p-4 border rounded-md has-[:checked]:border-primary">
                                 <FormControl>
-                                    <RadioGroupItem value="wave" disabled={isProcessing} />
+                                  <RadioGroupItem value="cod" disabled={isProcessing} />
                                 </FormControl>
                                 <FormLabel className="font-normal flex items-center text-base cursor-pointer">
-                                   <svg viewBox="0 0 110 110" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-3 h-6 w-6"><path d="M13.577 109.354C8.02 109.354 3.5 104.835 3.5 99.277V10.444C3.5 4.886 8.02 0.368 13.577 0.368H95.828C101.386 0.368 105.904 4.886 105.904 10.444V99.277C105.904 104.835 101.386 109.354 95.828 109.354H13.577Z" fill="#00A9E7"></path><path d="M91.794 43.65C88.48 40.336 79.32 37.021 70.424 37.021C59.638 37.021 51.27 40.336 46.822 43.65L45.674 44.534C45.145 44.807 44.617 44.807 44.088 44.534L39.375 42.396C36.326 40.864 32.467 40.055 28.872 40.055C25.012 40.055 21.417 41.128 18.368 42.924V21.02C22.711 19.224 27.863 18.15 33.28 18.15C43.538 18.15 51.905 21.465 56.089 24.514L57.237 25.397C57.766 25.671 58.294 25.671 58.823 25.397L63.271 23.26C66.585 21.727 70.18 21.199 73.505 21.199C76.83 21.199 80.155 21.727 83.204 22.799V43.65H91.794Z" fill="#042A3A"></path><path d="M91.793 65.971C88.479 69.285 79.319 72.6 70.423 72.6C59.637 72.6 51.269 69.285 46.821 65.971L45.673 65.088C45.144 64.815 44.616 64.815 44.087 65.088L39.374 67.226C36.325 68.758 32.466 69.567 28.871 69.567C25.011 69.567 21.416 68.494 18.367 66.698V88.601C22.71 90.397 27.862 91.47 33.279 91.47C43.537 91.47 51.904 88.155 56.088 85.106L57.236 84.223C57.765 83.95 58.293 83.95 58.822 84.223L63.27 86.36C66.584 87.892 70.179 88.42 73.504 88.42C76.829 88.42 80.154 87.892 83.203 86.82V65.971H91.793Z" fill="white"></path></svg>
-                                    Payer avec Wave
+                                  <Truck className="mr-3 h-6 w-6 text-primary" />
+                                  Payer à la livraison
                                 </FormLabel>
-                            </FormItem>
+                              </FormItem>
+                            )}
+                            {settings?.pickupEnabled && (
+                              <FormItem className="flex items-center space-x-3 space-y-0 p-4 border rounded-md has-[:checked]:border-primary">
+                                <FormControl>
+                                  <RadioGroupItem value="pickup" disabled={isProcessing} />
+                                </FormControl>
+                                <FormLabel className="font-normal flex items-center text-base cursor-pointer">
+                                  <Store className="mr-3 h-6 w-6 text-primary" />
+                                  Récupérer en boutique (Paiement sur place)
+                                </FormLabel>
+                              </FormItem>
+                            )}
+                            {settings?.waveEnabled && (
+                              <FormItem className="flex items-center space-x-3 space-y-0 p-4 border rounded-md has-[:checked]:border-primary">
+                                <FormControl>
+                                  <RadioGroupItem value="wave" disabled={isProcessing} />
+                                </FormControl>
+                                <FormLabel className="font-normal flex items-center text-base cursor-pointer">
+                                  <svg viewBox="0 0 110 110" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-3 h-6 w-6"><path d="M13.577 109.354C8.02 109.354 3.5 104.835 3.5 99.277V10.444C3.5 4.886 8.02 0.368 13.577 0.368H95.828C101.386 0.368 105.904 4.886 105.904 10.444V99.277C105.904 104.835 101.386 109.354 95.828 109.354H13.577Z" fill="#00A9E7"></path><path d="M91.794 43.65C88.48 40.336 79.32 37.021 70.424 37.021C59.638 37.021 51.27 40.336 46.822 43.65L45.674 44.534C45.145 44.807 44.617 44.807 44.088 44.534L39.375 42.396C36.326 40.864 32.467 40.055 28.872 40.055C25.012 40.055 21.417 41.128 18.368 42.924V21.02C22.711 19.224 27.863 18.15 33.28 18.15C43.538 18.15 51.905 21.465 56.089 24.514L57.237 25.397C57.766 25.671 58.294 25.671 58.823 25.397L63.271 23.26C66.585 21.727 70.18 21.199 73.505 21.199C76.83 21.199 80.155 21.727 83.204 22.799V43.65H91.794Z" fill="#042A3A"></path><path d="M91.793 65.971C88.479 69.285 79.319 72.6 70.423 72.6C59.637 72.6 51.269 69.285 46.821 65.971L45.673 65.088C45.144 64.815 44.616 64.815 44.087 65.088L39.374 67.226C36.325 68.758 32.466 69.567 28.871 69.567C25.011 69.567 21.416 68.494 18.367 66.698V88.601C22.71 90.397 27.862 91.47 33.279 91.47C43.537 91.47 51.904 88.155 56.088 85.106L57.236 84.223C57.765 83.95 58.293 83.95 58.822 84.223L63.27 86.36C66.584 87.892 70.179 88.42 73.504 88.42C76.829 88.42 80.154 87.892 83.203 86.82V65.971H91.793Z" fill="white"></path></svg>
+                                  Payer avec Wave
+                                </FormLabel>
+                              </FormItem>
                             )}
                           </RadioGroup>
                         </FormControl>
@@ -444,10 +454,10 @@ export default function CheckoutPage() {
                   <div className="flex-grow">
                     <p className="font-medium">{item.name} (x{item.quantity})</p>
                     {item.selectedSize && <p className="text-xs text-muted-foreground">Taille: {item.selectedSize}</p>}
-                     {item.customization && (
-                        <p className="text-xs text-blue-600 flex items-center gap-1">
-                            <Tag className="h-3 w-3"/> Flocage: {item.customization.name}, {item.customization.number}
-                        </p>
+                    {item.customization && (
+                      <p className="text-xs text-blue-600 flex items-center gap-1">
+                        <Tag className="h-3 w-3" /> Flocage: {item.customization.name}, {item.customization.number}
+                      </p>
                     )}
                   </div>
                   <p className="flex-shrink-0 ml-4">{((item.priceInCart + (item.customizationCost || 0)) * item.quantity).toLocaleString('fr-FR')} FCFA</p>
@@ -460,7 +470,7 @@ export default function CheckoutPage() {
               </div>
               <div className="flex justify-between">
                 <span>Livraison</span>
-                 <span className={shippingCost === 0 ? "text-primary" : ""}>
+                <span className={shippingCost === 0 ? "text-primary" : ""}>
                   {shippingCost > 0 ? `${shippingCost.toLocaleString('fr-FR')} FCFA` : 'Gratuite'}
                 </span>
               </div>

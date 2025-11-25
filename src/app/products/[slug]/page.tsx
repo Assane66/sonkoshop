@@ -17,31 +17,31 @@ import { Badge } from '@/components/ui/badge';
 
 
 type Props = {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
 async function getProductBySlug(slug: string): Promise<Product | null> {
-    try {
-        const productsRef = collection(db, "products");
-        const q = query(productsRef, where("slug", "==", slug), limit(1));
-        const querySnapshot = await getDocs(q);
+  try {
+    const productsRef = collection(db, "products");
+    const q = query(productsRef, where("slug", "==", slug), limit(1));
+    const querySnapshot = await getDocs(q);
 
-        if (!querySnapshot.empty) {
-            const docSnap = querySnapshot.docs[0];
-            const data = docSnap.data();
-            let imageUrls: string[] = [];
-            if (data.imageUrls && Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
-                imageUrls = data.imageUrls;
-            } else if (data.imageUrl && typeof data.imageUrl === 'string') {
-                imageUrls = [data.imageUrl];
-            }
-            return { id: docSnap.id, ...data, imageUrls } as Product;
-        }
-        return null;
-    } catch (error) {
-        console.error("Error fetching product by slug:", error);
-        return null;
+    if (!querySnapshot.empty) {
+      const docSnap = querySnapshot.docs[0];
+      const data = docSnap.data();
+      let imageUrls: string[] = [];
+      if (data.imageUrls && Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
+        imageUrls = data.imageUrls;
+      } else if (data.imageUrl && typeof data.imageUrl === 'string') {
+        imageUrls = [data.imageUrl];
+      }
+      return { id: docSnap.id, ...data, imageUrls } as Product;
     }
+    return null;
+  } catch (error) {
+    console.error("Error fetching product by slug:", error);
+    return null;
+  }
 }
 
 async function getSuggestedProducts(product: Product | null): Promise<Product[]> {
@@ -49,24 +49,24 @@ async function getSuggestedProducts(product: Product | null): Promise<Product[]>
   try {
     const productsCollection = collection(db, 'products');
     const q = query(
-        productsCollection,
-        where('category', '==', product.category),
-        limit(5)
+      productsCollection,
+      where('category', '==', product.category),
+      limit(5)
     );
     const snapshot = await getDocs(q);
     return snapshot.docs
-        .map(doc => {
-            const data = doc.data();
-            let imageUrls: string[] = [];
-            if (data.imageUrls && Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
-                imageUrls = data.imageUrls;
-            } else if (data.imageUrl && typeof data.imageUrl === 'string') {
-                imageUrls = [data.imageUrl];
-            }
-            return { id: doc.id, ...data, imageUrls } as Product;
-        })
-        .filter(p => p.id !== product.id)
-        .slice(0, 4);
+      .map(doc => {
+        const data = doc.data();
+        let imageUrls: string[] = [];
+        if (data.imageUrls && Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
+          imageUrls = data.imageUrls;
+        } else if (data.imageUrl && typeof data.imageUrl === 'string') {
+          imageUrls = [data.imageUrl];
+        }
+        return { id: doc.id, ...data, imageUrls } as Product;
+      })
+      .filter(p => p.id !== product.id)
+      .slice(0, 4);
   } catch (error) {
     console.error("Error fetching suggestions:", error);
     return [];
@@ -78,7 +78,7 @@ export async function generateMetadata(
   { params }: Props,
   parent: ResolvingMetadata
 ): Promise<Metadata> {
-  const slug = params.slug;
+  const { slug } = await params;
   const product = await getProductBySlug(slug);
 
   if (!product) {
@@ -104,11 +104,11 @@ export async function generateMetadata(
 
 
 export default async function ProductDetailPage({ params }: Props) {
-  const { slug } = params;
+  const { slug } = await params;
   const product = await getProductBySlug(slug);
 
   if (!product) {
-     return (
+    return (
       <div className="container mx-auto px-4 py-12 text-center">
         <Zap className="mx-auto h-24 w-24 text-destructive mb-4" />
         <h1 className="text-2xl font-semibold text-destructive">Produit Non Trouvé</h1>
@@ -126,45 +126,45 @@ export default async function ProductDetailPage({ params }: Props) {
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">
-        <Button variant="outline" asChild className="mb-6">
-            <Link href="/products" className="flex items-center text-sm"><ArrowLeft className="mr-2 h-4 w-4" />Tous les produits</Link>
-        </Button>
-        <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-start">
-            
-            <ProductInteraction product={product} />
+      <Button variant="outline" asChild className="mb-6">
+        <Link href="/products" className="flex items-center text-sm"><ArrowLeft className="mr-2 h-4 w-4" />Tous les produits</Link>
+      </Button>
+      <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-start">
 
-            <div className="space-y-6">
-                 <div className="flex justify-between items-start">
-                    <div>
-                    {product.category && <Badge variant="secondary" className="mb-2 inline-flex items-center gap-1.5 py-1 px-2.5 text-xs"><CategoryIconComponent className="h-3.5 w-3.5" />{product.category}</Badge>}
-                    <h1 className="text-3xl lg:text-4xl font-bold text-primary">{product.name}</h1>
-                    </div>
-                    <Badge variant={product.stock > 0 ? "default" : "destructive"} className={`text-sm py-1 px-3 ${product.stock > 0 && product.stock <=10 ? 'bg-yellow-500 text-black' : ''}`}>{product.stock > 0 ? `En Stock (${product.stock})` : "Épuisé"}</Badge>
-                </div>
-                 <p className="text-base text-foreground/80 leading-relaxed">{product.description}</p>
-                 <Card className="rounded-lg">
-                    <CardContent className="p-6 space-y-3">
-                        <div className="flex items-center text-sm text-muted-foreground"><CheckCircle className="h-5 w-5 mr-2 text-green-500" /><span>Produit authentique garanti</span></div>
-                        <div className="flex items-center text-sm text-muted-foreground"><ShieldCheck className="h-5 w-5 mr-2 text-blue-500" /><span>Paiement sécurisé</span></div>
-                        <div className="flex items-center text-sm text-muted-foreground"><Tag className="h-5 w-5 mr-2 text-primary" /><span>Meilleur prix & Qualité</span></div>
-                    </CardContent>
-                </Card>
+        <ProductInteraction product={product} />
+
+        <div className="space-y-6">
+          <div className="flex justify-between items-start">
+            <div>
+              {product.category && <Badge variant="secondary" className="mb-2 inline-flex items-center gap-1.5 py-1 px-2.5 text-xs"><CategoryIconComponent className="h-3.5 w-3.5" />{product.category}</Badge>}
+              <h1 className="text-3xl lg:text-4xl font-bold text-primary">{product.name}</h1>
             </div>
+            <Badge variant={product.stock > 0 ? "default" : "destructive"} className={`text-sm py-1 px-3 ${product.stock > 0 && product.stock <= 10 ? 'bg-yellow-500 text-black' : ''}`}>{product.stock > 0 ? `En Stock (${product.stock})` : "Épuisé"}</Badge>
+          </div>
+          <p className="text-base text-foreground/80 leading-relaxed">{product.description}</p>
+          <Card className="rounded-lg">
+            <CardContent className="p-6 space-y-3">
+              <div className="flex items-center text-sm text-muted-foreground"><CheckCircle className="h-5 w-5 mr-2 text-green-500" /><span>Produit authentique garanti</span></div>
+              <div className="flex items-center text-sm text-muted-foreground"><ShieldCheck className="h-5 w-5 mr-2 text-blue-500" /><span>Paiement sécurisé</span></div>
+              <div className="flex items-center text-sm text-muted-foreground"><Tag className="h-5 w-5 mr-2 text-primary" /><span>Meilleur prix & Qualité</span></div>
+            </CardContent>
+          </Card>
         </div>
+      </div>
 
-        <Separator className="my-12" />
-        <section>
-            <h2 className="text-3xl font-bold text-center mb-8 text-primary">Vous aimerez aussi</h2>
-            {suggestedProducts.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    {suggestedProducts.map((p) => (
-                        <ProductCard key={p.id} product={p} />
-                    ))}
-                </div>
-            ) : (
-                <p className="text-center text-muted-foreground">Aucun produit similaire trouvé.</p>
-            )}
-        </section>
+      <Separator className="my-12" />
+      <section>
+        <h2 className="text-3xl font-bold text-center mb-8 text-primary">Vous aimerez aussi</h2>
+        {suggestedProducts.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {suggestedProducts.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-muted-foreground">Aucun produit similaire trouvé.</p>
+        )}
+      </section>
     </div>
   );
 }

@@ -1,52 +1,79 @@
-
 import { MetadataRoute } from 'next';
-import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Product } from '@/types';
-
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002';
+import { collection, getDocs } from 'firebase/firestore';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002';
+
   // Static pages
-  const staticRoutes = [
-    '', 
-    '/products', 
-    '/about', 
-    '/cart', 
-    '/login', 
-    '/register',
-    '/politique-de-retour',
-    '/termes-et-conditions',
-  ].map((route) => ({
-    url: `${BASE_URL}${route}`,
-    lastModified: new Date().toISOString(),
-    changeFrequency: 'weekly' as const,
-    priority: route === '' ? 1 : 0.8,
-  }));
+  const staticPages: MetadataRoute.Sitemap = [
+    {
+      url: baseUrl,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 1,
+    },
+    {
+      url: `${baseUrl}/products`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/cart`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/checkout`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/login`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/register`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.3,
+    },
+  ];
 
-  // Dynamic product pages
-  const productsCollectionRef = collection(db, 'products');
-  const productsSnapshot = await getDocs(productsCollectionRef);
-  const productRoutes = productsSnapshot.docs.map((doc) => {
-    const product = doc.data() as Product;
-    const slug = product.slug || doc.id;
-    return {
-      url: `${BASE_URL}/products/${slug}`,
-      lastModified: new Date().toISOString(),
-      changeFrequency: 'weekly' as const,
-      priority: 0.7,
-    };
-  });
-  
-  // Dynamic category pages
-  const categoriesCollectionRef = collection(db, 'categories');
-  const categoriesSnapshot = await getDocs(categoriesCollectionRef);
-  const categoryRoutes = categoriesSnapshot.docs.map((doc) => ({
-    url: `${BASE_URL}/products?category=${encodeURIComponent(doc.data().name)}`,
-    lastModified: new Date().toISOString(),
-    changeFrequency: 'weekly' as const,
-    priority: 0.6,
-  }));
+  try {
+    // Fetch all products
+    const productsSnapshot = await getDocs(collection(db, 'products'));
+    const productPages: MetadataRoute.Sitemap = productsSnapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        url: `${baseUrl}/products/${data.slug || doc.id}`,
+        lastModified: new Date(),
+        changeFrequency: 'weekly' as const,
+        priority: 0.8,
+      };
+    });
 
-  return [...staticRoutes, ...productRoutes, ...categoryRoutes];
+    // Fetch all categories
+    const categoriesSnapshot = await getDocs(collection(db, 'categories'));
+    const categoryPages: MetadataRoute.Sitemap = categoriesSnapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        url: `${baseUrl}/products?category=${encodeURIComponent(data.name)}`,
+        lastModified: new Date(),
+        changeFrequency: 'weekly' as const,
+        priority: 0.7,
+      };
+    });
+
+    return [...staticPages, ...productPages, ...categoryPages];
+  } catch (error) {
+    console.error('Error generating sitemap:', error);
+    // Return at least static pages if dynamic fetching fails
+    return staticPages;
+  }
 }

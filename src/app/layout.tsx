@@ -6,16 +6,20 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Toaster } from "@/components/ui/toaster";
 import { CartProvider } from '@/context/CartContext';
-import { AuthProvider } from '@/context/AuthContext'; 
+import { AuthProvider } from '@/context/AuthContext';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
+  display: 'swap',
+  preload: true,
 });
 
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
+  display: 'swap',
+  preload: true,
 });
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002';
@@ -95,7 +99,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
-        <AuthProvider> 
+        <AuthProvider>
           <CartProvider>
             <Header />
             <main className="flex-grow">
@@ -104,7 +108,7 @@ export default function RootLayout({
             <Footer />
             <Toaster />
           </CartProvider>
-        </AuthProvider> 
+        </AuthProvider>
       </body>
     </html>
   );

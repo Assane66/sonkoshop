@@ -66,7 +66,7 @@ function SuccessPageContent() {
             const parsedOrder = JSON.parse(storedOrder) as Order;
             setOrder(parsedOrder);
             setVerificationStatus('cod');
-             // The WhatsApp notification is now handled on the checkout page, so we don't need to do anything here.
+            // The WhatsApp notification is now handled on the checkout page, so we don't need to do anything here.
           } else {
             console.warn("CheckoutSuccessPage: No order data found in sessionStorage for non-Wave payment.");
             setVerificationStatus('failed');
@@ -86,7 +86,7 @@ function SuccessPageContent() {
 
   const handleDownloadPdf = async () => {
     if (!invoiceRef.current || !order) {
-      toast({ variant: "destructive", title: "Erreur PDF", description: "Contenu de la facture non disponible."});
+      toast({ variant: "destructive", title: "Erreur PDF", description: "Contenu de la facture non disponible." });
       return;
     }
     setIsGeneratingPdf(true);
@@ -94,11 +94,23 @@ function SuccessPageContent() {
       const { default: jsPDF } = await import('jspdf');
       const { default: html2canvas } = await import('html2canvas');
 
+      // Force the invoice to have a fixed width for consistent PDF generation
+      const originalWidth = invoiceRef.current.style.width;
+      invoiceRef.current.style.width = '800px';
+      invoiceRef.current.style.maxWidth = '800px';
+
       const canvas = await html2canvas(invoiceRef.current, {
         scale: 2,
         useCORS: true,
-        logging: true,
+        logging: false,
+        width: 800,
+        windowWidth: 800,
       });
+
+      // Restore original width
+      invoiceRef.current.style.width = originalWidth;
+      invoiceRef.current.style.maxWidth = '';
+
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -115,16 +127,16 @@ function SuccessPageContent() {
       const imgY = 10;
 
       pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-      pdf.save(`facture-${order.id.substring(0,8)}.pdf`);
-      toast({ title: "Facture téléchargée", description: "Votre facture PDF a été téléchargée."});
+      pdf.save(`facture-${order.id.substring(0, 8)}.pdf`);
+      toast({ title: "Facture téléchargée", description: "Votre facture PDF a été téléchargée." });
     } catch (error) {
-        console.error("Erreur lors de la génération du PDF:", error);
-        toast({ variant: "destructive", title: "Erreur PDF", description: "Impossible de générer le PDF."});
+      console.error("Erreur lors de la génération du PDF:", error);
+      toast({ variant: "destructive", title: "Erreur PDF", description: "Impossible de générer le PDF." });
     } finally {
-        setIsGeneratingPdf(false);
+      setIsGeneratingPdf(false);
     }
   };
-  
+
   const formatDate = (dateString: string | Date) => {
     return new Date(dateString).toLocaleDateString('fr-FR', {
       day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -139,38 +151,38 @@ function SuccessPageContent() {
       </div>
     );
   }
-  
+
   if (verificationStatus === 'failed') {
-     return (
-       <Card className="w-full max-w-lg text-center shadow-xl">
-          <CardHeader>
-              <div className="mx-auto bg-red-100 rounded-full p-3 w-fit mb-4">
-                <XCircle className="h-12 w-12 text-red-600" />
-              </div>
-              <CardTitle className="text-2xl font-bold text-destructive">Échec de la Transaction</CardTitle>
-              <CardDescription>{errorMessage || "Une erreur est survenue."}</CardDescription>
-          </CardHeader>
-          <CardContent>
-              <Button asChild>
-                  <Link href="/cart">Retour au panier</Link>
-              </Button>
-          </CardContent>
+    return (
+      <Card className="w-full max-w-lg text-center shadow-xl">
+        <CardHeader>
+          <div className="mx-auto bg-red-100 rounded-full p-3 w-fit mb-4">
+            <XCircle className="h-12 w-12 text-red-600" />
+          </div>
+          <CardTitle className="text-2xl font-bold text-destructive">Échec de la Transaction</CardTitle>
+          <CardDescription>{errorMessage || "Une erreur est survenue."}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild>
+            <Link href="/cart">Retour au panier</Link>
+          </Button>
+        </CardContent>
       </Card>
     );
   }
 
   if (!order) {
     return (
-       <Card className="w-full max-w-lg text-center shadow-xl">
-          <CardHeader>
-              <CardTitle className="text-2xl font-bold text-destructive">Commande non trouvée</CardTitle>
-              <CardDescription>Aucun détail de commande n'a été trouvé. Cela peut se produire si vous accédez directement à cette page ou après un long moment. Veuillez vérifier votre historique de commandes ou nous contacter.</CardDescription>
-          </CardHeader>
-            <CardContent>
-              <Button asChild>
-                  <Link href="/">Retour à l'accueil</Link>
-              </Button>
-          </CardContent>
+      <Card className="w-full max-w-lg text-center shadow-xl">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold text-destructive">Commande non trouvée</CardTitle>
+          <CardDescription>Aucun détail de commande n'a été trouvé. Cela peut se produire si vous accédez directement à cette page ou après un long moment. Veuillez vérifier votre historique de commandes ou nous contacter.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild>
+            <Link href="/">Retour à l'accueil</Link>
+          </Button>
+        </CardContent>
       </Card>
     );
   }
@@ -182,8 +194,8 @@ function SuccessPageContent() {
   let iconBg = "bg-green-100";
 
   if (verificationStatus === 'success' && order.paymentMethod === 'wave') {
-      title = "Paiement confirmé !";
-      description = "Merci ! Votre paiement a été validé et votre commande est maintenant en cours de traitement.";
+    title = "Paiement confirmé !";
+    description = "Merci ! Votre paiement a été validé et votre commande est maintenant en cours de traitement.";
   } else if (order.paymentMethod === 'cod') {
     title = "Commande (Paiement à la livraison) Réussie!";
     description = "Votre commande a été enregistrée. Vous serez contacté(e) sous peu pour la confirmation et la livraison. Merci de préparer le montant exact.";
@@ -203,14 +215,14 @@ function SuccessPageContent() {
           <CardTitle className="text-3xl font-bold text-primary">{title}</CardTitle>
           <CardDescription className="text-muted-foreground text-base pt-2">
             {description}
-            {order.id && <p className="mt-2">Votre numéro de commande est : <strong>{order.id.substring(0,8)}...</strong></p>}
+            {order.id && <p className="mt-2">Votre numéro de commande est : <strong>{order.id.substring(0, 8)}...</strong></p>}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-            <Button onClick={handleDownloadPdf} disabled={isGeneratingPdf || !invoiceRef.current} className="w-full bg-primary hover:bg-primary/90">
-              {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-              {isGeneratingPdf ? 'Génération...' : 'Télécharger la Facture (PDF)'}
-            </Button>
+          <Button onClick={handleDownloadPdf} disabled={isGeneratingPdf || !invoiceRef.current} className="w-full bg-primary hover:bg-primary/90">
+            {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+            {isGeneratingPdf ? 'Génération...' : 'Télécharger la Facture (PDF)'}
+          </Button>
           <div className="flex items-center justify-center text-muted-foreground">
             <Package className="h-5 w-5 mr-2" />
             <span>Vous pouvez suivre le statut de votre commande dans votre compte.</span>
@@ -225,83 +237,83 @@ function SuccessPageContent() {
       </Card>
 
       {order && (
-        <div ref={invoiceRef} className="p-8 bg-white text-black w-full max-w-2xl mx-auto border rounded-lg shadow-lg my-8">
-            <div className="flex justify-between items-start mb-8">
-                <div className="w-1/3">
-                    <Image src="https://res.cloudinary.com/dm6yuokre/image/upload/v1751785241/logo_noqoct.png" alt="Sonko Shop Logo" width={150} height={75} data-ai-hint="shop logo" className="object-contain"/>
-                </div>
-                <div className="text-right">
-                    <h2 className="text-2xl font-bold text-gray-800">FACTURE</h2>
-                    <p className="text-sm text-gray-600">Commande #: {order.id.substring(0,8)}...</p>
-                    <p className="text-sm text-gray-600">Date: {formatDate(order.orderDate as string)}</p>
-                </div>
+        <div ref={invoiceRef} className="p-8 bg-white text-black w-full mx-auto border rounded-lg shadow-lg my-8" style={{ maxWidth: '800px', width: '800px' }}>
+          <div className="flex justify-between items-start mb-8">
+            <div className="w-1/3">
+              <Image src="https://res.cloudinary.com/dm6yuokre/image/upload/v1751785241/logo_noqoct.png" alt="Sonko Shop Logo" width={150} height={75} data-ai-hint="shop logo" className="object-contain" />
             </div>
-            <div className="grid grid-cols-2 gap-4 mb-8">
-                <div>
-                    <h3 className="font-semibold text-gray-700 mb-1">Facturé à :</h3>
-                    <p className="text-sm text-gray-600">{order.customerInfo.fullName}</p>
-                    {order.customerInfo.address && <p className="text-sm text-gray-600">{order.customerInfo.address}</p>}
-                    <p className="text-sm text-gray-600">{order.customerInfo.phone}</p>
-                </div>
-                <div className="text-right">
-                    <h3 className="font-semibold text-gray-700 mb-1">Sonko Shop</h3>
-                    <p className="text-sm text-gray-600">Tivaouane Peulh, Quartier Diawrine</p>
-                    <p className="text-sm text-gray-600">Dakar, Sénégal</p>
-                    <p className="text-sm text-gray-600">sonkoshop1@gmail.com</p>
-                    <p className="text-sm text-gray-600">78 451 36 33 / 78 139 58 93</p>
-                </div>
+            <div className="text-right">
+              <h2 className="text-2xl font-bold text-gray-800">FACTURE</h2>
+              <p className="text-sm text-gray-600">Commande #: {order.id.substring(0, 8)}...</p>
+              <p className="text-sm text-gray-600">Date: {formatDate(order.orderDate as string)}</p>
             </div>
-            <div className="mb-8">
-                <table className="w-full text-sm text-left text-gray-600">
-                    <thead className="bg-gray-100">
-                        <tr>
-                            <th className="py-2 px-3 font-semibold">Article</th>
-                            <th className="py-2 px-3 font-semibold text-center">Taille</th>
-                            <th className="py-2 px-3 font-semibold text-center">Qté</th>
-                            <th className="py-2 px-3 font-semibold text-right">Prix Unitaire</th>
-                            <th className="py-2 px-3 font-semibold text-right">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {order.items.map((item: OrderItem, index: number) => (
-                            <tr key={index} className="border-b border-gray-200">
-                                <td className="py-2 px-3">
-                                    <p>{item.productName}</p>
-                                    {item.customization && (
-                                        <div className="text-xs text-blue-600 pl-2">
-                                            <p className="flex items-center gap-1"><Tag className="h-3 w-3"/>Flocage: {item.customization.name}, {item.customization.number}</p>
-                                        </div>
-                                    )}
-                                </td>
-                                <td className="py-2 px-3 text-center">{item.selectedSize || '-'}</td>
-                                <td className="py-2 px-3 text-center">{item.quantity}</td>
-                                <td className="py-2 px-3 text-right">{(item.price + (item.customizationCost || 0)).toLocaleString('fr-FR')} FCFA</td>
-                                <td className="py-2 px-3 text-right">{((item.price + (item.customizationCost || 0)) * item.quantity).toLocaleString('fr-FR')} FCFA</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+          </div>
+          <div className="grid grid-cols-2 gap-4 mb-8">
+            <div>
+              <h3 className="font-semibold text-gray-700 mb-1">Facturé à :</h3>
+              <p className="text-sm text-gray-600">{order.customerInfo.fullName}</p>
+              {order.customerInfo.address && <p className="text-sm text-gray-600">{order.customerInfo.address}</p>}
+              <p className="text-sm text-gray-600">{order.customerInfo.phone}</p>
             </div>
-            <div className="flex justify-end mb-8">
-                <div className="w-full md:w-1/3">
-                    <div className="flex justify-between text-sm text-gray-600">
-                        <span>Sous-total :</span>
-                        <span>{order.subtotal?.toLocaleString('fr-FR') || 0} FCFA</span>
-                    </div>
-                    <div className="flex justify-between text-sm text-gray-600">
-                        <span>Livraison ({order.shippingAddress}):</span>
-                        <span>{order.shippingCost !== undefined ? (order.shippingCost > 0 ? `${order.shippingCost.toLocaleString('fr-FR')} FCFA` : 'Gratuite') : 'N/A'}</span>
-                    </div>
-                    <hr className="my-2 border-gray-300"/>
-                    <div className="flex justify-between font-bold text-md text-gray-800">
-                        <span>TOTAL :</span>
-                        <span>{order.totalAmount.toLocaleString('fr-FR')} FCFA</span>
-                    </div>
-                </div>
+            <div className="text-right">
+              <h3 className="font-semibold text-gray-700 mb-1">Sonko Shop</h3>
+              <p className="text-sm text-gray-600">Tivaouane Peulh, Quartier Diawrine</p>
+              <p className="text-sm text-gray-600">Dakar, Sénégal</p>
+              <p className="text-sm text-gray-600">sonkoshop1@gmail.com</p>
+              <p className="text-sm text-gray-600">78 451 36 33 / 78 139 58 93</p>
             </div>
-            <div className="text-center text-sm text-gray-500">
-                <p>Merci pour votre confiance et à bientôt sur Sonko Shop !</p>
+          </div>
+          <div className="mb-8 overflow-x-auto">
+            <table className="w-full text-sm text-left text-gray-600" style={{ minWidth: '100%' }}>
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="py-2 px-2 font-semibold" style={{ width: '35%' }}>Article</th>
+                  <th className="py-2 px-2 font-semibold text-center" style={{ width: '10%' }}>Taille</th>
+                  <th className="py-2 px-2 font-semibold text-center" style={{ width: '10%' }}>Qté</th>
+                  <th className="py-2 px-2 font-semibold text-right" style={{ width: '22%' }}>Prix Unitaire</th>
+                  <th className="py-2 px-2 font-semibold text-right" style={{ width: '23%' }}>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {order.items.map((item: OrderItem, index: number) => (
+                  <tr key={index} className="border-b border-gray-200">
+                    <td className="py-2 px-2">
+                      <p className="text-xs leading-tight">{item.productName}</p>
+                      {item.customization && (
+                        <div className="text-xs text-blue-600 pl-1 mt-1">
+                          <p className="flex items-center gap-1"><Tag className="h-3 w-3" />Flocage: {item.customization.name}, {item.customization.number}</p>
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-2 px-2 text-center text-xs">{item.selectedSize || '-'}</td>
+                    <td className="py-2 px-2 text-center text-xs">{item.quantity}</td>
+                    <td className="py-2 px-2 text-right text-xs whitespace-nowrap">{(item.price + (item.customizationCost || 0)).toLocaleString('fr-FR')} FCFA</td>
+                    <td className="py-2 px-2 text-right text-xs whitespace-nowrap">{((item.price + (item.customizationCost || 0)) * item.quantity).toLocaleString('fr-FR')} FCFA</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex justify-end mb-8">
+            <div className="w-full md:w-1/2">
+              <div className="flex justify-between text-sm text-gray-600 mb-1">
+                <span>Sous-total :</span>
+                <span className="whitespace-nowrap">{order.subtotal?.toLocaleString('fr-FR') || 0} FCFA</span>
+              </div>
+              <div className="flex justify-between text-sm text-gray-600 mb-2">
+                <span>Livraison ({order.shippingAddress}):</span>
+                <span className="whitespace-nowrap">{order.shippingCost !== undefined ? (order.shippingCost > 0 ? `${order.shippingCost.toLocaleString('fr-FR')} FCFA` : 'Gratuite') : 'N/A'}</span>
+              </div>
+              <hr className="my-2 border-gray-300" />
+              <div className="flex justify-between font-bold text-base text-gray-800">
+                <span>TOTAL :</span>
+                <span className="whitespace-nowrap">{order.totalAmount.toLocaleString('fr-FR')} FCFA</span>
+              </div>
             </div>
+          </div>
+          <div className="text-center text-sm text-gray-500">
+            <p>Merci pour votre confiance et à bientôt sur Sonko Shop !</p>
+          </div>
         </div>
       )}
     </>

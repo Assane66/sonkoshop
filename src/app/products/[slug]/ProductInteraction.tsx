@@ -31,17 +31,16 @@ export default function ProductInteraction({ product }: ProductInteractionProps)
   const [mainImageUrl, setMainImageUrl] = useState(product.imageUrls?.[0] || 'https://placehold.co/600x600.png');
   const [selectedSize, setSelectedSize] = useState<string | undefined>(product.sizes?.[0]);
   const [quantity, setQuantity] = useState(1);
-  
+
   // State for customization
   const [customizationEnabled, setCustomizationEnabled] = useState(false);
   const [customizationName, setCustomizationName] = useState('');
   const [customizationNumber, setCustomizationNumber] = useState('');
-  const [customizationBottomText, setCustomizationBottomText] = useState('');
 
   const isPromo = product.promotionPrice && product.promotionPrice > 0 && product.promotionPrice < product.price;
   const basePrice = isPromo ? product.promotionPrice! : product.price;
   const originalPrice = isPromo ? product.price : null;
-  
+
   const customizationCost = customizationEnabled ? CUSTOMIZATION_COST : 0;
   const totalCartPrice = (basePrice * quantity) + (customizationCost * quantity);
 
@@ -54,7 +53,7 @@ export default function ProductInteraction({ product }: ProductInteractionProps)
       toast({ variant: "destructive", title: "Veuillez sélectionner une taille" });
       return;
     }
-    
+
     let customizationData: CustomizationData | undefined = undefined;
     if (customizationEnabled) {
       if (!customizationName || !customizationNumber) {
@@ -64,10 +63,9 @@ export default function ProductInteraction({ product }: ProductInteractionProps)
       customizationData = {
         name: customizationName,
         number: customizationNumber,
-        bottomText: customizationBottomText,
       };
     }
-    
+
     addToCart(product, quantity, selectedSize, customizationData, customizationEnabled ? CUSTOMIZATION_COST : 0);
     toast({ title: "Produit ajouté au panier!", action: <CheckCircle className="text-green-500" /> });
   };
@@ -93,77 +91,73 @@ export default function ProductInteraction({ product }: ProductInteractionProps)
           </div>
         )}
       </Card>
-      
+
       <Card className="shadow-lg rounded-lg">
         <CardContent className="p-6 space-y-4">
-            <div className="mb-4">
-                {isPromo ? (
-                    <>
-                    <p className="text-xl lg:text-2xl text-muted-foreground line-through">{originalPrice?.toLocaleString('fr-FR')} FCFA</p>
-                    <p className="text-2xl lg:text-3xl font-semibold text-destructive">{basePrice.toLocaleString('fr-FR')} FCFA <Badge variant="destructive" className="ml-2 text-sm">PROMO</Badge></p>
-                    </>
-                ) : (
-                    <p className="text-2xl lg:text-3xl font-semibold text-primary">{basePrice.toLocaleString('fr-FR')} FCFA</p>
-                )}
-            </div>
-
-            {product.sizes && product.sizes.length > 0 && (
-                <div className="grid grid-cols-3 items-center gap-4">
-                <Label htmlFor="size" className="text-base font-medium">Taille:</Label>
-                <Select value={selectedSize} onValueChange={setSelectedSize} disabled={product.stock === 0}>
-                    <SelectTrigger id="size" className="col-span-2 text-base"><SelectValue placeholder="Choisir une taille" /></SelectTrigger>
-                    <SelectContent>{product.sizes.map(size => <SelectItem key={size} value={size} className="text-base">{size}</SelectItem>)}</SelectContent>
-                </Select>
-                </div>
+          <div className="mb-4">
+            {isPromo ? (
+              <>
+                <p className="text-xl lg:text-2xl text-muted-foreground line-through">{originalPrice?.toLocaleString('fr-FR')} FCFA</p>
+                <p className="text-2xl lg:text-3xl font-semibold text-destructive">{basePrice.toLocaleString('fr-FR')} FCFA <Badge variant="destructive" className="ml-2 text-sm">PROMO</Badge></p>
+              </>
+            ) : (
+              <p className="text-2xl lg:text-3xl font-semibold text-primary">{basePrice.toLocaleString('fr-FR')} FCFA</p>
             )}
+          </div>
+
+          {product.sizes && product.sizes.length > 0 && (
             <div className="grid grid-cols-3 items-center gap-4">
-                <Label htmlFor="quantity" className="text-base font-medium">Quantité:</Label>
-                <div className="flex items-center space-x-1 col-span-2">
-                <Button variant="outline" size="icon" onClick={() => setQuantity(q => Math.max(1, q - 1))} disabled={quantity <= 1 || product.stock === 0}><Minus className="h-4 w-4" /></Button>
-                <Input id="quantity" type="number" value={quantity} onChange={(e) => setQuantity(Math.max(1, Math.min(product.stock, parseInt(e.target.value) || 1)))} className="w-16 text-center text-base h-9" min="1" max={product.stock} disabled={product.stock === 0} />
-                <Button variant="outline" size="icon" onClick={() => setQuantity(q => Math.min(product.stock, q + 1))} disabled={quantity >= product.stock || product.stock === 0}><Plus className="h-4 w-4" /></Button>
-                </div>
+              <Label htmlFor="size" className="text-base font-medium">Taille:</Label>
+              <Select value={selectedSize} onValueChange={setSelectedSize} disabled={product.stock === 0}>
+                <SelectTrigger id="size" className="col-span-2 text-base"><SelectValue placeholder="Choisir une taille" /></SelectTrigger>
+                <SelectContent>{product.sizes.map(size => <SelectItem key={size} value={size} className="text-base">{size}</SelectItem>)}</SelectContent>
+              </Select>
             </div>
+          )}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <Label htmlFor="quantity" className="text-base font-medium">Quantité:</Label>
+            <div className="flex items-center space-x-1 col-span-2">
+              <Button variant="outline" size="icon" onClick={() => setQuantity(q => Math.max(1, q - 1))} disabled={quantity <= 1 || product.stock === 0}><Minus className="h-4 w-4" /></Button>
+              <Input id="quantity" type="number" value={quantity} onChange={(e) => setQuantity(Math.max(1, Math.min(product.stock, parseInt(e.target.value) || 1)))} className="w-16 text-center text-base h-9" min="1" max={product.stock} disabled={product.stock === 0} />
+              <Button variant="outline" size="icon" onClick={() => setQuantity(q => Math.min(product.stock, q + 1))} disabled={quantity >= product.stock || product.stock === 0}><Plus className="h-4 w-4" /></Button>
+            </div>
+          </div>
 
-            {/* --- Customization Section --- */}
-            {product.category === 'Maillots' && (
-              <div className="space-y-4 pt-4 border-t">
-                <h3 className="text-lg font-semibold">Flocage</h3>
-                <RadioGroup value={customizationEnabled ? "avec" : "sans"} onValueChange={(value) => setCustomizationEnabled(value === "avec")}>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="sans" id="sans-flocage" />
-                    <Label htmlFor="sans-flocage">Sans flocage</Label>
+          {/* --- Customization Section --- */}
+          {product.category && product.category.trim().toLowerCase().includes('maillot') && (
+            <div className="space-y-4 pt-4 border-t">
+              <h3 className="text-lg font-semibold">Flocage</h3>
+              <RadioGroup value={customizationEnabled ? "avec" : "sans"} onValueChange={(value) => setCustomizationEnabled(value === "avec")}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="sans" id="sans-flocage" />
+                  <Label htmlFor="sans-flocage">Sans flocage</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="avec" id="avec-flocage" />
+                  <Label htmlFor="avec-flocage">Avec flocage (+{CUSTOMIZATION_COST.toLocaleString('fr-FR')} FCFA)</Label>
+                </div>
+              </RadioGroup>
+
+              {customizationEnabled && (
+                <div className="p-4 bg-muted/50 rounded-lg space-y-4 animate-accordion-down">
+                  <div>
+                    <Label htmlFor="flocage-nom">Nom (haut du maillot)</Label>
+                    <Input id="flocage-nom" value={customizationName} onChange={(e) => setCustomizationName(e.target.value)} placeholder="Ex: GASSAMA" required />
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="avec" id="avec-flocage" />
-                    <Label htmlFor="avec-flocage">Avec flocage (+{CUSTOMIZATION_COST.toLocaleString('fr-FR')} FCFA)</Label>
+                  <div>
+                    <Label htmlFor="flocage-numero">Numéro (centre)</Label>
+                    <Input id="flocage-numero" type="number" value={customizationNumber} onChange={(e) => setCustomizationNumber(e.target.value)} placeholder="Ex: 10" required />
                   </div>
-                </RadioGroup>
+                </div>
+              )}
+            </div>
+          )}
 
-                {customizationEnabled && (
-                  <div className="p-4 bg-muted/50 rounded-lg space-y-4 animate-accordion-down">
-                    <div>
-                      <Label htmlFor="flocage-nom">Nom (haut du maillot)</Label>
-                      <Input id="flocage-nom" value={customizationName} onChange={(e) => setCustomizationName(e.target.value)} placeholder="Ex: GASSAMA" required/>
-                    </div>
-                     <div>
-                      <Label htmlFor="flocage-numero">Numéro (centre)</Label>
-                      <Input id="flocage-numero" type="number" value={customizationNumber} onChange={(e) => setCustomizationNumber(e.target.value)} placeholder="Ex: 10" required />
-                    </div>
-                     <div>
-                      <Label htmlFor="flocage-bas">Texte en bas (optionnel)</Label>
-                      <Input id="flocage-bas" value={customizationBottomText} onChange={(e) => setCustomizationBottomText(e.target.value)} placeholder="Ex: El Hadj"/>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-            
-            <Separator />
+          <Separator />
 
-            <div className='text-2xl font-bold mt-4'>Total: {totalCartPrice.toLocaleString('fr-FR')} FCFA</div>
+          <div className='text-2xl font-bold mt-4'>Total: {totalCartPrice.toLocaleString('fr-FR')} FCFA</div>
 
-            <Button size="lg" className="w-full mt-8 text-lg py-3 bg-primary hover:bg-primary/90" onClick={handleAddToCart} disabled={product.stock === 0}><ShoppingCart className="mr-2 h-5 w-5" />Ajouter au Panier</Button>
+          <Button size="lg" className="w-full mt-8 text-lg py-3 bg-primary hover:bg-primary/90" onClick={handleAddToCart} disabled={product.stock === 0}><ShoppingCart className="mr-2 h-5 w-5" />Ajouter au Panier</Button>
         </CardContent>
       </Card>
     </div>

@@ -52,47 +52,84 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   return (
     <Link href={productLink} className="block group">
-      <Card className="overflow-hidden border-none shadow-none rounded-lg h-full flex flex-col bg-secondary">
-        <div className="relative w-full aspect-[4/5] bg-white">
+      <Card className="overflow-hidden border border-slate-200 shadow-md hover:shadow-xl transition-all duration-300 rounded-2xl h-full flex flex-col bg-white group-hover:scale-[1.02]">
+        <div className="relative w-full aspect-[4/5] bg-gradient-to-br from-slate-50 to-white overflow-hidden">
           <Image
             src={displayImageUrl}
             alt={product.name}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            className="object-contain transition-transform duration-300 group-hover:scale-105 p-4"
+            className="object-contain transition-transform duration-500 group-hover:scale-110 p-4"
             data-ai-hint={displayImageAiHint}
             onError={(e) => e.currentTarget.src = 'https://placehold.co/600x400.png'}
             loading="lazy"
           />
-          <div className="absolute top-2 left-2 flex flex-col gap-1">
-             {isPromo ? (
-                <Badge variant="destructive">PROMO</Badge>
-             ) : (
-                <Badge variant="secondary" className="text-xs bg-white text-black border border-gray-200">NEW</Badge>
-             )}
-             <Badge variant="secondary" className="text-xs bg-white text-cyan-600 border border-gray-200 flex items-center gap-1"><Truck className="h-3 w-3" /> 24h</Badge>
-          </div>
-        </div>
-        <CardContent className="p-3 text-center flex-grow flex flex-col justify-between">
-          <div>
-            <p className="text-xs text-muted-foreground uppercase">{product.category}</p>
-            <h3 className="font-semibold text-sm leading-tight mt-1">{product.name}</h3>
-          </div>
-          <div className="mt-2">
+          <div className="absolute top-3 left-3 flex flex-col gap-2">
             {isPromo ? (
-              <>
-                <p className="text-sm text-muted-foreground line-through">{originalPrice?.toLocaleString('fr-FR')} FCFA</p>
-                <p className="text-md font-bold text-destructive">
+              <Badge className="bg-red-500 text-white border-0 shadow-lg font-semibold px-3 py-1">
+                PROMO
+              </Badge>
+            ) : (
+              <Badge className="bg-white text-slate-700 border border-slate-200 shadow-sm font-medium px-3 py-1">
+                NEW
+              </Badge>
+            )}
+            <Badge className="bg-white text-primary border border-primary/20 shadow-sm flex items-center gap-1.5 px-3 py-1 font-medium">
+              <Truck className="h-3.5 w-3.5" /> Livraison 24h
+            </Badge>
+          </div>
+
+          {/* Stock indicator */}
+          {product.stock === 0 && (
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+              <Badge variant="destructive" className="text-lg px-4 py-2">
+                Épuisé
+              </Badge>
+            </div>
+          )}
+        </div>
+
+        <CardContent className="p-5 text-center flex-grow flex flex-col justify-between">
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-2">
+              {product.category}
+            </p>
+            <h3 className="font-bold text-base leading-tight mb-3 text-slate-900 group-hover:text-primary transition-colors line-clamp-2">
+              {product.name}
+            </h3>
+          </div>
+
+          <div className="mt-auto">
+            {isPromo ? (
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground line-through">
+                  {originalPrice?.toLocaleString('fr-FR')} FCFA
+                </p>
+                <p className="text-xl font-bold text-red-600">
                   {displayPrice.toLocaleString('fr-FR')} FCFA
                 </p>
-              </>
+                <p className="text-xs text-green-600 font-medium">
+                  Économisez {((originalPrice! - displayPrice) / originalPrice! * 100).toFixed(0)}%
+                </p>
+              </div>
             ) : (
-              <p className="text-md font-bold text-foreground">
+              <p className="text-xl font-bold text-slate-900">
                 {displayPrice.toLocaleString('fr-FR')} FCFA
               </p>
             )}
           </div>
         </CardContent>
+
+        <CardFooter className="p-5 pt-0">
+          <Button
+            className="w-full bg-primary hover:bg-primary/90 text-white font-semibold rounded-full shadow-md hover:shadow-lg transition-all duration-300"
+            onClick={handleAddToCart}
+            disabled={product.stock === 0}
+          >
+            <ShoppingCart className="mr-2 h-4 w-4" />
+            {product.stock === 0 ? 'Épuisé' : 'Ajouter au panier'}
+          </Button>
+        </CardFooter>
       </Card>
     </Link>
   );

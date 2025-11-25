@@ -49,12 +49,15 @@ export default function BannerCarousel({ banners, priority = false }: BannerCaro
   const currentBanner = banners[currentIndex];
 
   return (
-    <div className="relative w-full h-[300px] md:h-[400px] lg:h-[500px] overflow-hidden rounded-lg shadow-xl group">
+    <div className="relative w-full h-[300px] md:h-[400px] lg:h-[500px] overflow-hidden rounded-2xl shadow-2xl group">
       <div className="w-full h-full relative">
         {banners.map((banner, index) => (
           <div
             key={banner.id}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
+            className={`absolute inset-0 transition-all duration-1000 ease-in-out ${index === currentIndex
+                ? 'opacity-100 scale-100'
+                : 'opacity-0 scale-105'
+              }`}
           >
             <Image
               src={banner.imageUrl}
@@ -67,25 +70,34 @@ export default function BannerCarousel({ banners, priority = false }: BannerCaro
             />
           </div>
         ))}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
       </div>
 
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 text-white">
-        <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 drop-shadow-lg animate-fade-in-down">{currentBanner.title}</h2>
-        {currentBanner.subtitle && <p className="text-lg md:text-xl mb-6 drop-shadow-md animate-fade-in-up">{currentBanner.subtitle}</p>}
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 text-white z-10">
+        <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 drop-shadow-2xl animate-fade-in-down tracking-tight">
+          {currentBanner.title}
+        </h2>
+        {currentBanner.subtitle && (
+          <p className="text-lg md:text-xl lg:text-2xl mb-8 drop-shadow-lg animate-fade-in-up max-w-2xl">
+            {currentBanner.subtitle}
+          </p>
+        )}
         <Link href={currentBanner.link}>
-          <Button size="lg" variant="secondary" className="bg-primary/80 hover:bg-primary text-primary-foreground border-primary-foreground/50 border animate-fade-in">
-            Découvrir
+          <Button
+            size="lg"
+            className="bg-white text-primary hover:bg-white/90 font-semibold px-8 py-6 text-lg rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 animate-fade-in"
+          >
+            Découvrir maintenant
           </Button>
         </Link>
       </div>
-      
+
       {banners.length > 1 && (
         <>
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-1/2 left-4 transform -translate-y-1/2 rounded-full opacity-50 group-hover:opacity-100 transition-opacity bg-background/30 hover:bg-background/70 text-foreground"
+            className="absolute top-1/2 left-4 transform -translate-y-1/2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border border-white/30 h-12 w-12"
             onClick={goToPrevious}
           >
             <ChevronLeft className="h-6 w-6" />
@@ -93,7 +105,7 @@ export default function BannerCarousel({ banners, priority = false }: BannerCaro
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-1/2 right-4 transform -translate-y-1/2 rounded-full opacity-50 group-hover:opacity-100 transition-opacity bg-background/30 hover:bg-background/70 text-foreground"
+            className="absolute top-1/2 right-4 transform -translate-y-1/2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border border-white/30 h-12 w-12"
             onClick={goToNext}
           >
             <ChevronRight className="h-6 w-6" />
@@ -101,12 +113,15 @@ export default function BannerCarousel({ banners, priority = false }: BannerCaro
         </>
       )}
 
-       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-3 z-20">
         {banners.map((_, index) => (
           <button
             key={index}
             onClick={() => setCurrentIndex(index)}
-            className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${currentIndex === index ? 'bg-primary scale-125' : 'bg-white/70 hover:bg-white'}`}
+            className={`transition-all duration-300 rounded-full ${currentIndex === index
+                ? 'bg-white w-8 h-3'
+                : 'bg-white/50 hover:bg-white/75 w-3 h-3'
+              }`}
             aria-label={`Aller à la bannière ${index + 1}`}
           />
         ))}
