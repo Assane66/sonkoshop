@@ -1,0 +1,5 @@
+# Settings for Cloud Build and Cloud Run
+runConfig:
+  # The command to start the application.
+  # For Next.js, this is typically 'npm start' or 'next start'.
+  runCommand: npm run start

@@ -1,6 +1,7 @@
 {
   "projects": {
-    "sonko": "sonko-storefront"
+    "sonko": "sonko-storefront",
+    "shop": "sonko-storefront"
   },
   "targets": {},
   "etags": {}
