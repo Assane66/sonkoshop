@@ -18,6 +18,7 @@ import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import ProductReviews from '@/components/ProductReviews';
+import { optimizeCloudinaryUrl } from '@/lib/utils';
 
 // Prix du flocage en FCFA
 const FLOCAGE_PRICE = 2000;
@@ -227,7 +228,7 @@ export default function ProductDetailClient({ initialProduct }: { initialProduct
           <div className="relative w-full aspect-square overflow-hidden rounded-t-lg">
             {/* Next/Image onError uses state fallback */}
             <Image
-              src={mainImageUrl}
+              src={optimizeCloudinaryUrl(mainImageUrl, 800)}
               alt={product.name}
               fill
               priority
@@ -249,7 +250,7 @@ export default function ProductDetailClient({ initialProduct }: { initialProduct
                     onClick={() => setMainImageUrl(url)}
                     type="button"
                   >
-                    <Image src={url} alt={`Thumbnail ${index + 1}`} fill sizes="64px" className="object-cover" onError={() => { /* hide broken thumbnail */ }} />
+                    <Image src={optimizeCloudinaryUrl(url, 150)} alt={`Thumbnail ${index + 1}`} fill sizes="64px" className="object-cover" onError={() => { /* hide broken thumbnail */ }} />
                   </button>
                 ))}
               </div>

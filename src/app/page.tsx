@@ -12,6 +12,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import BannerCarousel from '@/components/BannerCarousel';
+import { optimizeCloudinaryUrl } from '@/lib/utils';
 
 const ProductCarousel = ({ products }: { products: Product[] }) => {
   if (!products || products.length === 0) return null;
@@ -127,7 +128,7 @@ export default function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {categoryPromoBanners.slice(0, 2).map(banner => (
                 <Link key={banner.id} href={banner.link} className="relative h-96 rounded-2xl overflow-hidden group shadow-xl hover:shadow-2xl transition-all duration-300">
-                  <Image src={banner.imageUrl} alt={banner.title} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover transition-transform duration-500 group-hover:scale-110" data-ai-hint={banner.imageAiHint || 'category promotion'} loading="lazy" />
+                  <Image src={optimizeCloudinaryUrl(banner.imageUrl, 600)} alt={banner.title} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover transition-transform duration-500 group-hover:scale-110" data-ai-hint={banner.imageAiHint || 'category promotion'} loading="lazy" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent group-hover:from-black/70 transition-all duration-300" />
                   <div className="absolute inset-0 flex items-end p-8">
                     <div className="transform transition-transform duration-300 group-hover:translate-y-[-8px]">

@@ -12,6 +12,7 @@ import { ShoppingCart, CheckCircle, Truck, Info } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { Timestamp } from 'firebase/firestore';
+import { optimizeCloudinaryUrl } from '@/lib/utils';
 
 interface ProductCardProps {
   product: Product;
@@ -46,7 +47,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     });
   };
 
-  const displayImageUrl = product.imageUrls?.[0] || 'https://placehold.co/600x400.png';
+  const displayImageUrl = product.imageUrls?.[0] ? optimizeCloudinaryUrl(product.imageUrls[0], 400) : 'https://placehold.co/600x400.png';
   const displayImageAiHint = product.imageAiHint || 'product image';
   const productLink = `/products/${product.slug || product.id}`;
 

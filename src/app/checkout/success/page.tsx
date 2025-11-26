@@ -237,7 +237,7 @@ function SuccessPageContent() {
       </Card>
 
       {order && (
-        <div ref={invoiceRef} className="p-8 bg-white text-black w-full mx-auto border rounded-lg shadow-lg my-8" style={{ maxWidth: '800px', width: '800px' }}>
+        <div ref={invoiceRef} className="p-8 bg-white text-black w-full mx-auto border rounded-lg shadow-lg my-8 max-w-[800px] w-[800px]">
           <div className="flex justify-between items-start mb-8">
             <div className="w-1/3">
               <Image src="https://res.cloudinary.com/dm6yuokre/image/upload/v1751785241/logo_noqoct.png" alt="Sonko Shop Logo" width={150} height={75} data-ai-hint="shop logo" className="object-contain" />
@@ -264,14 +264,14 @@ function SuccessPageContent() {
             </div>
           </div>
           <div className="mb-8 overflow-x-auto">
-            <table className="w-full text-sm text-left text-gray-600" style={{ minWidth: '100%' }}>
+            <table className="w-full text-sm text-left text-gray-600 min-w-full">
               <thead className="bg-gray-100">
                 <tr>
-                  <th className="py-2 px-2 font-semibold" style={{ width: '35%' }}>Article</th>
-                  <th className="py-2 px-2 font-semibold text-center" style={{ width: '10%' }}>Taille</th>
-                  <th className="py-2 px-2 font-semibold text-center" style={{ width: '10%' }}>Qté</th>
-                  <th className="py-2 px-2 font-semibold text-right" style={{ width: '22%' }}>Prix Unitaire</th>
-                  <th className="py-2 px-2 font-semibold text-right" style={{ width: '23%' }}>Total</th>
+                  <th className="py-2 px-2 font-semibold w-[35%]">Article</th>
+                  <th className="py-2 px-2 font-semibold text-center w-[10%]">Taille</th>
+                  <th className="py-2 px-2 font-semibold text-center w-[10%]">Qté</th>
+                  <th className="py-2 px-2 font-semibold text-right w-[22%]">Prix Unitaire</th>
+                  <th className="py-2 px-2 font-semibold text-right w-[23%]">Total</th>
                 </tr>
               </thead>
               <tbody>

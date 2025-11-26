@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useEffect, useState, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { optimizeCloudinaryUrl } from '@/lib/utils';
 
 interface BannerCarouselProps {
   banners: Banner[];
@@ -55,15 +56,16 @@ export default function BannerCarousel({ banners, priority = false }: BannerCaro
           <div
             key={banner.id}
             className={`absolute inset-0 transition-all duration-1000 ease-in-out ${index === currentIndex
-                ? 'opacity-100 scale-100'
-                : 'opacity-0 scale-105'
+              ? 'opacity-100 scale-100'
+              : 'opacity-0 scale-105'
               }`}
           >
             <Image
-              src={banner.imageUrl}
+              src={optimizeCloudinaryUrl(banner.imageUrl, 1200)}
               alt={banner.title}
               fill
               priority={priority && index === 0}
+              loading={priority && index === 0 ? "eager" : "lazy"}
               sizes="100vw"
               className="object-cover"
               data-ai-hint={banner.imageAiHint || 'promotional banner'}
@@ -119,8 +121,8 @@ export default function BannerCarousel({ banners, priority = false }: BannerCaro
             key={index}
             onClick={() => setCurrentIndex(index)}
             className={`transition-all duration-300 rounded-full ${currentIndex === index
-                ? 'bg-white w-8 h-3'
-                : 'bg-white/50 hover:bg-white/75 w-3 h-3'
+              ? 'bg-white w-8 h-3'
+              : 'bg-white/50 hover:bg-white/75 w-3 h-3'
               }`}
             aria-label={`Aller à la bannière ${index + 1}`}
           />
