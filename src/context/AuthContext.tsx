@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged, User, signOut as firebaseSignOut, signInWithEmailAndPassword } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
+import { getFirebaseAuth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { doc, onSnapshot } from 'firebase/firestore';
 import type { UserData } from '@/types';
@@ -25,6 +25,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
+    // Only initialize auth on client-side
+    if (typeof window === 'undefined') return;
+
+    const auth = getFirebaseAuth();
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (!currentUser) {
@@ -58,6 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, pass: string): Promise<User | null> => {
     setLoading(true);
     try {
+      const auth = getFirebaseAuth();
       const userCredential = await signInWithEmailAndPassword(auth, email, pass);
       // onAuthStateChanged will handle setting the user and triggering the Firestore listener
       return userCredential.user;
@@ -72,6 +77,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     setLoading(true);
     try {
+      const auth = getFirebaseAuth();
       await firebaseSignOut(auth);
       setUser(null);
       setUserData(null);
@@ -79,7 +85,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Logout failed:", error);
     } finally {
-       setLoading(false);
+      setLoading(false);
     }
   };
 

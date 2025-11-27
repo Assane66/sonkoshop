@@ -61,12 +61,13 @@ export default function BannerCarousel({ banners, priority = false }: BannerCaro
               }`}
           >
             <Image
-              src={optimizeCloudinaryUrl(banner.imageUrl, 1200)}
+              src={optimizeCloudinaryUrl(banner.imageUrl)}
               alt={banner.title}
               fill
               priority={priority && index === 0}
               loading={priority && index === 0 ? "eager" : "lazy"}
-              sizes="100vw"
+              fetchPriority={priority && index === 0 ? "high" : "auto"}
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 1200px"
               className="object-cover"
               data-ai-hint={banner.imageAiHint || 'promotional banner'}
             />
@@ -101,6 +102,7 @@ export default function BannerCarousel({ banners, priority = false }: BannerCaro
             size="icon"
             className="absolute top-1/2 left-4 transform -translate-y-1/2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border border-white/30 h-12 w-12"
             onClick={goToPrevious}
+            aria-label="Bannière précédente"
           >
             <ChevronLeft className="h-6 w-6" />
           </Button>
@@ -109,6 +111,7 @@ export default function BannerCarousel({ banners, priority = false }: BannerCaro
             size="icon"
             className="absolute top-1/2 right-4 transform -translate-y-1/2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border border-white/30 h-12 w-12"
             onClick={goToNext}
+            aria-label="Bannière suivante"
           >
             <ChevronRight className="h-6 w-6" />
           </Button>
@@ -120,10 +123,11 @@ export default function BannerCarousel({ banners, priority = false }: BannerCaro
           <button
             key={index}
             onClick={() => setCurrentIndex(index)}
-            className={`transition-all duration-300 rounded-full ${currentIndex === index
-              ? 'bg-white w-8 h-3'
-              : 'bg-white/50 hover:bg-white/75 w-3 h-3'
-              }`}
+            className="w-3 h-3 rounded-full bg-white transition-all duration-300"
+            style={{
+              transform: currentIndex === index ? 'scaleX(2.67)' : 'scaleX(1)',
+              opacity: currentIndex === index ? 1 : 0.5,
+            }}
             aria-label={`Aller à la bannière ${index + 1}`}
           />
         ))}

@@ -20,6 +20,7 @@ const nextConfig: NextConfig = {
   // Performance optimizations
   experimental: {
     optimizePackageImports: ['lucide-react', 'recharts'],
+    optimizeCss: true,
   },
 
   // Production optimizations

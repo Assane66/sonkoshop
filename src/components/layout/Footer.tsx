@@ -36,13 +36,13 @@ export default function Footer() {
             <h4 className="font-semibold">PAIEMENT SÉCURISÉ</h4>
             <p className="text-sm text-gray-400">Paiement à la livraison ou Wave</p>
           </div>
-           <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center">
             <ShieldCheck className="h-8 w-8 mb-2" />
             <h4 className="font-semibold">SATISFACTION GARANTIE</h4>
             <p className="text-sm text-gray-400">Retour facile sous 7 jours</p>
           </div>
           <div className="flex flex-col items-center">
-             <div className="h-8 w-8 mb-2 font-bold text-2xl">4x</div>
+            <div className="h-8 w-8 mb-2 font-bold text-2xl">4x</div>
             <h4 className="font-semibold">PAIEMENT EN PLUSIEURS FOIS</h4>
             <p className="text-sm text-gray-400">Bientôt disponible</p>
           </div>
@@ -67,20 +67,20 @@ export default function Footer() {
           <div className="md:col-span-1">
             <h3 className="font-bold mb-4">RESTONS CONNECTÉS</h3>
             <div className="flex space-x-4">
-                <Link href="https://www.facebook.com/profile.php?id=61556322727649" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white"><Facebook className="h-6 w-6" /></Link>
-                <Link href="https://www.tiktok.com/@sonkoshop24" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white"><TikTokIcon className="h-6 w-6" /></Link>
-                <Link href="https://www.instagram.com/sonko24shop/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white"><Instagram className="h-6 w-6" /></Link>
+              <Link href="https://www.facebook.com/profile.php?id=61556322727649" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white" aria-label="Suivez-nous sur Facebook"><Facebook className="h-6 w-6" /></Link>
+              <Link href="https://www.tiktok.com/@sonkoshop24" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white" aria-label="Suivez-nous sur TikTok"><TikTokIcon className="h-6 w-6" /></Link>
+              <Link href="https://www.instagram.com/sonko24shop/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white" aria-label="Suivez-nous sur Instagram"><Instagram className="h-6 w-6" /></Link>
             </div>
           </div>
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-12 border-t border-gray-700 pt-6 flex flex-col md:flex-row justify-between items-center text-sm text-gray-500">
-           <p>&copy; {new Date().getFullYear()} Sonko Shop. Tous droits réservés.</p>
-           <div className="flex space-x-4 mt-4 md:mt-0">
-                <Link href="/termes-et-conditions" className="hover:text-white">Conditions de vente</Link>
-                <Link href="/politique-de-retour" className="hover:text-white">Mentions légales</Link>
-           </div>
+        <div className="mt-12 border-t border-gray-700 pt-6 flex flex-col md:flex-row justify-between items-center text-sm text-gray-400">
+          <p>&copy; {new Date().getFullYear()} Sonko Shop. Tous droits réservés.</p>
+          <div className="flex space-x-4 mt-4 md:mt-0">
+            <Link href="/termes-et-conditions" className="hover:text-white">Conditions de vente</Link>
+            <Link href="/politique-de-retour" className="hover:text-white">Mentions légales</Link>
+          </div>
         </div>
       </div>
     </footer>

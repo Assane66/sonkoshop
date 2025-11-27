@@ -50,11 +50,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const productsSnapshot = await getDocs(collection(db, 'products'));
     const productPages: MetadataRoute.Sitemap = productsSnapshot.docs.map((doc) => {
       const data = doc.data();
+      const slug = data.slug || doc.id;
+
+      // Boost priority for Senegal jerseys to help with Google sitelinks
+      const isSenegalJersey = data.name?.toLowerCase().includes('sénégal') ||
+        data.name?.toLowerCase().includes('senegal') ||
+        slug.includes('senegal');
+
       return {
-        url: `${baseUrl}/products/${data.slug || doc.id}`,
+        url: `${baseUrl}/products/${slug}`,
         lastModified: new Date(),
         changeFrequency: 'weekly' as const,
-        priority: 0.8,
+        priority: isSenegalJersey ? 0.95 : 0.8,
       };
     });
 

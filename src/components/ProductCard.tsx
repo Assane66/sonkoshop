@@ -109,7 +109,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                 <p className="text-xl font-bold text-red-600">
                   {displayPrice.toLocaleString('fr-FR')} FCFA
                 </p>
-                <p className="text-xs text-green-600 font-medium">
+                <p className="text-xs text-green-700 font-medium">
                   Économisez {((originalPrice! - displayPrice) / originalPrice! * 100).toFixed(0)}%
                 </p>
               </div>
