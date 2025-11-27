@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, MailCheck } from 'lucide-react';
 import Link from 'next/link';
-import { auth } from '@/lib/firebase';
+import { getFirebaseAuth } from '@/lib/firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
 
@@ -24,6 +24,7 @@ export default function ForgotPasswordPage() {
     setEmailSent(false);
 
     try {
+      const auth = getFirebaseAuth();
       await sendPasswordResetEmail(auth, email);
       setEmailSent(true);
     } catch (err: any) {
@@ -31,7 +32,7 @@ export default function ForgotPasswordPage() {
       // Firebase hides "user-not-found" for security. We'll show a generic message.
       // So we only really need to handle invalid-email format.
       if (err instanceof FirebaseError && err.code === 'auth/invalid-email') {
-          errorMessage = "Le format de l'email est invalide.";
+        errorMessage = "Le format de l'email est invalide.";
       }
       toast({ variant: 'destructive', title: 'Échec', description: errorMessage });
     } finally {
@@ -80,10 +81,10 @@ export default function ForgotPasswordPage() {
             </CardFooter>
           </form>
         )}
-         <CardFooter className="flex flex-col gap-4 border-t pt-6 mt-2">
-            <div className="text-sm text-center text-muted-foreground">
-                <Link href="/login" className="text-primary hover:underline">Retour à la page de connexion</Link>
-            </div>
+        <CardFooter className="flex flex-col gap-4 border-t pt-6 mt-2">
+          <div className="text-sm text-center text-muted-foreground">
+            <Link href="/login" className="text-primary hover:underline">Retour à la page de connexion</Link>
+          </div>
         </CardFooter>
       </Card>
     </div>

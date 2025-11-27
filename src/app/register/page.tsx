@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
 import { Loader2 } from 'lucide-react';
-import { db, auth } from '@/lib/firebase';
+import { db, getFirebaseAuth } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -35,7 +35,7 @@ export default function RegisterPage() {
       setError("Les mots de passe ne correspondent pas.");
       return;
     }
-    
+
     if (phone.trim().length < 9) {
       setError("Le numéro de téléphone doit contenir au moins 9 chiffres.");
       return;
@@ -44,6 +44,7 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
+      const auth = getFirebaseAuth();
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
@@ -100,7 +101,7 @@ export default function RegisterPage() {
                 disabled={isLoading}
               />
             </div>
-             <div className="space-y-2">
+            <div className="space-y-2">
               <Label htmlFor="phone">Numéro de téléphone</Label>
               <Input
                 id="phone"
@@ -112,7 +113,7 @@ export default function RegisterPage() {
                 disabled={isLoading}
               />
             </div>
-             <div className="space-y-2">
+            <div className="space-y-2">
               <Label htmlFor="address">Adresse</Label>
               <Input
                 id="address"
