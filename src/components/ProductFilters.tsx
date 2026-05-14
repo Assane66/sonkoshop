@@ -11,7 +11,7 @@ import { categoryIcons, type SiteCategory } from '@/types';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { X } from 'lucide-react';
 import { debounce } from 'lodash';
 
 interface ProductFiltersProps {
@@ -36,8 +36,6 @@ export default function ProductFilters({ onFilterChange, initialCategory, initia
     }
   }, [initialCategory]);
 
-
-  // Debounced version of onFilterChange to avoid too many re-renders with the slider
   const debouncedFilterChange = useCallback(debounce(onFilterChange, 300), [onFilterChange]);
 
   useEffect(() => {
@@ -46,10 +44,8 @@ export default function ProductFilters({ onFilterChange, initialCategory, initia
       sizes: selectedSizes,
       priceRange,
     });
-    // Cleanup debounce on component unmount
     return () => debouncedFilterChange.cancel();
   }, [selectedCategories, selectedSizes, priceRange, debouncedFilterChange]);
-
 
   const handleCategoryChange = (categoryName: string) => {
     setSelectedCategories(prev =>
@@ -65,73 +61,121 @@ export default function ProductFilters({ onFilterChange, initialCategory, initia
   
   const handlePriceSliderChange = (value: number[]) => {
     if (Array.isArray(value) && value.length === 2) {
-        setPriceRange([value[0], value[1]]);
+      setPriceRange([value[0], value[1]]);
     }
   };
 
+  const handleResetFilters = () => {
+    setSelectedCategories([]);
+    setSelectedSizes([]);
+    setPriceRange([0, MAX_PRICE]);
+  };
+
+  const hasActiveFilters = selectedCategories.length > 0 || selectedSizes.length > 0 || 
+    priceRange[0] > 0 || priceRange[1] < MAX_PRICE;
+
   return (
-    <div className="w-full md:w-64 lg:w-72 space-y-6 p-4 border rounded-lg bg-card shadow-sm">
-      <h3 className="text-xl font-semibold text-primary">Filtres</h3>
-      <Accordion type="multiple" defaultValue={['categories', 'price']} className="w-full">
-        <AccordionItem value="categories">
-          <AccordionTrigger className="text-base font-medium">Catégories</AccordionTrigger>
-          <AccordionContent className="space-y-2 pt-2">
-            {initialCategories.length > 0 ? (
-              initialCategories.map(category => {
-                const IconComponent = category.iconName ? categoryIcons[category.iconName] : categoryIcons["Default"];
-                return (
-                  <div key={category.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`category-filter-${category.id}`}
-                      checked={selectedCategories.includes(category.name)}
-                      onCheckedChange={() => handleCategoryChange(category.name)}
-                    />
-                    {IconComponent && <IconComponent className="h-4 w-4 text-muted-foreground" />}
-                    <Label htmlFor={`category-filter-${category.id}`} className="text-sm font-normal">{category.name}</Label>
-                  </div>
-                );
-              })
-            ) : (
-              <p className="text-sm text-muted-foreground">Aucune catégorie disponible.</p>
-            )}
-          </AccordionContent>
-        </AccordionItem>
+    <div className="w-full md:w-64 lg:w-72 space-y-4">
+      {/* Header with Reset */}
+      <div className="flex items-center justify-between px-4 py-3 bg-secondary rounded-xl">
+        <h3 className="text-lg font-semibold text-foreground">Filtres</h3>
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleResetFilters}
+            className="h-7 px-2 text-xs font-medium text-primary hover:bg-primary/10"
+          >
+            Réinitialiser
+          </Button>
+        )}
+      </div>
 
-        <AccordionItem value="price">
-          <AccordionTrigger className="text-base font-medium">Prix (FCFA)</AccordionTrigger>
-          <AccordionContent className="pt-4">
-            <Slider
-              min={0}
-              max={MAX_PRICE}
-              step={1000}
-              onValueChange={handlePriceSliderChange} 
-              value={priceRange} 
-              className="mb-2"
-            />
-            <div className="flex justify-between text-sm text-muted-foreground">
-              <span>{priceRange[0].toLocaleString('fr-FR')} FCFA</span>
-              <span>{priceRange[1].toLocaleString('fr-FR')} FCFA</span>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
+      {/* Filters Accordion */}
+      <div className="bg-card border border-border rounded-xl p-4 space-y-2">
+        <Accordion type="multiple" defaultValue={['categories', 'price']} className="w-full">
+          {/* Categories */}
+          <AccordionItem value="categories" className="border-0">
+            <AccordionTrigger className="text-base font-semibold text-foreground hover:text-primary transition-colors py-3 px-0">
+              Catégories
+            </AccordionTrigger>
+            <AccordionContent className="space-y-3 pt-2 pb-4 px-0">
+              {initialCategories.length > 0 ? (
+                initialCategories.map(category => {
+                  const IconComponent = category.iconName ? categoryIcons[category.iconName] : categoryIcons["Default"];
+                  return (
+                    <div key={category.id} className="flex items-center space-x-3 group">
+                      <Checkbox
+                        id={`category-filter-${category.id}`}
+                        checked={selectedCategories.includes(category.name)}
+                        onCheckedChange={() => handleCategoryChange(category.name)}
+                        className="rounded-md"
+                      />
+                      {IconComponent && <IconComponent className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />}
+                      <Label 
+                        htmlFor={`category-filter-${category.id}`} 
+                        className="text-sm font-normal text-foreground cursor-pointer group-hover:text-primary transition-colors"
+                      >
+                        {category.name}
+                      </Label>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-sm text-muted-foreground">Aucune catégorie disponible.</p>
+              )}
+            </AccordionContent>
+          </AccordionItem>
 
-        <AccordionItem value="sizes">
-          <AccordionTrigger className="text-base font-medium">Tailles</AccordionTrigger>
-          <AccordionContent className="space-y-2 pt-2 max-h-48 overflow-y-auto">
-            {SIZES.map(size => (
-              <div key={size} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`size-${size}`}
-                  checked={selectedSizes.includes(size)}
-                  onCheckedChange={() => handleSizeChange(size)}
-                />
-                <Label htmlFor={`size-${size}`} className="text-sm font-normal">{size}</Label>
+          {/* Price Range */}
+          <AccordionItem value="price" className="border-0">
+            <AccordionTrigger className="text-base font-semibold text-foreground hover:text-primary transition-colors py-3 px-0">
+              Prix (FCFA)
+            </AccordionTrigger>
+            <AccordionContent className="pt-4 pb-4 px-0">
+              <Slider
+                min={0}
+                max={MAX_PRICE}
+                step={1000}
+                onValueChange={handlePriceSliderChange} 
+                value={priceRange}
+                className="mb-4"
+              />
+              <div className="flex justify-between text-sm font-medium text-foreground bg-secondary p-3 rounded-lg">
+                <span>{priceRange[0].toLocaleString('fr-FR')} FCFA</span>
+                <span>{priceRange[1].toLocaleString('fr-FR')} FCFA</span>
               </div>
-            ))}
-          </AccordionContent>
-        </AccordionItem>
+            </AccordionContent>
+          </AccordionItem>
 
-      </Accordion>
+          {/* Sizes */}
+          <AccordionItem value="sizes" className="border-0">
+            <AccordionTrigger className="text-base font-semibold text-foreground hover:text-primary transition-colors py-3 px-0">
+              Tailles
+            </AccordionTrigger>
+            <AccordionContent className="pt-2 pb-4 px-0">
+              <div className="grid grid-cols-3 gap-2">
+                {SIZES.map(size => (
+                  <div key={size} className="flex items-center">
+                    <Checkbox
+                      id={`size-${size}`}
+                      checked={selectedSizes.includes(size)}
+                      onCheckedChange={() => handleSizeChange(size)}
+                      className="rounded-md"
+                    />
+                    <Label 
+                      htmlFor={`size-${size}`} 
+                      className="text-sm font-normal text-foreground cursor-pointer ml-2"
+                    >
+                      {size}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </div>
     </div>
   );
 }

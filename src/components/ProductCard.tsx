@@ -2,16 +2,13 @@
 'use client';
 
 import type { Product } from '@/types';
-import { categoryIcons } from '@/types';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, CheckCircle, Truck, Info } from 'lucide-react';
+import { ShoppingCart, CheckCircle, Truck } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
-import { Timestamp } from 'firebase/firestore';
 import { optimizeCloudinaryUrl } from '@/lib/utils';
 
 interface ProductCardProps {
@@ -25,6 +22,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const isPromo = product.promotionPrice && product.promotionPrice > 0 && product.promotionPrice < product.price;
   const displayPrice = isPromo ? product.promotionPrice! : product.price;
   const originalPrice = isPromo ? product.price : null;
+  const discountPercent = isPromo ? Math.round(((originalPrice! - displayPrice) / originalPrice!) * 100) : 0;
 
   const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -52,86 +50,86 @@ export default function ProductCard({ product }: ProductCardProps) {
   const productLink = `/products/${product.slug || product.id}`;
 
   return (
-    <Link href={productLink} className="block group">
-      <Card className="overflow-hidden border border-slate-200 shadow-md hover:shadow-xl transition-all duration-300 rounded-2xl h-full flex flex-col bg-white group-hover:scale-[1.02]">
-        <div className="relative w-full aspect-[4/5] bg-gradient-to-br from-slate-50 to-white overflow-hidden">
+    <Link href={productLink} className="block group h-full">
+      <div className="h-full flex flex-col rounded-2xl overflow-hidden bg-card border border-border hover:border-primary/30 transition-all duration-300 hover:shadow-lg">
+        {/* Image Container */}
+        <div className="relative w-full aspect-square bg-secondary overflow-hidden">
           <Image
             src={displayImageUrl}
             alt={product.name}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            className="object-contain transition-transform duration-500 group-hover:scale-110 p-4"
+            className="object-contain transition-transform duration-500 group-hover:scale-105 p-6"
             data-ai-hint={displayImageAiHint}
             onError={(e) => e.currentTarget.src = 'https://placehold.co/600x400.png'}
             loading="lazy"
           />
-          <div className="absolute top-3 left-3 flex flex-col gap-2">
-            {isPromo ? (
-              <Badge className="bg-red-500 text-white border-0 shadow-lg font-semibold px-3 py-1">
-                PROMO
-              </Badge>
-            ) : (
-              <Badge className="bg-white text-slate-700 border border-slate-200 shadow-sm font-medium px-3 py-1">
-                NEW
+
+          {/* Badges */}
+          <div className="absolute top-4 left-4 flex flex-col gap-2">
+            {isPromo && (
+              <Badge className="bg-destructive text-white border-0 font-semibold px-3 py-1 text-xs">
+                -{discountPercent}%
               </Badge>
             )}
-            <Badge className="bg-white text-primary border border-primary/20 shadow-sm flex items-center gap-1.5 px-3 py-1 font-medium">
-              <Truck className="h-3.5 w-3.5" /> Livraison 24h
-            </Badge>
+            {product.stock > 0 && (
+              <Badge className="bg-primary text-primary-foreground border-0 font-medium px-3 py-1 text-xs flex items-center gap-1">
+                <Truck className="h-3 w-3" /> 24h
+              </Badge>
+            )}
           </div>
 
-          {/* Stock indicator */}
+          {/* Stock Overlay */}
           {product.stock === 0 && (
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
-              <Badge variant="destructive" className="text-lg px-4 py-2">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center">
+              <Badge variant="destructive" className="text-base px-4 py-2 font-semibold">
                 Épuisé
               </Badge>
             </div>
           )}
         </div>
 
-        <CardContent className="p-5 text-center flex-grow flex flex-col justify-between">
-          <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-2">
-              {product.category}
-            </p>
-            <h3 className="font-bold text-base leading-tight mb-3 text-slate-900 group-hover:text-primary transition-colors line-clamp-2">
-              {product.name}
-            </h3>
-          </div>
+        {/* Content */}
+        <div className="flex flex-col flex-grow p-4">
+          {/* Category */}
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-2">
+            {product.category}
+          </p>
 
-          <div className="mt-auto">
+          {/* Product Name */}
+          <h3 className="font-semibold text-base leading-snug text-foreground group-hover:text-primary transition-colors mb-3 line-clamp-2 flex-grow">
+            {product.name}
+          </h3>
+
+          {/* Pricing */}
+          <div className="mt-auto mb-4">
             {isPromo ? (
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground line-through">
                   {originalPrice?.toLocaleString('fr-FR')} FCFA
                 </p>
-                <p className="text-xl font-bold text-red-600">
+                <p className="text-lg font-bold text-foreground">
                   {displayPrice.toLocaleString('fr-FR')} FCFA
-                </p>
-                <p className="text-xs text-green-700 font-medium">
-                  Économisez {((originalPrice! - displayPrice) / originalPrice! * 100).toFixed(0)}%
                 </p>
               </div>
             ) : (
-              <p className="text-xl font-bold text-slate-900">
+              <p className="text-lg font-bold text-foreground">
                 {displayPrice.toLocaleString('fr-FR')} FCFA
               </p>
             )}
           </div>
-        </CardContent>
 
-        <CardFooter className="p-5 pt-0">
+          {/* Add to Cart Button */}
           <Button
-            className="w-full bg-primary hover:bg-primary/90 text-white font-semibold rounded-full shadow-md hover:shadow-lg transition-all duration-300"
+            className="w-full bg-primary text-primary-foreground font-semibold rounded-full hover:bg-primary/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleAddToCart}
             disabled={product.stock === 0}
           >
             <ShoppingCart className="mr-2 h-4 w-4" />
-            {product.stock === 0 ? 'Épuisé' : 'Ajouter au panier'}
+            {product.stock === 0 ? 'Épuisé' : 'Ajouter'}
           </Button>
-        </CardFooter>
-      </Card>
+        </div>
+      </div>
     </Link>
   );
 }

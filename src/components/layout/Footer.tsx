@@ -1,7 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Facebook, Instagram, Truck, CreditCard, ShieldCheck } from "lucide-react";
+import { Facebook, Instagram, Truck, CreditCard, ShieldCheck, Mail } from "lucide-react";
 import Link from 'next/link';
 
 const TikTokIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -19,67 +18,165 @@ const TikTokIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-
 export default function Footer() {
   return (
-    <footer className="bg-gray-900 text-white">
-      <div className="container mx-auto px-4 py-12">
-        {/* Top Info Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 text-center pb-8 border-b border-gray-700">
-          <div className="flex flex-col items-center">
-            <Truck className="h-8 w-8 mb-2" />
-            <h4 className="font-semibold">LIVRAISON</h4>
-            <p className="text-sm text-gray-400">Livraison partout au Sénégal</p>
+    <footer className="bg-background border-t border-border">
+      <div className="container mx-auto px-4 py-12 md:py-16">
+        
+        {/* Features Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12 pb-12 border-b border-border">
+          <div className="flex flex-col items-center md:items-start text-center md:text-left">
+            <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center mb-4">
+              <Truck className="h-6 w-6 text-primary" />
+            </div>
+            <h4 className="font-semibold text-foreground mb-1">Livraison Rapide</h4>
+            <p className="text-sm text-muted-foreground">Livraison partout au Sénégal en 24h</p>
           </div>
-          <div className="flex flex-col items-center">
-            <CreditCard className="h-8 w-8 mb-2" />
-            <h4 className="font-semibold">PAIEMENT SÉCURISÉ</h4>
-            <p className="text-sm text-gray-400">Paiement à la livraison ou Wave</p>
+
+          <div className="flex flex-col items-center md:items-start text-center md:text-left">
+            <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center mb-4">
+              <CreditCard className="h-6 w-6 text-primary" />
+            </div>
+            <h4 className="font-semibold text-foreground mb-1">Paiement Sécurisé</h4>
+            <p className="text-sm text-muted-foreground">À la livraison ou via Wave</p>
           </div>
-          <div className="flex flex-col items-center">
-            <ShieldCheck className="h-8 w-8 mb-2" />
-            <h4 className="font-semibold">SATISFACTION GARANTIE</h4>
-            <p className="text-sm text-gray-400">Retour facile sous 7 jours</p>
+
+          <div className="flex flex-col items-center md:items-start text-center md:text-left">
+            <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center mb-4">
+              <ShieldCheck className="h-6 w-6 text-primary" />
+            </div>
+            <h4 className="font-semibold text-foreground mb-1">Satisfaction Garantie</h4>
+            <p className="text-sm text-muted-foreground">Retour facile sous 7 jours</p>
           </div>
-          <div className="flex flex-col items-center">
-            <div className="h-8 w-8 mb-2 font-bold text-2xl">4x</div>
-            <h4 className="font-semibold">PAIEMENT EN PLUSIEURS FOIS</h4>
-            <p className="text-sm text-gray-400">Bientôt disponible</p>
+
+          <div className="flex flex-col items-center md:items-start text-center md:text-left">
+            <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center mb-4">
+              <span className="text-lg font-bold text-primary">✓</span>
+            </div>
+            <h4 className="font-semibold text-foreground mb-1">Service Client</h4>
+            <p className="text-sm text-muted-foreground">Support disponible 24/7</p>
           </div>
         </div>
 
-        {/* Main Footer Links */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-10">
-          <div>
-            <h3 className="font-bold mb-4">Aide</h3>
-            <ul className="space-y-2 text-sm text-gray-400">
-              <li><Link href="/contact" className="hover:text-white">Contactez-nous</Link></li>
-              <li><Link href="/politique-de-retour" className="hover:text-white">Retours et échanges</Link></li>
-              <li><Link href="/termes-et-conditions" className="hover:text-white">Modes de paiement</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="font-bold mb-4">Nos boutiques</h3>
-            <ul className="space-y-2 text-sm text-gray-400">
-              <li><Link href="https://maps.app.goo.gl/vb67yYM6BqKWq6jh7" target="_blank" rel="noopener noreferrer" className="hover:text-white">Tivaouane Peulh</Link></li>
-            </ul>
-          </div>
+        {/* Main Footer Content */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+          {/* Brand */}
           <div className="md:col-span-1">
-            <h3 className="font-bold mb-4">RESTONS CONNECTÉS</h3>
-            <div className="flex space-x-4">
-              <Link href="https://www.facebook.com/profile.php?id=61556322727649" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white" aria-label="Suivez-nous sur Facebook"><Facebook className="h-6 w-6" /></Link>
-              <Link href="https://www.tiktok.com/@sonkoshop24" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white" aria-label="Suivez-nous sur TikTok"><TikTokIcon className="h-6 w-6" /></Link>
-              <Link href="https://www.instagram.com/sonko24shop/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white" aria-label="Suivez-nous sur Instagram"><Instagram className="h-6 w-6" /></Link>
+            <Link href="/" className="flex items-center gap-1 mb-6">
+              <span className="text-xl font-bold text-foreground">SONKO</span>
+              <span className="text-xl font-bold text-primary">SHOP</span>
+            </Link>
+            <p className="text-sm text-muted-foreground mb-6">
+              Votre destination pour les vêtements et équipements sportifs de qualité premium.
+            </p>
+            <div className="flex gap-3">
+              <Link 
+                href="https://www.facebook.com/profile.php?id=61556322727649" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
+                aria-label="Facebook"
+              >
+                <Facebook className="h-5 w-5" />
+              </Link>
+              <Link 
+                href="https://www.tiktok.com/@sonkoshop24" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
+                aria-label="TikTok"
+              >
+                <TikTokIcon className="h-5 w-5" />
+              </Link>
+              <Link 
+                href="https://www.instagram.com/sonko24shop/" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
+                aria-label="Instagram"
+              >
+                <Instagram className="h-5 w-5" />
+              </Link>
             </div>
+          </div>
+
+          {/* Help */}
+          <div>
+            <h3 className="font-semibold text-foreground mb-4">Aide</h3>
+            <ul className="space-y-3">
+              <li>
+                <Link href="/contact" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  Contactez-nous
+                </Link>
+              </li>
+              <li>
+                <Link href="/politique-de-retour" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  Retours et échanges
+                </Link>
+              </li>
+              <li>
+                <Link href="/termes-et-conditions" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  Modes de paiement
+                </Link>
+              </li>
+              <li>
+                <Link href="/faq" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  FAQ
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Stores */}
+          <div>
+            <h3 className="font-semibold text-foreground mb-4">Nos Boutiques</h3>
+            <ul className="space-y-3">
+              <li>
+                <Link 
+                  href="https://maps.app.goo.gl/vb67yYM6BqKWq6jh7" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Tivaouane Peulh
+                </Link>
+              </li>
+              <li>
+                <Link href="/stores" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  Toutes les boutiques
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Legal */}
+          <div>
+            <h3 className="font-semibold text-foreground mb-4">Légal</h3>
+            <ul className="space-y-3">
+              <li>
+                <Link href="/termes-et-conditions" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  Conditions de vente
+                </Link>
+              </li>
+              <li>
+                <Link href="/politique-de-retour" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  Mentions légales
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  Politique de confidentialité
+                </Link>
+              </li>
+            </ul>
           </div>
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-12 border-t border-gray-700 pt-6 flex flex-col md:flex-row justify-between items-center text-sm text-gray-400">
+        <div className="border-t border-border pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} Sonko Shop. Tous droits réservés.</p>
-          <div className="flex space-x-4 mt-4 md:mt-0">
-            <Link href="/termes-et-conditions" className="hover:text-white">Conditions de vente</Link>
-            <Link href="/politique-de-retour" className="hover:text-white">Mentions légales</Link>
+          <div className="flex gap-6">
+            <span>Fait avec ❤️ pour vous</span>
           </div>
         </div>
       </div>
